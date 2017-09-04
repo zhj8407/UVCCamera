@@ -403,6 +403,20 @@ typedef struct uvc_extension_unit {
 	uint16_t request;
 } uvc_extension_unit_t;
 
+/** Represents post-capture encoding functions */
+typedef struct uvc_encoding_unit {
+	struct uvc_encoding_unit *prev, *next;
+	/** Index of the encoding unit within the device */
+	uint8_t bUnitID;
+	/** Index of the terminal from which the device accepts images */
+	uint8_t bSourceID;
+	/** Encoding controls (meaning of bits given in {uvc_eu_ctrl_selector}) */
+	uint64_t bmControls;
+	uint64_t bmRunningControls;
+	/** request code(wIndex) */
+	uint16_t request;
+} uvc_encoding_unit_t;
+
 enum uvc_status_class {
 	UVC_STATUS_CLASS_CONTROL = 0x10,
 	UVC_STATUS_CLASS_CONTROL_CAMERA = 0x11,

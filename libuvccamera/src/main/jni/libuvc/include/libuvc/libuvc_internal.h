@@ -117,7 +117,8 @@ enum uvc_vc_desc_subtype {
   UVC_VC_OUTPUT_TERMINAL = 0x03,
   UVC_VC_SELECTOR_UNIT = 0x04,
   UVC_VC_PROCESSING_UNIT = 0x05,
-  UVC_VC_EXTENSION_UNIT = 0x06
+  UVC_VC_EXTENSION_UNIT = 0x06,
+  UVC_VC_ENCODING_UNIT = 0x07
 };
 
 /** UVC endpoint descriptor subtype (A.7) */
@@ -216,6 +217,7 @@ typedef struct uvc_control_interface {
   struct uvc_output_terminal *output_term_descs;
   struct uvc_processing_unit *processing_unit_descs;
   struct uvc_extension_unit *extension_unit_descs;
+  struct uvc_encoding_unit *encoding_unit_descs;
   uint16_t bcdUVC;
   uint8_t bEndpointAddress;
   /** Interface number */
@@ -329,7 +331,8 @@ uvc_error_t uvc_query_stream_ctrl(
 
 void uvc_start_handler_thread(uvc_context_t *ctx);
 uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx);
-uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx);
+uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx,
+  unsigned char ep_addr);
 
 #endif // !def(LIBUVC_INTERNAL_H)
 /** @endcond */

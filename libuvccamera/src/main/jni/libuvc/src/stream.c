@@ -499,7 +499,7 @@ static uvc_error_t _uvc_get_stream_ctrl_format(uvc_device_handle_t *devh,
 	}
 	result = UVC_ERROR_INVALID_MODE;
 fail:
-	uvc_release_if(devh, ctrl->bInterfaceNumber);
+	uvc_release_if(devh, ctrl->bInterfaceNumber, 0);
 	RETURN(result, uvc_error_t);
 
 found:
@@ -726,7 +726,7 @@ static void _uvc_process_payload(uvc_stream_handle_t *strmh, const uint8_t *payl
 		if (UNLIKELY(header_info & UVC_STREAM_ERR)) {
 //			strmh->bfh_err |= UVC_STREAM_ERR;
 			UVC_DEBUG("bad packet: error bit set");
-			libusb_clear_halt(strmh->devh->usb_devh, strmh->stream_if->bEndpointAddress);
+			//libusb_clear_halt(strmh->devh->usb_devh, strmh->stream_if->bEndpointAddress);
 //			uvc_vc_get_error_code(strmh->devh, &vc_error_code, UVC_GET_CUR);
 			uvc_vs_get_error_code(strmh->devh, &vs_error_code, UVC_GET_CUR);
 //			return;
@@ -1862,12 +1862,13 @@ uvc_error_t uvc_stream_stop(uvc_stream_handle_t *strmh) {
 void uvc_stream_close(uvc_stream_handle_t *strmh) {
 	UVC_ENTER();
 
-	if (!strmh) { UVC_EXIT_VOID() };
+	if (!strmh) { UVC_EXIT_VOID(); };
 
 	if (strmh->running)
 		uvc_stream_stop(strmh);
 
-	uvc_release_if(strmh->devh, strmh->stream_if->bInterfaceNumber);
+	uvc_release_if(strmh->devh, strmh->stream_if->bInterfaceNumber,
+		strmh->stream_if->bEndpointAddress);
 
 	if (strmh->frame.data) {
 		free(strmh->frame.data);

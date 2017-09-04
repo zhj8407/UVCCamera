@@ -205,9 +205,9 @@ static void dump_urb(int ix, int fd, struct usbfs_urb *urb) {
 	if (UNLIKELY(ret == -1)) {
 		LOGE("Failed to get fd flags: %d", errno);
 	}
-	LOGI("ファイフディスクリプタフラグ:%x", ret);
+	LOGI("fcntl return value:%x", ret);
 	LOGI("O_ACCMODE:%x", ret & O_ACCMODE);				// 0:読み込み専用, 1:書き込み専用, 2;読み書き可
-	LOGI("ノンブロッキングかどうか:%d", ret & O_NONBLOCK);	// 0:ブロッキング
+	LOGI("blocked:%d", ret & O_NONBLOCK);	// 0:ブロッキング
 	LOGI("%d:type=%d,endpopint=0x%02x,status=%d,flag=%d", ix, urb->type, urb->endpoint, urb->status, urb->flags);
 	LOGI("%d:buffer=%p,buffer_length=%d,actual_length=%d,start_frame=%d", ix, urb->buffer, urb->buffer_length, urb->actual_length, urb->start_frame);
 	LOGI("%d:number_of_packets=%d,error_count=%d,signr=%d", ix, urb->number_of_packets, urb->error_count, urb->signr);
@@ -238,7 +238,7 @@ static int __get_usbfs_fd(struct libusb_device *dev, mode_t mode, int silent) {
 
 	if (errno == ENOENT) {
 		if (!silent)
-			usbi_err(ctx, "File doesn't exist, wait %d ms and try again\n", delay / 1000);
+			LOGE("File doesn't exist, wait %d ms and try again\n", delay / 1000);
 
 		/* Wait 10ms for USB device path creation.*/
 		usleep(delay);
@@ -249,10 +249,10 @@ static int __get_usbfs_fd(struct libusb_device *dev, mode_t mode, int silent) {
 	}
 
 	if (!silent) {
-		usbi_err(ctx, "libusb couldn't open USB device %s: %s",
+		LOGE("libusb couldn't open USB device %s: %s",
 			path, strerror(errno));
 		if (errno == EACCES && mode == O_RDWR)
-			usbi_err(ctx, "libusb requires write access to USB "
+			LOGE("libusb requires write access to USB "
 					"device nodes.");
 	}
 
@@ -724,6 +724,7 @@ static int __read_sysfs_attr(struct libusb_context *ctx, const char *devname,
 			 disconnected (see trac ticket #70). */
 			return LIBUSB_ERROR_NO_DEVICE;
 		}
+		LOGE("open %s failed errno=%d", filename, errno);
 		usbi_err(ctx, "open %s failed errno=%d", filename, errno);
 		return LIBUSB_ERROR_IO;
 	}
@@ -731,10 +732,12 @@ static int __read_sysfs_attr(struct libusb_context *ctx, const char *devname,
 	r = fscanf(f, "%d", &value);
 	fclose(f);
 	if (UNLIKELY(r != 1)) {
+		LOGE("fscanf %s returned %d, errno=%d", attr, r, errno);
 		usbi_err(ctx, "fscanf %s returned %d, errno=%d", attr, r, errno);
 		return LIBUSB_ERROR_NO_DEVICE; /* For unplug race (trac #70) */
 	}
 	if (UNLIKELY(value < 0)) {
+		LOGE("%s contains a negative value", filename);
 		usbi_err(ctx, "%s contains a negative value", filename);
 		return LIBUSB_ERROR_IO;
 	}
@@ -871,7 +874,7 @@ static int seek_to_first_descriptor(struct libusb_context *ctx,
 			return LIBUSB_ERROR_NOT_FOUND;
 
 		if (size < LIBUSB_DT_HEADER_SIZE) {
-			usbi_err(ctx, "short descriptor read %d/2", size);
+			LOGE("short descriptor read %d/2", size);
 			return LIBUSB_ERROR_IO;
 		}
 		usbi_parse_descriptor(buffer + i, "bb", &header, 0);
@@ -879,7 +882,7 @@ static int seek_to_first_descriptor(struct libusb_context *ctx,
 		if (header.bDescriptorType == descriptor_type)	// XXX
 			return i;
 	}
-	usbi_err(ctx, "bLength overflow by %d bytes", -size);
+	LOGE("bLength overflow by %d bytes", -size);
 	return LIBUSB_ERROR_IO;
 }
 
@@ -895,7 +898,7 @@ static int seek_to_next_descriptor(struct libusb_context *ctx,
 			return LIBUSB_ERROR_NOT_FOUND;
 
 		if (size < LIBUSB_DT_HEADER_SIZE) {
-			usbi_err(ctx, "short descriptor read %d/2", size);
+			LOGE("short descriptor read %d/2", size);
 			return LIBUSB_ERROR_IO;
 		}
 		usbi_parse_descriptor(buffer + i, "bb", &header, 0);
@@ -903,7 +906,7 @@ static int seek_to_next_descriptor(struct libusb_context *ctx,
 		if (i && header.bDescriptorType == descriptor_type)
 			return i;
 	}
-	usbi_err(ctx, "bLength overflow by %d bytes", -size);
+	LOGE("bLength overflow by %d bytes", -size);
 	return LIBUSB_ERROR_IO;
 }
 
@@ -917,19 +920,19 @@ static int seek_to_next_config(struct libusb_context *ctx,
 		return LIBUSB_ERROR_NOT_FOUND;
 
 	if (size < LIBUSB_DT_HEADER_SIZE) {
-		usbi_err(ctx, "short descriptor read %d/%d",
+		LOGE("short descriptor read %d/%d",
 			size, LIBUSB_DT_CONFIG_SIZE);
 		return LIBUSB_ERROR_IO;
 	}
 	if (size < LIBUSB_DT_CONFIG_SIZE) {
-		usbi_err(ctx, "short descriptor read %d/%d",
+		LOGE("short descriptor read %d/%d",
 			size, LIBUSB_DT_CONFIG_SIZE);
 		return LIBUSB_ERROR_IO;
 	}
 
 	usbi_parse_descriptor(buffer, "bbwbbbbb", &config, 0);
 	if (config.bDescriptorType != LIBUSB_DT_CONFIG) {
-		usbi_err(ctx, "descriptor is not a config desc (type 0x%02x)",
+		LOGE("descriptor is not a config desc (type 0x%02x)",
 			config.bDescriptorType);
 		return LIBUSB_ERROR_IO;
 	}
@@ -950,16 +953,16 @@ static int seek_to_next_config(struct libusb_context *ctx,
 			return next;
 
 		if (next != config.wTotalLength)
-			usbi_warn(ctx, "config length mismatch wTotalLength "
+			LOGW("config length mismatch wTotalLength "
 				"%d real %d", config.wTotalLength, next);
 		return next;
 	} else {
 		if (config.wTotalLength < LIBUSB_DT_CONFIG_SIZE) {
-			usbi_err(ctx, "invalid wTotalLength %d",
+			LOGE("invalid wTotalLength %d",
 				config.wTotalLength);
 			return LIBUSB_ERROR_IO;
 		} else if (config.wTotalLength > size) {
-			usbi_warn(ctx, "short descriptor read %d/%d",
+			LOGE("short descriptor read %d/%d",
 				size, config.wTotalLength);
 			return size;
 		} else
@@ -1166,7 +1169,7 @@ static int initialize_device(struct libusb_device *dev, uint8_t busnum,
 		r = read(fd, priv->descriptors + priv->descriptors_len,
 				descriptors_size - priv->descriptors_len);
 		if (UNLIKELY(r < 0)) {
-			usbi_err(ctx, "read descriptor failed ret=%d errno=%d", fd, errno);
+			LOGE("read descriptor failed ret=%d errno=%d", fd, errno);
 			close(fd);
 			return LIBUSB_ERROR_IO;
 		}
@@ -1176,7 +1179,7 @@ static int initialize_device(struct libusb_device *dev, uint8_t busnum,
 	close(fd);
 
 	if (UNLIKELY(priv->descriptors_len < DEVICE_DESC_LENGTH)) {
-		usbi_err(ctx, "short descriptor read (%d)", priv->descriptors_len);
+		LOGE("short descriptor read (%d)", priv->descriptors_len);
 		return LIBUSB_ERROR_IO;
 	}
 
@@ -1507,7 +1510,7 @@ static int usbfs_scan_busdir(struct libusb_context *ctx, uint8_t busnum) {
 	usbi_dbg("%s", dirpath);
 	dir = opendir(dirpath);
 	if (UNLIKELY(!dir)) {
-		usbi_err(ctx, "opendir '%s' failed, errno=%d", dirpath, errno);
+		LOGE("opendir '%s' failed, errno=%d", dirpath, errno);
 		/* FIXME: should handle valid race conditions like hub unplugged
 		 * during directory iteration - this is not an error */
 		return r;
@@ -1543,7 +1546,7 @@ static int usbfs_get_device_list(struct libusb_context *ctx) {
 	int r = 0;
 
 	if (!buses) {
-		usbi_err(ctx, "opendir buses failed errno=%d", errno);
+		LOGE("opendir buses failed errno=%d", errno);
 		return LIBUSB_ERROR_IO;
 	}
 
@@ -1601,7 +1604,7 @@ static int sysfs_get_device_list(struct libusb_context *ctx) {
 	int r = LIBUSB_ERROR_IO;
 
 	if (UNLIKELY(!devices)) {
-		usbi_err(ctx, "opendir devices failed errno=%d", errno);
+		LOGE("opendir devices failed errno=%d", errno);
 		return r;
 	}
 
@@ -2256,6 +2259,7 @@ static int submit_bulk_transfer(struct usbi_transfer *itransfer) {
 			} else {
 				usbi_err(TRANSFER_CTX(transfer),
 					"submiturb failed error %d errno=%d", r, errno);
+				LOGE("submiturb failed error %d errno=%d", r, errno);
 				r = LIBUSB_ERROR_IO;
 			}
 
@@ -2966,7 +2970,7 @@ static int op_handle_events(struct libusb_context *ctx, struct pollfd *fds,
 		}
 
 		if (!hpriv || hpriv->fd != pollfd->fd) {
-			usbi_err(ctx, "cannot find handle for fd %d\n",
+			LOGE("cannot find handle for fd %d\n",
 				 pollfd->fd);
 			continue;
 		}

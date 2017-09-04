@@ -343,7 +343,7 @@ uvc_error_t uvc_open(uvc_device_t *dev, uvc_device_handle_t **devh) {
 	return ret;
 
 fail:
-	uvc_release_if(internal_devh, internal_devh->info->ctrl_if.bInterfaceNumber);	// XXX crash, assume when uvc_get_device_info failed.
+	uvc_release_if(internal_devh, internal_devh->info->ctrl_if.bInterfaceNumber, 0);	// XXX crash, assume when uvc_get_device_info failed.
 fail2:
 #if !UVC_DETACH_ATTACH
 	/* disable automatic attach/detach kernel driver on supported platforms in libusb */
@@ -859,19 +859,30 @@ uvc_error_t uvc_claim_if(uvc_device_handle_t *devh, int idx) {
  * @param devh UVC device handle
  * @param idx UVC interface index
  */
-uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx) {
+uvc_error_t uvc_release_if(uvc_device_handle_t *devh, int idx, unsigned char ep_addr) {
 	int ret;
+	const struct libusb_interface *interface;
+	unsigned char isochronous = 0x00;
 
 	UVC_ENTER();
 	UVC_DEBUG("releasing interface %d", idx);
+
+	// Get the interface that provides the chosen format and frame configuration
+	interface = &devh->info->config->interface[idx];
+
+	/* A VS interface uses isochronous transfers if it has multiple altsettings.
+	 * (UVC 1.5: 2.4.3. VideoStreaming Interface, on page 19) */
+	isochronous = interface->num_altsetting > 1;
 	/* libusb_release_interface *should* reset the alternate setting to the first available,
 	 but sometimes (e.g. on Darwin) it doesn't. Thus, we do it explicitly here.
 	 This is needed to de-initialize certain cameras. */
 	// XXX but resetting the alt setting here manytimes leads trouble
 	// on GT-N7100(international Galaxy Note2 at lease with Android4.4.2)
 	// so we add flag to avoid the issue
-	if (devh->reset_on_release_if)
+	if (isochronous && devh->reset_on_release_if)
 		libusb_set_interface_alt_setting(devh->usb_devh, idx, 0);
+	else if (!isochronous && ep_addr)
+		libusb_clear_halt(devh->usb_devh, ep_addr);
 
 	ret = libusb_release_interface(devh->usb_devh, idx);
 
@@ -1138,6 +1149,35 @@ uvc_error_t uvc_parse_vc_extension_unit(uvc_device_t *dev,
 }
 
 /** @internal
+ * @brief Parse a VideoControl extension unit.
+ * @ingroup device
+ */
+uvc_error_t uvc_parse_vc_encoding_unit(uvc_device_t *dev,
+		uvc_device_info_t *info, const unsigned char *block, size_t block_size) {
+	uvc_encoding_unit_t *unit;
+
+	UVC_ENTER();
+
+	unit = calloc(1, sizeof(*unit));
+	unit->bUnitID = block[3];
+	unit->bSourceID = block[4];
+	unit->request = (unit->bUnitID << 8) | info->ctrl_if.bInterfaceNumber;	// XXX
+
+	unit->bmControls = 0;	// XXX
+	unit->bmRunningControls = 0;
+
+#if 0
+	for (i = 7 + block[7]; i >= 8; i--)
+		unit->bmControls = block[i] + (unit->bmControls << 8);
+
+#endif
+	DL_APPEND(info->ctrl_if.encoding_unit_descs, unit);
+
+	UVC_EXIT(UVC_SUCCESS);
+	return UVC_SUCCESS;
+}
+
+/** @internal
  * Process a single VideoControl descriptor block
  * @ingroup device
  */
@@ -1172,6 +1212,9 @@ uvc_error_t uvc_parse_vc(uvc_device_t *dev, uvc_device_info_t *info,
 	case UVC_VC_EXTENSION_UNIT:
 		ret = uvc_parse_vc_extension_unit(dev, info, block, block_size);
 		break;
+	case UVC_VC_ENCODING_UNIT:
+		ret = uvc_parse_vc_encoding_unit(dev, info, block, block_size);
+	    break;
 	default:
 		LOGW("UVC_ERROR_INVALID_DEVICE:descriptor_subtype=0x%02x", descriptor_subtype);
 		ret = UVC_ERROR_INVALID_DEVICE;
@@ -1561,7 +1604,7 @@ void uvc_close(uvc_device_handle_t *devh) {
 	if (devh->streams)
 		uvc_stop_streaming(devh);
 
-	uvc_release_if(devh, devh->info->ctrl_if.bInterfaceNumber);
+	uvc_release_if(devh, devh->info->ctrl_if.bInterfaceNumber, 0);
 
 #if !UVC_DETACH_ATTACH
 	/* disable automatic attach/detach kernel driver on supported platforms in libusb */
