@@ -138,7 +138,9 @@ enum uvc_vs_desc_subtype {
   UVC_VS_COLORFORMAT = 0x0d,
   UVC_VS_FORMAT_FRAME_BASED = 0x10,
   UVC_VS_FRAME_FRAME_BASED = 0x11,
-  UVC_VS_FORMAT_STREAM_BASED = 0x12
+  UVC_VS_FORMAT_STREAM_BASED = 0x12,
+  UVC_VS_FORMAT_H_264 = 0x13,
+  UVC_VS_FRAME_H_264 = 0x14
 };
 
 struct uvc_format_desc;
@@ -189,6 +191,21 @@ typedef struct uvc_frame_desc {
  * A "format" determines a stream's image type (e.g., raw YUYV or JPEG)
  * and includes many "frame" configurations.
  */
+
+typedef struct uvc_format_h_264_prop {
+  uint8_t bMaxCodecConfigDelay;
+  uint8_t bmSupportedSliceModes;
+  uint8_t bmSupportedSyncFrameTypes;
+  uint8_t bResolutionScaling;
+  uint8_t bmSupportedRateControlModes;
+  uint16_t wMaxMBperSecOneResolutionNoScalability;
+  uint16_t wMaxMBperSecTwoResolutionsNoScalability;
+  uint16_t wMaxMBperSecThreeResolutionsNoScalability;
+  uint16_t wMaxMBperSecFourResolutionsNoScalability;
+  uint16_t wMaxMBperSecOneResolutionTemporalScalability;
+  /* TODO Add more */
+} uvc_format_h_264_prop_t;
+
 typedef struct uvc_format_desc {
   struct uvc_streaming_interface *parent;
   struct uvc_format_desc *prev, *next;
@@ -208,6 +225,8 @@ typedef struct uvc_format_desc {
     uint8_t bBitsPerPixel;
     /** Flags for JPEG stream */
     uint8_t bmFlags;
+    /** Properties for H_264 stream */
+    uvc_format_h_264_prop_t h_264_props;
   };
   /** Default {uvc_frame_desc} to choose given this format */
   uint8_t bDefaultFrameIndex;
