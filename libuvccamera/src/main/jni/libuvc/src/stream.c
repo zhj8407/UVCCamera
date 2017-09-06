@@ -108,9 +108,11 @@ struct format_table_entry *_get_format_entry(enum uvc_frame_format format) {
     	{'B', 'Y', '8', ' ', 0x00, 0x00, 0x10, 0x00, 0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71})
 
 	ABS_FMT(UVC_FRAME_FORMAT_COMPRESSED,
-		{UVC_FRAME_FORMAT_MJPEG})
+		{UVC_FRAME_FORMAT_MJPEG, UVC_FRAME_FORMAT_H_264})
 	FMT(UVC_FRAME_FORMAT_MJPEG,
 		{'M', 'J', 'P', 'G'})
+	FMT(UVC_FRAME_FORMAT_H_264,
+		{'H', '2', '6', '4'})
 
 	default:
 		return NULL;

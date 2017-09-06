@@ -1415,7 +1415,7 @@ uvc_error_t uvc_parse_vs_format_h_264(uvc_streaming_interface_t *stream_if,
 	format->bDescriptorSubtype = block[2];
 	format->bFormatIndex = block[3];
 	format->bNumFrameDescriptors = block[4];
-	memcpy(format->fourccFormat, "H_264", 4);
+	memcpy(format->fourccFormat, "H264", 4);
 	format->bBitsPerPixel = 0;
 	format->bDefaultFrameIndex = block[5];
 	format->h_264_props.bMaxCodecConfigDelay = block[6];

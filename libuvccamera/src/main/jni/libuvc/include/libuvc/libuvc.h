@@ -105,6 +105,7 @@ enum uvc_frame_format {
 	UVC_FRAME_FORMAT_MJPEG,
 	UVC_FRAME_FORMAT_GRAY8,
 	UVC_FRAME_FORMAT_BY8,
+	UVC_FRAME_FORMAT_H_264,
 	/** Number of formats understood */
 	UVC_FRAME_FORMAT_COUNT,
 };
