@@ -152,6 +152,19 @@ struct uvc_frame_desc;
  * for a particular image size at one of possibly several
  * available frame rates.
  */
+
+typedef struct uvc_frame_h_264_prop {
+  uint16_t wSARwidth;
+  uint16_t wSARheight;
+  uint16_t wProfile;
+  uint8_t bLevelIDC;
+  uint16_t wConstrainedToolset;
+  uint32_t bmSupportedUsages;
+  uint16_t bmCapabilities;
+  uint32_t bmSVCCapabilities;
+  uint32_t bmMVCCapabilities;
+} uvc_frame_h_264_prop_t;
+
 typedef struct uvc_frame_desc {
   struct uvc_format_desc *parent;
   struct uvc_frame_desc *prev, *next;
@@ -180,8 +193,12 @@ typedef struct uvc_frame_desc {
   uint32_t dwFrameIntervalStep;
   /** Frame intervals */
   uint8_t bFrameIntervalType;
-  /** number of bytes per line */
-  uint32_t dwBytesPerLine;
+  union {
+    /** number of bytes per line */
+    uint32_t dwBytesPerLine;
+    /** h264 frame properties. */
+    uvc_frame_h_264_prop_t h_264_props;
+  };
   /** Available frame rates, zero-terminated (in 100ns units) */
   uint32_t *intervals;
 } uvc_frame_desc_t;

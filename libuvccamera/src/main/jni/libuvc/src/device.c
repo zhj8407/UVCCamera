@@ -1414,14 +1414,20 @@ uvc_error_t uvc_parse_vs_format_h_264(uvc_streaming_interface_t *stream_if,
 	format->parent = stream_if;
 	format->bDescriptorSubtype = block[2];
 	format->bFormatIndex = block[3];
+	format->bNumFrameDescriptors = block[4];
 	memcpy(format->fourccFormat, "H_264", 4);
 	format->bBitsPerPixel = 0;
-	format->bmFlags = block[5];
-	format->bDefaultFrameIndex = block[6];
-	format->bAspectRatioX = block[7];
-	format->bAspectRatioY = block[8];
-	format->bmInterlaceFlags = block[9];
-	format->bCopyProtect = block[10];
+	format->bDefaultFrameIndex = block[5];
+	format->h_264_props.bMaxCodecConfigDelay = block[6];
+	format->h_264_props.bmSupportedSliceModes = block[7];
+	format->h_264_props.bmSupportedSyncFrameTypes = block[8];
+	format->h_264_props.bResolutionScaling = block[9];
+	format->h_264_props.bmSupportedRateControlModes = block[11];
+	format->h_264_props.wMaxMBperSecOneResolutionNoScalability = SW_TO_SHORT(&block[12]);
+	format->h_264_props.wMaxMBperSecTwoResolutionsNoScalability = SW_TO_SHORT(&block[14]);
+	format->h_264_props.wMaxMBperSecThreeResolutionsNoScalability = SW_TO_SHORT(&block[16]);
+	format->h_264_props.wMaxMBperSecFourResolutionsNoScalability = SW_TO_SHORT(&block[18]);
+	format->h_264_props.wMaxMBperSecOneResolutionTemporalScalability = SW_TO_SHORT(&block[20]);
 
 	DL_APPEND(stream_if->format_descs, format);
 
@@ -1548,6 +1554,76 @@ uvc_error_t uvc_parse_vs_frame_uncompressed(
 }
 
 /** @internal
+ * @brief Parse a VideoStreaming H_264 frame block.
+ * @ingroup device
+ */
+uvc_error_t uvc_parse_vs_frame_h_264(
+		uvc_streaming_interface_t *stream_if, const unsigned char *block,
+		size_t block_size) {
+	uvc_format_desc_t *format;
+	uvc_frame_desc_t *frame;
+	uint8_t frame_type;
+	uint8_t n;
+	uint32_t interval;
+
+	const unsigned char *p;
+	int i;
+
+	UVC_ENTER();
+
+	format = stream_if->format_descs->prev;
+	frame = calloc(1, sizeof(*frame));
+
+	frame->parent = format;
+
+	frame_type = frame->bDescriptorSubtype = block[2];
+	frame->bFrameIndex = block[3];
+	frame->wWidth = SW_TO_SHORT(&block[4]);
+	frame->wHeight = SW_TO_SHORT(&block[6]);
+	frame->h_264_props.wSARwidth = SW_TO_SHORT(&block[8]);
+	frame->h_264_props.wSARheight = SW_TO_SHORT(&block[10]);
+	frame->h_264_props.wProfile = SW_TO_SHORT(&block[12]);
+	frame->h_264_props.bLevelIDC = block[14];
+	frame->h_264_props.wConstrainedToolset = SW_TO_SHORT(&block[15]);
+	frame->h_264_props.bmSupportedUsages = DW_TO_INT(&block[17]);
+	frame->h_264_props.bmCapabilities = SW_TO_SHORT(&block[21]);
+	frame->h_264_props.bmSVCCapabilities = DW_TO_INT(&block[23]);
+	frame->h_264_props.bmMVCCapabilities = DW_TO_INT(&block[27]);
+	frame->dwMinBitRate = DW_TO_INT(&block[31]);
+	frame->dwMaxBitRate = DW_TO_INT(&block[35]);
+	frame->dwDefaultFrameInterval = DW_TO_INT(&block[39]);
+	n = frame->bFrameIntervalType = block[43];
+
+	if (!n) {
+		frame->dwMinFrameInterval = DW_TO_INT(&block[44]);
+		frame->dwMaxFrameInterval = DW_TO_INT(&block[48]);
+		frame->dwFrameIntervalStep = DW_TO_INT(&block[52]);
+	} else {
+		frame->intervals = calloc(n + 1, sizeof(frame->intervals[0]));
+		p = &block[44];
+
+		for (i = 0; i < n; ++i) {
+			interval = DW_TO_INT(p);
+			frame->intervals[i] = interval ? interval : 1;
+			p += 4;
+		}
+		frame->intervals[n] = 0;
+		
+		frame->dwDefaultFrameInterval
+			= MIN(frame->intervals[n-1],
+				MAX(frame->intervals[0], frame->dwDefaultFrameInterval));
+	}
+	
+	frame->dwMaxVideoFrameBufferSize
+		= frame->wWidth * frame->wHeight * 3 / 4;
+	
+	DL_APPEND(format->frame_descs, frame);
+
+	UVC_EXIT(UVC_SUCCESS);
+	return UVC_SUCCESS;
+}
+
+/** @internal
  * Process a single VideoStreaming descriptor block
  * @ingroup device
  */
@@ -1574,15 +1650,20 @@ uvc_error_t uvc_parse_vs(uvc_device_t *dev, uvc_device_info_t *info,
 	case UVC_VS_FORMAT_MJPEG:
 		ret = uvc_parse_vs_format_mjpeg(stream_if, block, block_size);
 		break;
+	case UVC_VS_FORMAT_H_264:
+		ret = uvc_parse_vs_format_h_264(stream_if, block, block_size);
+		break;
 	case UVC_VS_FRAME_UNCOMPRESSED:
 	case UVC_VS_FRAME_MJPEG:
 		ret = uvc_parse_vs_frame_uncompressed(stream_if, block, block_size);
 		break;
+	case UVC_VS_FRAME_H_264:
+		ret = uvc_parse_vs_frame_h_264(stream_if, block, block_size);
 	case UVC_VS_FORMAT_FRAME_BASED:
-		ret = uvc_parse_vs_frame_format(stream_if, block, block_size );
+		ret = uvc_parse_vs_frame_format(stream_if, block, block_size);
 		break;
 	case UVC_VS_FRAME_FRAME_BASED:
-		ret = uvc_parse_vs_frame_frame(stream_if, block, block_size );
+		ret = uvc_parse_vs_frame_frame(stream_if, block, block_size);
 		break;
 //	case UVC_VS_COLORFORMAT:	// FIXME unsupported now
 //		break;
