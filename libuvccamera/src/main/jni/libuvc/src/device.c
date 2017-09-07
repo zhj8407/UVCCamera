@@ -1659,6 +1659,7 @@ uvc_error_t uvc_parse_vs(uvc_device_t *dev, uvc_device_info_t *info,
 		break;
 	case UVC_VS_FRAME_H_264:
 		ret = uvc_parse_vs_frame_h_264(stream_if, block, block_size);
+		break;
 	case UVC_VS_FORMAT_FRAME_BASED:
 		ret = uvc_parse_vs_frame_format(stream_if, block, block_size);
 		break;
