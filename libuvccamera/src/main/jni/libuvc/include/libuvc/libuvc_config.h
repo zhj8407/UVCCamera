@@ -8,9 +8,9 @@
 #define LIBUVC_VERSION_PATCH 4
 #define LIBUVC_VERSION_STR "0.0.4"
 #define LIBUVC_VERSION_INT \
-  (0 << 16) |              \
-  (0 << 8) |               \
-  (4)
+    (0 << 16) |              \
+    (0 << 8) |               \
+    (4)
 
 /* #undef LIBUVC_HAS_JPEG */
 

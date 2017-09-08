@@ -92,20 +92,25 @@ YUV stream from a UVC device such as a standard webcam.
  * There's one of these per UVC context.
  * @todo We shouldn't run this if we don't own the USB context
  */
-void *_uvc_handle_events(void *arg) {
-	uvc_context_t *ctx = (uvc_context_t *) arg;
+void *_uvc_handle_events(void *arg)
+{
+    uvc_context_t *ctx = (uvc_context_t *) arg;
 
 #if defined(__ANDROID__)
-	// try to increase thread priority
-	int prio = getpriority(PRIO_PROCESS, 0);
-	nice(-18);
-	if (UNLIKELY(getpriority(PRIO_PROCESS, 0) >= prio)) {
-		LOGW("could not change thread priority");
-	}
+    // try to increase thread priority
+    int prio = getpriority(PRIO_PROCESS, 0);
+    nice(-18);
+
+    if (UNLIKELY(getpriority(PRIO_PROCESS, 0) >= prio)) {
+        LOGW("could not change thread priority");
+    }
+
 #endif
-	for (; !ctx->kill_handler_thread ;)
-		libusb_handle_events(ctx->usb_ctx);
-	return NULL;
+
+    for (; !ctx->kill_handler_thread ;)
+        libusb_handle_events(ctx->usb_ctx);
+
+    return NULL;
 }
 
 /** @brief Initializes the UVC context
@@ -118,57 +123,62 @@ void *_uvc_handle_events(void *arg) {
  * @param[in]  usb_ctx Optional USB context to use
  * @return Error opening context or UVC_SUCCESS
  */
-uvc_error_t uvc_init2(uvc_context_t **pctx, struct libusb_context *usb_ctx, const char *usbfs) {
-	uvc_error_t ret = UVC_SUCCESS;
-	uvc_context_t *ctx = calloc(1, sizeof(*ctx));
+uvc_error_t uvc_init2(uvc_context_t **pctx, struct libusb_context *usb_ctx, const char *usbfs)
+{
+    uvc_error_t ret = UVC_SUCCESS;
+    uvc_context_t *ctx = calloc(1, sizeof(*ctx));
 
-	if (usb_ctx == NULL) {
-		if (usbfs && strlen(usbfs) > 0) {
-			LOGD("call #libusb_init2");
-			ret = libusb_init2(&ctx->usb_ctx, usbfs);
-		} else {
-			LOGD("call #libusb_init");
-			ret = libusb_init(&ctx->usb_ctx);
-		}
-		ctx->own_usb_ctx = 1;
-		if (UNLIKELY(ret != UVC_SUCCESS)) {
-			LOGW("failed:err=%d", ret);
-			free(ctx);
-			ctx = NULL;
-		}
-	} else {
-		ctx->own_usb_ctx = 0;
-		ctx->usb_ctx = usb_ctx;
-	}
+    if (usb_ctx == NULL) {
+        if (usbfs && strlen(usbfs) > 0) {
+            LOGD("call #libusb_init2");
+            ret = libusb_init2(&ctx->usb_ctx, usbfs);
+        } else {
+            LOGD("call #libusb_init");
+            ret = libusb_init(&ctx->usb_ctx);
+        }
 
-	if (ctx != NULL)
-		*pctx = ctx;
+        ctx->own_usb_ctx = 1;
 
-	return ret;
+        if (UNLIKELY(ret != UVC_SUCCESS)) {
+            LOGW("failed:err=%d", ret);
+            free(ctx);
+            ctx = NULL;
+        }
+    } else {
+        ctx->own_usb_ctx = 0;
+        ctx->usb_ctx = usb_ctx;
+    }
+
+    if (ctx != NULL)
+        *pctx = ctx;
+
+    return ret;
 }
 
-uvc_error_t uvc_init(uvc_context_t **pctx, struct libusb_context *usb_ctx) {
-	return uvc_init2(pctx, usb_ctx, NULL);
+uvc_error_t uvc_init(uvc_context_t **pctx, struct libusb_context *usb_ctx)
+{
+    return uvc_init2(pctx, usb_ctx, NULL);
 #if 0
-	uvc_error_t ret = UVC_SUCCESS;
-	uvc_context_t *ctx = calloc(1, sizeof(*ctx));
+    uvc_error_t ret = UVC_SUCCESS;
+    uvc_context_t *ctx = calloc(1, sizeof(*ctx));
 
-	if (usb_ctx == NULL) {
-		ret = libusb_init(&ctx->usb_ctx);
-		ctx->own_usb_ctx = 1;
-		if (UNLIKELY(ret != UVC_SUCCESS)) {
-			free(ctx);
-			ctx = NULL;
-		}
-	} else {
-		ctx->own_usb_ctx = 0;
-		ctx->usb_ctx = usb_ctx;
-	}
+    if (usb_ctx == NULL) {
+        ret = libusb_init(&ctx->usb_ctx);
+        ctx->own_usb_ctx = 1;
 
-	if (ctx != NULL)
-		*pctx = ctx;
+        if (UNLIKELY(ret != UVC_SUCCESS)) {
+            free(ctx);
+            ctx = NULL;
+        }
+    } else {
+        ctx->own_usb_ctx = 0;
+        ctx->usb_ctx = usb_ctx;
+    }
 
-	return ret;
+    if (ctx != NULL)
+        *pctx = ctx;
+
+    return ret;
 #endif
 }
 
@@ -184,18 +194,18 @@ uvc_error_t uvc_init(uvc_context_t **pctx, struct libusb_context *usb_ctx) {
  *
  * @param ctx UVC context to shut down
  */
-void uvc_exit(uvc_context_t *ctx) {
-	uvc_device_handle_t *devh;
+void uvc_exit(uvc_context_t *ctx)
+{
+    uvc_device_handle_t *devh;
 
-	DL_FOREACH(ctx->open_devices, devh)
-	{
-		uvc_close(devh);
-	}
+    DL_FOREACH(ctx->open_devices, devh) {
+        uvc_close(devh);
+    }
 
-	if (ctx->own_usb_ctx)
-		libusb_exit(ctx->usb_ctx);
+    if (ctx->own_usb_ctx)
+        libusb_exit(ctx->usb_ctx);
 
-	free(ctx);
+    free(ctx);
 }
 
 /**
@@ -206,9 +216,10 @@ void uvc_exit(uvc_context_t *ctx) {
  * This should be called at the end of a successful uvc_open if no devices
  * are already open (and being handled).
  */
-void uvc_start_handler_thread(uvc_context_t *ctx) {
-	if (ctx->own_usb_ctx) {
-		pthread_create(&ctx->handler_thread, NULL, _uvc_handle_events, (void*) ctx);
-	}
+void uvc_start_handler_thread(uvc_context_t *ctx)
+{
+    if (ctx->own_usb_ctx) {
+        pthread_create(&ctx->handler_thread, NULL, _uvc_handle_events, (void*) ctx);
+    }
 }
 
