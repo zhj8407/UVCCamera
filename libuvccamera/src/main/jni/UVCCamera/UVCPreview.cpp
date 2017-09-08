@@ -42,9 +42,9 @@
 #include "libuvc_internal.h"
 
 #define	LOCAL_DEBUG 0
-#define MAX_FRAME 4
+#define MAX_FRAME 1
 #define PREVIEW_PIXEL_BYTES 4	// RGBA/RGBX
-#define FRAME_POOL_SZ MAX_FRAME + 2
+#define FRAME_POOL_SZ MAX_FRAME + 1
 
 UVCPreview::UVCPreview(uvc_device_handle_t *devh)
 :	mPreviewWindow(NULL),
@@ -554,7 +554,7 @@ void UVCPreview::do_preview(uvc_stream_ctrl_t *ctrl) {
 #if LOCAL_DEBUG
 		LOGI("preview_thread_func:wait for all callbacks complete");
 #endif
-		uvc_stop_streaming(mDeviceHandle);
+		uvc_stop_streaming(mDeviceHandle, ctrl);
 #if LOCAL_DEBUG
 		LOGI("Streaming finished");
 #endif

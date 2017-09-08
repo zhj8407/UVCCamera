@@ -642,7 +642,8 @@ uvc_error_t uvc_start_streaming_bandwidth(uvc_device_handle_t *devh,
 uvc_error_t uvc_start_iso_streaming(uvc_device_handle_t *devh,
                                     uvc_stream_ctrl_t *ctrl, uvc_frame_callback_t *cb, void *user_ptr);
 
-void uvc_stop_streaming(uvc_device_handle_t *devh);
+void uvc_stop_all_streaming(uvc_device_handle_t *devh);
+void uvc_stop_streaming(uvc_device_handle_t *devh, uvc_stream_ctrl_t *ctrl);
 
 uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh,
                                  uvc_stream_handle_t **strmh, uvc_stream_ctrl_t *ctrl);

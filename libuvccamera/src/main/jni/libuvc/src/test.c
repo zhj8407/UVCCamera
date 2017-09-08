@@ -139,7 +139,7 @@ int main(int argc, char **argv)
                     }
 
                     sleep(10);
-                    uvc_stop_streaming(devh);
+                    uvc_stop_streaming(devh, &ctrl);
                     puts("Done streaming.");
                 }
             }

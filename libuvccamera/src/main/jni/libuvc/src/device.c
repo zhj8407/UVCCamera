@@ -1799,7 +1799,7 @@ void uvc_close(uvc_device_handle_t *devh)
     uvc_context_t *ctx = devh->dev->ctx;
 
     if (devh->streams)
-        uvc_stop_streaming(devh);
+        uvc_stop_all_streaming(devh);
 
     uvc_release_if(devh, devh->info->ctrl_if.bInterfaceNumber, 0);
 

@@ -128,7 +128,7 @@ int main(int argc, char **argv)
                     sleep(10); /* stream for 10 seconds */
 
                     /* End the stream. Blocks until last callback is serviced */
-                    uvc_stop_streaming(devh);
+                    uvc_stop_streaming(devh, &ctrl);
                     puts("Done streaming.");
                 }
             }

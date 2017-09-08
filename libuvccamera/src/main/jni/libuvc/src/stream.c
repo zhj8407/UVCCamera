@@ -1928,15 +1928,31 @@ uvc_error_t uvc_stream_get_frame(uvc_stream_handle_t *strmh,
  *
  * @param devh UVC device
  */
-void uvc_stop_streaming(uvc_device_handle_t *devh)
+void uvc_stop_all_streaming(uvc_device_handle_t *devh)
 {
     uvc_stream_handle_t *strmh, *strmh_tmp;
 
-    UVC_ENTER();
     DL_FOREACH_SAFE(devh->streams, strmh, strmh_tmp) {
         uvc_stream_close(strmh);
     }
-    UVC_EXIT_VOID();
+}
+
+/** @brief Stop streaming video
+ * @ingroup streaming
+ *
+ * Closes the stream, ends threads and cancels pollers
+ *
+ * @param devh UVC device
+ */
+void uvc_stop_streaming(uvc_device_handle_t *devh,
+                        uvc_stream_ctrl_t *ctrl)
+{
+    uvc_stream_handle_t *strmh, *strmh_tmp;
+
+    DL_FOREACH_SAFE(devh->streams, strmh, strmh_tmp) {
+        if (strmh->cur_ctrl.bInterfaceNumber == ctrl->bInterfaceNumber)
+            uvc_stream_close(strmh);
+    }
 }
 
 /** @brief Stop stream.
