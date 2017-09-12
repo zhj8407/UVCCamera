@@ -29,18 +29,21 @@
 
 extern int register_uvccamera(JNIEnv *env);
 
-jint JNI_OnLoad(JavaVM *vm, void *reserved) {
+jint JNI_OnLoad(JavaVM *vm, void *reserved)
+{
 #if LOCAL_DEBUG
     LOGD("JNI_OnLoad");
 #endif
 
     JNIEnv *env;
+
     if (vm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
         return JNI_ERR;
     }
+
     // register native methods
     int result = register_uvccamera(env);
-	setVM(vm);
+    setVM(vm);
 #if LOCAL_DEBUG
     LOGD("JNI_OnLoad:finshed:result=%d", result);
 #endif

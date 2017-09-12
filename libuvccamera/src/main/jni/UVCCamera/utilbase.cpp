@@ -26,18 +26,23 @@
 
 static JavaVM *savedVm;
 
-void setVM(JavaVM *vm) {
-	savedVm = vm;
+void setVM(JavaVM *vm)
+{
+    savedVm = vm;
 }
 
-JavaVM *getVM() {
-	return savedVm;
+JavaVM *getVM()
+{
+    return savedVm;
 }
 
-JNIEnv *getEnv() {
+JNIEnv *getEnv()
+{
     JNIEnv *env = NULL;
+
     if (savedVm->GetEnv(reinterpret_cast<void **>(&env), JNI_VERSION_1_6) != JNI_OK) {
-    	env = NULL;
+        env = NULL;
     }
+
     return env;
 }
