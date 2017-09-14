@@ -49,192 +49,195 @@ import com.serenegiant.usb.USBMonitor;
 import com.serenegiant.uvccamera.R;
 
 public class CameraDialog extends DialogFragment {
-	private static final String TAG = CameraDialog.class.getSimpleName();
+    private static final String TAG = CameraDialog.class.getSimpleName();
 
-	public interface CameraDialogParent {
-		public USBMonitor getUSBMonitor();
-		public void onDialogResult(boolean canceled);
-	}
-	
-	/**
-	 * Helper method
-	 * @param parent FragmentActivity
-	 * @return
-	 */
-	public static CameraDialog showDialog(final Activity parent/* add parameters here if you need */) {
-		CameraDialog dialog = newInstance(/* add parameters here if you need */);
-		try {
-			dialog.show(parent.getFragmentManager(), TAG);
-		} catch (final IllegalStateException e) {
-			dialog = null;
-		}
-    	return dialog;
-	}
+    public interface CameraDialogParent {
+        public USBMonitor getUSBMonitor();
 
-	public static CameraDialog newInstance(/* add parameters here if you need */) {
-		final CameraDialog dialog = new CameraDialog();
-		final Bundle args = new Bundle();
-		// add parameters here if you need
-		dialog.setArguments(args);
-		return dialog;
-	}
+        public void onDialogResult(boolean canceled);
+    }
 
-	protected USBMonitor mUSBMonitor;
-	private Spinner mSpinner;
-	private DeviceListAdapter mDeviceListAdapter;
-
-	public CameraDialog(/* no arguments */) {
-		// Fragment need default constructor
-	}
-
-	@SuppressWarnings("deprecation")
-	@Override
-	public void onAttach(final Activity activity) {
-		super.onAttach(activity);
-       if (mUSBMonitor == null)
+    /**
+     * Helper method
+     *
+     * @param parent FragmentActivity
+     * @return
+     */
+    public static CameraDialog showDialog(final Activity parent/* add parameters here if you need */) {
+        CameraDialog dialog = newInstance(/* add parameters here if you need */);
         try {
-    		mUSBMonitor = ((CameraDialogParent)activity).getUSBMonitor();
-        } catch (final ClassCastException e) {
-    	} catch (final NullPointerException e) {
+            dialog.show(parent.getFragmentManager(), TAG);
+        } catch (final IllegalStateException e) {
+            dialog = null;
         }
-		if (mUSBMonitor == null) {
-        	throw new ClassCastException(activity.toString() + " must implement CameraDialogParent#getUSBController");
-		}
-	}
-
-	@Override
-    public void onCreate(Bundle savedInstanceState) {
-		super.onCreate(savedInstanceState);
-		if (savedInstanceState == null)
-			savedInstanceState = getArguments();
-	}
-
-	@Override
-	public void onSaveInstanceState(final Bundle saveInstanceState) {
-		final Bundle args = getArguments();
-		if (args != null)
-			saveInstanceState.putAll(args);
-		super.onSaveInstanceState(saveInstanceState);
-	}
-
-	@Override
-    public Dialog onCreateDialog(final Bundle savedInstanceState) {
-		final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-		builder.setView(initView());
-    	builder.setTitle(R.string.select);
-	    builder.setPositiveButton(android.R.string.ok, mOnDialogClickListener);
-	    builder.setNegativeButton(android.R.string.cancel , mOnDialogClickListener);
-	    builder.setNeutralButton(R.string.refresh, null);
-	    final Dialog dialog = builder.create();
-	    dialog.setCancelable(true);
-	    dialog.setCanceledOnTouchOutside(true);
         return dialog;
-	}
+    }
 
-	/**
-	 * create view that this fragment shows
-	 * @return
-	 */
-	private final View initView() {
-		final View rootView = getActivity().getLayoutInflater().inflate(R.layout.dialog_camera, null);
-		mSpinner = (Spinner)rootView.findViewById(R.id.spinner1);
-		final View empty = rootView.findViewById(android.R.id.empty);
-		mSpinner.setEmptyView(empty);
-		return rootView;
-	}
+    public static CameraDialog newInstance(/* add parameters here if you need */) {
+        final CameraDialog dialog = new CameraDialog();
+        final Bundle args = new Bundle();
+        // add parameters here if you need
+        dialog.setArguments(args);
+        return dialog;
+    }
+
+    protected USBMonitor mUSBMonitor;
+    private Spinner mSpinner;
+    private DeviceListAdapter mDeviceListAdapter;
+
+    public CameraDialog(/* no arguments */) {
+        // Fragment need default constructor
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    public void onAttach(final Activity activity) {
+        super.onAttach(activity);
+        if (mUSBMonitor == null)
+            try {
+                mUSBMonitor = ((CameraDialogParent) activity).getUSBMonitor();
+            } catch (final ClassCastException e) {
+            } catch (final NullPointerException e) {
+            }
+        if (mUSBMonitor == null) {
+            throw new ClassCastException(activity.toString() + " must implement CameraDialogParent#getUSBController");
+        }
+    }
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (savedInstanceState == null)
+            savedInstanceState = getArguments();
+    }
+
+    @Override
+    public void onSaveInstanceState(final Bundle saveInstanceState) {
+        final Bundle args = getArguments();
+        if (args != null)
+            saveInstanceState.putAll(args);
+        super.onSaveInstanceState(saveInstanceState);
+    }
+
+    @Override
+    public Dialog onCreateDialog(final Bundle savedInstanceState) {
+        final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+        builder.setView(initView());
+        builder.setTitle(R.string.select);
+        builder.setPositiveButton(android.R.string.ok, mOnDialogClickListener);
+        builder.setNegativeButton(android.R.string.cancel, mOnDialogClickListener);
+        builder.setNeutralButton(R.string.refresh, null);
+        final Dialog dialog = builder.create();
+        dialog.setCancelable(true);
+        dialog.setCanceledOnTouchOutside(true);
+        return dialog;
+    }
+
+    /**
+     * create view that this fragment shows
+     *
+     * @return
+     */
+    private final View initView() {
+        final View rootView = getActivity().getLayoutInflater().inflate(R.layout.dialog_camera, null);
+        mSpinner = (Spinner) rootView.findViewById(R.id.spinner1);
+        final View empty = rootView.findViewById(android.R.id.empty);
+        mSpinner.setEmptyView(empty);
+        return rootView;
+    }
 
 
-	@Override
-	public void onResume() {
-		super.onResume();
-		updateDevices();
-	    final Button button = (Button)getDialog().findViewById(android.R.id.button3);
-	    if (button != null) {
-	    	button.setOnClickListener(mOnClickListener);
-	    }
-	}
+    @Override
+    public void onResume() {
+        super.onResume();
+        updateDevices();
+        final Button button = (Button) getDialog().findViewById(android.R.id.button3);
+        if (button != null) {
+            button.setOnClickListener(mOnClickListener);
+        }
+    }
 
-	private final OnClickListener mOnClickListener = new OnClickListener() {
-		@Override
-		public void onClick(final View v) {
-			switch (v.getId()) {
-			case android.R.id.button3:
-				updateDevices();
-				break;
-			}
-		}
-	};
+    private final OnClickListener mOnClickListener = new OnClickListener() {
+        @Override
+        public void onClick(final View v) {
+            switch (v.getId()) {
+                case android.R.id.button3:
+                    updateDevices();
+                    break;
+            }
+        }
+    };
 
-	private final DialogInterface.OnClickListener mOnDialogClickListener = new DialogInterface.OnClickListener() {
-		@Override
-		public void onClick(final DialogInterface dialog, final int which) {
-			switch (which) {
-			case DialogInterface.BUTTON_POSITIVE:
-				final Object item = mSpinner.getSelectedItem();
-				if (item instanceof UsbDevice) {
-					mUSBMonitor.requestPermission((UsbDevice)item);
-					((CameraDialogParent)getActivity()).onDialogResult(false);
-				}
-				break;
-			case DialogInterface.BUTTON_NEGATIVE:
-				((CameraDialogParent)getActivity()).onDialogResult(true);
-				break;
-			}
-		}
-	};
+    private final DialogInterface.OnClickListener mOnDialogClickListener = new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(final DialogInterface dialog, final int which) {
+            switch (which) {
+                case DialogInterface.BUTTON_POSITIVE:
+                    final Object item = mSpinner.getSelectedItem();
+                    if (item instanceof UsbDevice) {
+                        mUSBMonitor.requestPermission((UsbDevice) item);
+                        ((CameraDialogParent) getActivity()).onDialogResult(false);
+                    }
+                    break;
+                case DialogInterface.BUTTON_NEGATIVE:
+                    ((CameraDialogParent) getActivity()).onDialogResult(true);
+                    break;
+            }
+        }
+    };
 
-	@Override
-	public void onCancel(final DialogInterface dialog) {
-		((CameraDialogParent)getActivity()).onDialogResult(true);
-		super.onCancel(dialog);
-	}
+    @Override
+    public void onCancel(final DialogInterface dialog) {
+        ((CameraDialogParent) getActivity()).onDialogResult(true);
+        super.onCancel(dialog);
+    }
 
-	public void updateDevices() {
+    public void updateDevices() {
 //		mUSBMonitor.dumpDevices();
-		final List<DeviceFilter> filter = DeviceFilter.getDeviceFilters(getActivity(), R.xml.device_filter);
-		mDeviceListAdapter = new DeviceListAdapter(getActivity(), mUSBMonitor.getDeviceList(filter.get(0)));
-		mSpinner.setAdapter(mDeviceListAdapter);
-	}
+        final List<DeviceFilter> filter = DeviceFilter.getDeviceFilters(getActivity(), R.xml.device_filter);
+        mDeviceListAdapter = new DeviceListAdapter(getActivity(), mUSBMonitor.getDeviceList(filter.get(0)));
+        mSpinner.setAdapter(mDeviceListAdapter);
+    }
 
-	private static final class DeviceListAdapter extends BaseAdapter {
+    private static final class DeviceListAdapter extends BaseAdapter {
 
-		private final LayoutInflater mInflater;
-		private final List<UsbDevice> mList;
+        private final LayoutInflater mInflater;
+        private final List<UsbDevice> mList;
 
-		public DeviceListAdapter(final Context context, final List<UsbDevice>list) {
-			mInflater = LayoutInflater.from(context);
-			mList = list != null ? list : new ArrayList<UsbDevice>();
-		}
+        public DeviceListAdapter(final Context context, final List<UsbDevice> list) {
+            mInflater = LayoutInflater.from(context);
+            mList = list != null ? list : new ArrayList<UsbDevice>();
+        }
 
-		@Override
-		public int getCount() {
-			return mList.size();
-		}
+        @Override
+        public int getCount() {
+            return mList.size();
+        }
 
-		@Override
-		public UsbDevice getItem(final int position) {
-			if ((position >= 0) && (position < mList.size()))
-				return mList.get(position);
-			else
-				return null;
-		}
+        @Override
+        public UsbDevice getItem(final int position) {
+            if ((position >= 0) && (position < mList.size()))
+                return mList.get(position);
+            else
+                return null;
+        }
 
-		@Override
-		public long getItemId(final int position) {
-			return position;
-		}
+        @Override
+        public long getItemId(final int position) {
+            return position;
+        }
 
-		@Override
-		public View getView(final int position, View convertView, final ViewGroup parent) {
-			if (convertView == null) {
-				convertView = mInflater.inflate(R.layout.listitem_device, parent, false);
-			}
-			if (convertView instanceof CheckedTextView) {
-				final UsbDevice device = getItem(position);
-				((CheckedTextView)convertView).setText(
-					String.format("UVC Camera:(%x:%x:%s)", device.getVendorId(), device.getProductId(), device.getDeviceName()));
-			}
-			return convertView;
-		}
-	}
+        @Override
+        public View getView(final int position, View convertView, final ViewGroup parent) {
+            if (convertView == null) {
+                convertView = mInflater.inflate(R.layout.listitem_device, parent, false);
+            }
+            if (convertView instanceof CheckedTextView) {
+                final UsbDevice device = getItem(position);
+                ((CheckedTextView) convertView).setText(
+                        String.format("UVC Camera:(%x:%x:%s)", device.getVendorId(), device.getProductId(), device.getDeviceName()));
+            }
+            return convertView;
+        }
+    }
 }
