@@ -62,12 +62,14 @@ public final class DeviceFilter {
     public final boolean isExclude;
 
     public DeviceFilter(final int vid, final int pid, final int clasz, final int subclass,
-                        final int protocol, final String manufacturer, final String product, final String serialNum) {
+            final int protocol, final String manufacturer, final String product,
+            final String serialNum) {
         this(vid, pid, clasz, subclass, protocol, manufacturer, product, serialNum, false);
     }
 
     public DeviceFilter(final int vid, final int pid, final int clasz, final int subclass,
-                        final int protocol, final String manufacturer, final String product, final String serialNum, final boolean isExclude) {
+            final int protocol, final String manufacturer, final String product,
+            final String serialNum, final boolean isExclude) {
         mVendorId = vid;
         mProductId = pid;
         mClass = clasz;
@@ -77,7 +79,8 @@ public final class DeviceFilter {
         mProductName = product;
         mSerialNumber = serialNum;
         this.isExclude = isExclude;
-/*		Log.i(TAG, String.format("vendorId=0x%04x,productId=0x%04x,class=0x%02x,subclass=0x%02x,protocol=0x%02x",
+/*		Log.i(TAG, String.format("vendorId=0x%04x,productId=0x%04x,class=0x%02x,subclass=0x%02x,
+protocol=0x%02x",
             mVendorId, mProductId, mClass, mSubclass, mProtocol)); */
     }
 
@@ -95,18 +98,16 @@ public final class DeviceFilter {
         mProductName = null;        // device.getProductName();
         mSerialNumber = null;        // device.getSerialNumber();
         this.isExclude = isExclude;
-/*		Log.i(TAG, String.format("vendorId=0x%04x,productId=0x%04x,class=0x%02x,subclass=0x%02x,protocol=0x%02x",
+/*		Log.i(TAG, String.format("vendorId=0x%04x,productId=0x%04x,class=0x%02x,subclass=0x%02x,
+protocol=0x%02x",
 			mVendorId, mProductId, mClass, mSubclass, mProtocol)); */
     }
 
     /**
      * 指定したxmlリソースからDeviceFilterリストを生成する
-     *
-     * @param context
-     * @param deviceFilterXmlId
-     * @return
      */
-    public static List<DeviceFilter> getDeviceFilters(final Context context, final int deviceFilterXmlId) {
+    public static List<DeviceFilter> getDeviceFilters(final Context context,
+            final int deviceFilterXmlId) {
         final XmlPullParser parser = context.getResources().getXml(deviceFilterXmlId);
         final List<DeviceFilter> deviceFilters = new ArrayList<DeviceFilter>();
         try {
@@ -132,20 +133,16 @@ public final class DeviceFilter {
     /**
      * read as integer values with default value from xml(w/o exception throws)
      * resource integer id is also resolved into integer
-     *
-     * @param parser
-     * @param namespace
-     * @param name
-     * @param defaultValue
-     * @return
      */
-    private static final int getAttributeInteger(final Context context, final XmlPullParser parser, final String namespace, final String name, final int defaultValue) {
+    private static final int getAttributeInteger(final Context context, final XmlPullParser parser,
+            final String namespace, final String name, final int defaultValue) {
         int result = defaultValue;
         try {
             String v = parser.getAttributeValue(namespace, name);
             if (!TextUtils.isEmpty(v) && v.startsWith("@")) {
                 final String r = v.substring(1);
-                final int resId = context.getResources().getIdentifier(r, null, context.getPackageName());
+                final int resId = context.getResources().getIdentifier(r, null,
+                        context.getPackageName());
                 if (resId > 0) {
                     result = context.getResources().getInteger(resId);
                 }
@@ -173,15 +170,10 @@ public final class DeviceFilter {
      * read as boolean values with default value from xml(w/o exception throws)
      * resource boolean id is also resolved into boolean
      * if the value is zero, return false, if the value is non-zero integer, return true
-     *
-     * @param context
-     * @param parser
-     * @param namespace
-     * @param name
-     * @param defaultValue
-     * @return
      */
-    private static final boolean getAttributeBoolean(final Context context, final XmlPullParser parser, final String namespace, final String name, final boolean defaultValue) {
+    private static final boolean getAttributeBoolean(final Context context,
+            final XmlPullParser parser, final String namespace, final String name,
+            final boolean defaultValue) {
         boolean result = defaultValue;
         try {
             String v = parser.getAttributeValue(namespace, name);
@@ -191,7 +183,8 @@ public final class DeviceFilter {
                 result = false;
             } else if (!TextUtils.isEmpty(v) && v.startsWith("@")) {
                 final String r = v.substring(1);
-                final int resId = context.getResources().getIdentifier(r, null, context.getPackageName());
+                final int resId = context.getResources().getIdentifier(r, null,
+                        context.getPackageName());
                 if (resId > 0) {
                     result = context.getResources().getBoolean(resId);
                 }
@@ -219,24 +212,23 @@ public final class DeviceFilter {
     /**
      * read as String attribute with default value from xml(w/o exception throws)
      * resource string id is also resolved into string
-     *
-     * @param parser
-     * @param namespace
-     * @param name
-     * @param defaultValue
-     * @return
      */
-    private static final String getAttributeString(final Context context, final XmlPullParser parser, final String namespace, final String name, final String defaultValue) {
+    private static final String getAttributeString(final Context context,
+            final XmlPullParser parser, final String namespace, final String name,
+            final String defaultValue) {
         String result = defaultValue;
         try {
             result = parser.getAttributeValue(namespace, name);
-            if (result == null)
+            if (result == null) {
                 result = defaultValue;
+            }
             if (!TextUtils.isEmpty(result) && result.startsWith("@")) {
                 final String r = result.substring(1);
-                final int resId = context.getResources().getIdentifier(r, null, context.getPackageName());
-                if (resId > 0)
+                final int resId = context.getResources().getIdentifier(r, null,
+                        context.getPackageName());
+                if (resId > 0) {
                     result = context.getResources().getString(resId);
+                }
             }
         } catch (final NotFoundException e) {
             result = defaultValue;
@@ -271,24 +263,31 @@ public final class DeviceFilter {
                     vendorId = getAttributeInteger(context, parser, null, "vendor-id", -1);
                     if (vendorId == -1) {
                         vendorId = getAttributeInteger(context, parser, null, "vendorId", -1);
-                        if (vendorId == -1)
+                        if (vendorId == -1) {
                             vendorId = getAttributeInteger(context, parser, null, "venderId", -1);
+                        }
                     }
                     productId = getAttributeInteger(context, parser, null, "product-id", -1);
-                    if (productId == -1)
+                    if (productId == -1) {
                         productId = getAttributeInteger(context, parser, null, "productId", -1);
+                    }
                     deviceClass = getAttributeInteger(context, parser, null, "class", -1);
                     deviceSubclass = getAttributeInteger(context, parser, null, "subclass", -1);
                     deviceProtocol = getAttributeInteger(context, parser, null, "protocol", -1);
-                    manufacturerName = getAttributeString(context, parser, null, "manufacturer-name", null);
-                    if (TextUtils.isEmpty(manufacturerName))
-                        manufacturerName = getAttributeString(context, parser, null, "manufacture", null);
+                    manufacturerName = getAttributeString(context, parser, null,
+                            "manufacturer-name", null);
+                    if (TextUtils.isEmpty(manufacturerName)) {
+                        manufacturerName = getAttributeString(context, parser, null, "manufacture",
+                                null);
+                    }
                     productName = getAttributeString(context, parser, null, "product-name", null);
-                    if (TextUtils.isEmpty(productName))
+                    if (TextUtils.isEmpty(productName)) {
                         productName = getAttributeString(context, parser, null, "product", null);
+                    }
                     serialNumber = getAttributeString(context, parser, null, "serial-number", null);
-                    if (TextUtils.isEmpty(serialNumber))
+                    if (TextUtils.isEmpty(serialNumber)) {
                         serialNumber = getAttributeString(context, parser, null, "serial", null);
+                    }
                     exclude = getAttributeBoolean(context, parser, null, "exclude", false);
                 } else if (eventType == XmlPullParser.END_TAG) {
                     if (hasValue) {
@@ -304,7 +303,7 @@ public final class DeviceFilter {
     }
 
 /*	public void write(XmlSerializer serializer) throws IOException {
-		serializer.startTag(null, "usb-device");
+        serializer.startTag(null, "usb-device");
 		if (mVendorId != -1) {
 			serializer
 					.attribute(null, "vendor-id", Integer.toString(mVendorId));
@@ -338,23 +337,16 @@ public final class DeviceFilter {
     /**
      * 指定したクラス・サブクラス・プロトコルがこのDeviceFilterとマッチするかどうかを返す
      * mExcludeフラグは別途#isExcludeか自前でチェックすること
-     *
-     * @param clasz
-     * @param subclass
-     * @param protocol
-     * @return
      */
     private boolean matches(final int clasz, final int subclass, final int protocol) {
         return ((mClass == -1 || clasz == mClass)
-                && (mSubclass == -1 || subclass == mSubclass) && (mProtocol == -1 || protocol == mProtocol));
+                && (mSubclass == -1 || subclass == mSubclass) && (mProtocol == -1
+                || protocol == mProtocol));
     }
 
     /**
      * 指定したUsbDeviceがこのDeviceFilterにマッチするかどうかを返す
      * mExcludeフラグは別途#isExcludeか自前でチェックすること
-     *
-     * @param device
-     * @return
      */
     public boolean matches(final UsbDevice device) {
         if (mVendorId != -1 && device.getVendorId() != mVendorId) {
@@ -380,7 +372,8 @@ public final class DeviceFilter {
 			return false; */
 
         // check device class/subclass/protocol
-        if (matches(device.getDeviceClass(), device.getDeviceSubclass(), device.getDeviceProtocol())) {
+        if (matches(device.getDeviceClass(), device.getDeviceSubclass(),
+                device.getDeviceProtocol())) {
             return true;
         }
 
@@ -388,7 +381,8 @@ public final class DeviceFilter {
         final int count = device.getInterfaceCount();
         for (int i = 0; i < count; i++) {
             final UsbInterface intf = device.getInterface(i);
-            if (matches(intf.getInterfaceClass(), intf.getInterfaceSubclass(), intf.getInterfaceProtocol())) {
+            if (matches(intf.getInterfaceClass(), intf.getInterfaceSubclass(),
+                    intf.getInterfaceProtocol())) {
                 return true;
             }
         }
@@ -398,9 +392,6 @@ public final class DeviceFilter {
 
     /**
      * このDeviceFilterに一致してかつmExcludeがtrueならtrueを返す
-     *
-     * @param device
-     * @return
      */
     public boolean isExclude(final UsbDevice device) {
         return isExclude && matches(device);
@@ -408,9 +399,6 @@ public final class DeviceFilter {
 
     /**
      * これって要らんかも, equalsでできる気が
-     *
-     * @param f
-     * @return
      */
     public boolean matches(final DeviceFilter f) {
         if (isExclude != f.isExclude) {

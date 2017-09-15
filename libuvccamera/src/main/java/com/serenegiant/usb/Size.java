@@ -55,11 +55,9 @@ public class Size implements Parcelable {
      *
      * @param _type       native側のraw_format_tの値, ただし9999は静止画
      * @param _frame_type native側のraw_frame_tの値
-     * @param _index
-     * @param _width
-     * @param _height
      */
-    public Size(final int _type, final int _frame_type, final int _index, final int _width, final int _height) {
+    public Size(final int _type, final int _frame_type, final int _index, final int _width,
+            final int _height) {
         type = _type;
         frame_type = _frame_type;
         index = _index;
@@ -74,15 +72,12 @@ public class Size implements Parcelable {
     /**
      * コンストラクタ
      *
-     * @param _type          native側のraw_format_tの値, ただし9999は静止画
-     * @param _frame_type    native側のraw_frame_tの値
-     * @param _index
-     * @param _width
-     * @param _height
-     * @param _min_intervals
-     * @param _max_intervals
+     * @param _type       native側のraw_format_tの値, ただし9999は静止画
+     * @param _frame_type native側のraw_frame_tの値
      */
-    public Size(final int _type, final int _frame_type, final int _index, final int _width, final int _height, final int _min_intervals, final int _max_intervals, final int _step) {
+    public Size(final int _type, final int _frame_type, final int _index, final int _width,
+            final int _height, final int _min_intervals, final int _max_intervals,
+            final int _step) {
         type = _type;
         frame_type = _frame_type;
         index = _index;
@@ -102,12 +97,9 @@ public class Size implements Parcelable {
      *
      * @param _type       native側のraw_format_tの値, ただし9999は静止画
      * @param _frame_type native側のraw_frame_tの値
-     * @param _index
-     * @param _width
-     * @param _height
-     * @param _intervals
      */
-    public Size(final int _type, final int _frame_type, final int _index, final int _width, final int _height, final int[] _intervals) {
+    public Size(final int _type, final int _frame_type, final int _index, final int _width,
+            final int _height, final int[] _intervals) {
         type = _type;
         frame_type = _frame_type;
         index = _index;
@@ -128,8 +120,6 @@ public class Size implements Parcelable {
 
     /**
      * コピーコンストラクタ
-     *
-     * @param other
      */
     public Size(final Size other) {
         type = other.type;
@@ -294,7 +284,8 @@ public class Size implements Parcelable {
             frame_rate = getCurrentFrameRate();
         } catch (final Exception e) {
         }
-        return String.format(Locale.US, "Size(%dx%d@%4.1f,type:%d,frame:%d,index:%d,%s)", width, height, frame_rate, type, frame_type, index, frameRates);
+        return String.format(Locale.US, "Size(%dx%d@%4.1f,type:%d,frame:%d,index:%d,%s)", width,
+                height, frame_rate, type, frame_type, index, frameRates);
     }
 
     public static final Creator<Size> CREATOR = new Parcelable.Creator<Size>() {

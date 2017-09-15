@@ -80,7 +80,7 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int min_fps, in
 {
     ENTER();
 
-    int result = 0;
+    int result = -1;
 
     if ((requestWidth != width) || (requestHeight != height) || (requestMode != mode)) {
         requestWidth = width;
@@ -91,10 +91,12 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int min_fps, in
         requestProfile = profile;
         requestBandwidth = bandwidth;
 
-        uvc_stream_ctrl_t ctrl;
-        result = uvc_get_stream_ctrl_format_size_fps(mDeviceHandle, &ctrl,
-                 !requestMode ? UVC_FRAME_FORMAT_YUYV : UVC_FRAME_FORMAT_MJPEG,
-                 requestWidth, requestHeight, requestMinFps, requestMaxFps);
+        if (requestMode == 2) {
+            uvc_stream_ctrl_t ctrl;
+            result = uvc_get_stream_ctrl_format_size_fps(mDeviceHandle, &ctrl,
+                     UVC_FRAME_FORMAT_H_264,
+                     requestWidth, requestHeight, requestMinFps, requestMaxFps);
+        }
     }
 
     RETURN(result, int);

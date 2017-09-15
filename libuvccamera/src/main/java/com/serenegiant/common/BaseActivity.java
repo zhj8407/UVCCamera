@@ -94,9 +94,6 @@ public class BaseActivity extends Activity
 
     /**
      * UIスレッドでRunnableを実行するためのヘルパーメソッド
-     *
-     * @param task
-     * @param duration
      */
     public final void runOnUiThread(final Runnable task, final long duration) {
         if (task == null) return;
@@ -114,8 +111,6 @@ public class BaseActivity extends Activity
 
     /**
      * UIスレッド上で指定したRunnableが実行待ちしていれば実行待ちを解除する
-     *
-     * @param task
      */
     public final void removeFromUiThread(final Runnable task) {
         if (task == null) return;
@@ -125,9 +120,6 @@ public class BaseActivity extends Activity
     /**
      * ワーカースレッド上で指定したRunnableを実行する
      * 未実行の同じRunnableがあればキャンセルされる(後から指定した方のみ実行される)
-     *
-     * @param task
-     * @param delayMillis
      */
     protected final synchronized void queueEvent(final Runnable task, final long delayMillis) {
         if ((task == null) || (mWorkerHandler == null)) return;
@@ -147,8 +139,6 @@ public class BaseActivity extends Activity
 
     /**
      * 指定したRunnableをワーカースレッド上で実行予定であればキャンセルする
-     *
-     * @param task
      */
     protected final synchronized void removeEvent(final Runnable task) {
         if (task == null) return;
@@ -164,8 +154,6 @@ public class BaseActivity extends Activity
 
     /**
      * Toastでメッセージを表示
-     *
-     * @param msg
      */
     protected void showToast(@StringRes final int msg, final Object... args) {
         removeFromUiThread(mShowToastTask);
@@ -224,15 +212,11 @@ public class BaseActivity extends Activity
 
     /**
      * MessageDialogFragmentメッセージダイアログからのコールバックリスナー
-     *
-     * @param dialog
-     * @param requestCode
-     * @param permissions
-     * @param result
      */
     @SuppressLint("NewApi")
     @Override
-    public void onMessageDialogResult(final MessageDialogFragment dialog, final int requestCode, final String[] permissions, final boolean result) {
+    public void onMessageDialogResult(final MessageDialogFragment dialog, final int requestCode,
+            final String[] permissions, final boolean result) {
         if (result) {
             // メッセージダイアログでOKを押された時はパーミッション要求する
             if (BuildCheck.isMarshmallow()) {
@@ -242,35 +226,32 @@ public class BaseActivity extends Activity
         }
         // メッセージダイアログでキャンセルされた時とAndroid6でない時は自前でチェックして#checkPermissionResultを呼び出す
         for (final String permission : permissions) {
-            checkPermissionResult(requestCode, permission, PermissionCheck.hasPermission(this, permission));
+            checkPermissionResult(requestCode, permission,
+                    PermissionCheck.hasPermission(this, permission));
         }
     }
 
     /**
      * パーミッション要求結果を受け取るためのメソッド
-     *
-     * @param requestCode
-     * @param permissions
-     * @param grantResults
      */
     @Override
-    public void onRequestPermissionsResult(final int requestCode, @NonNull final String[] permissions, @NonNull final int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);    // 何もしてないけど一応呼んどく
+    public void onRequestPermissionsResult(final int requestCode,
+            @NonNull final String[] permissions, @NonNull final int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions,
+                grantResults);    // 何もしてないけど一応呼んどく
         final int n = Math.min(permissions.length, grantResults.length);
         for (int i = 0; i < n; i++) {
-            checkPermissionResult(requestCode, permissions[i], grantResults[i] == PackageManager.PERMISSION_GRANTED);
+            checkPermissionResult(requestCode, permissions[i],
+                    grantResults[i] == PackageManager.PERMISSION_GRANTED);
         }
     }
 
     /**
      * パーミッション要求の結果をチェック
      * ここではパーミッションを取得できなかった時にToastでメッセージ表示するだけ
-     *
-     * @param requestCode
-     * @param permission
-     * @param result
      */
-    protected void checkPermissionResult(final int requestCode, final String permission, final boolean result) {
+    protected void checkPermissionResult(final int requestCode, final String permission,
+            final boolean result) {
         // パーミッションがないときにはメッセージを表示する
         if (!result && (permission != null)) {
             if (Manifest.permission.RECORD_AUDIO.equals(permission)) {

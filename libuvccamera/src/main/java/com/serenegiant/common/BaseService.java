@@ -73,9 +73,6 @@ public abstract class BaseService extends Service {
 
     /**
      * UIスレッドでRunnableを実行するためのヘルパーメソッド
-     *
-     * @param task
-     * @param duration
      */
     public final void runOnUiThread(final Runnable task, final long duration) {
         if (task == null) return;
@@ -93,8 +90,6 @@ public abstract class BaseService extends Service {
 
     /**
      * UIスレッド上で指定したRunnableが実行待ちしていれば実行待ちを解除する
-     *
-     * @param task
      */
     public final void removeFromUiThread(final Runnable task) {
         if (task == null) return;
@@ -104,9 +99,6 @@ public abstract class BaseService extends Service {
     /**
      * ワーカースレッド上で指定したRunnableを実行する
      * 未実行の同じRunnableがあればキャンセルされる(後から指定した方のみ実行される)
-     *
-     * @param task
-     * @param delayMillis
      */
     protected final synchronized void queueEvent(final Runnable task, final long delayMillis) {
         if ((task == null) || (mWorkerHandler == null)) return;
@@ -126,8 +118,6 @@ public abstract class BaseService extends Service {
 
     /**
      * 指定したRunnableをワーカースレッド上で実行予定であればキャンセルする
-     *
-     * @param task
      */
     protected final synchronized void removeEvent(final Runnable task) {
         if (task == null) return;
