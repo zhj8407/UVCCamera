@@ -614,6 +614,11 @@ abstract class AbstractUVCCameraHandler extends Handler {
 					videoEncoder.encode(frame);
 				}
 			}
+
+			@Override
+			public void onRecordFrame(final ByteBuffer frame) {
+
+			}
 		};
 
 		public void handleUpdateMedia(final String path) {

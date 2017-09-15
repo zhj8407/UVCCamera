@@ -1068,11 +1068,18 @@ public class UVCCamera {
 
     private static final native int nativeSetPreviewSize(final long id_camera, final int width, final int height, final int min_fps, final int max_fps, final int mode, final float bandwidth);
 
+    private static final native int nativeSetRecordSize(final long id_camera, final int width, final int height, final int profile,
+                                                        final int min_fps, final int max_fps, final int mode, final float bandwidth);
+
     private static final native String nativeGetSupportedSize(final long id_camera);
 
     private static final native int nativeStartPreview(final long id_camera);
 
     private static final native int nativeStopPreview(final long id_camera);
+
+    private static final native int nativeStartRecord(final long id_camera);
+
+    private static final native int nativeStopRecord(final long id_camera);
 
     private static final native int nativeSetPreviewDisplay(final long id_camera, final Surface surface);
 

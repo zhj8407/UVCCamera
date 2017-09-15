@@ -190,10 +190,13 @@ public:
 
     char *getSupportedSize();
     int setPreviewSize(int width, int height, int min_fps, int max_fps, int mode, float bandwidth = DEFAULT_BANDWIDTH);
+    int setRecordSize(int width, int height, int profile, int min_fps, int max_fps, int mode, float bandwidth = DEFAULT_BANDWIDTH);
     int setPreviewDisplay(ANativeWindow *preview_window);
     int setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pixel_format);
     int startPreview();
     int stopPreview();
+    int startRecord();
+    int stopRecord();
     int setCaptureDisplay(ANativeWindow *capture_window);
 
     int getCtrlSupports(uint64_t *supports);
