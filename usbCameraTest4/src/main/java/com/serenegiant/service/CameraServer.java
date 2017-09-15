@@ -467,7 +467,7 @@ public final class CameraServer extends Handler {
 		}
 
 		public void handleStartRecording() {
-			if (DEBUG) Log.d(TAG_THREAD, "handleStartRecording:");
+			if (DEBUG) Log.d(TAG_THREAD, "handleStartCapture:");
 			try {
 				if ((mUVCCamera == null) || (mMuxer != null)) return;
 				mMuxer = new MediaMuxerWrapper(".mp4");	// if you record audio only, ".m4a" is also OK.
@@ -485,7 +485,7 @@ public final class CameraServer extends Handler {
 		}
 
 		public void handleStopRecording() {
-			if (DEBUG) Log.d(TAG_THREAD, "handleStopRecording:mMuxer=" + mMuxer);
+			if (DEBUG) Log.d(TAG_THREAD, "handleStopCapture:mMuxer=" + mMuxer);
 			if (mMuxer != null) {
 				synchronized (mSync) {
 					if (mUVCCamera != null) {

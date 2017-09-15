@@ -259,6 +259,20 @@ static jint nativeSetPreviewSize(JNIEnv *env, jobject thiz,
     RETURN(JNI_ERR, jint);
 }
 
+static jint nativeSetRecordSize(JNIEnv *env, jobject thiz,
+                                 ID_TYPE id_camera, jint width, jint height, jint profile, jint min_fps, jint max_fps, jint mode, jfloat bandwidth)
+{
+
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        return camera->setRecordSize(width, height, profile, min_fps, max_fps, mode, bandwidth);
+    }
+
+    RETURN(JNI_ERR, jint);
+}
+
 static jint nativeStartPreview(JNIEnv *env, jobject thiz,
                                ID_TYPE id_camera)
 {
@@ -284,6 +298,36 @@ static jint nativeStopPreview(JNIEnv *env, jobject thiz,
 
     if (LIKELY(camera)) {
         result = camera->stopPreview();
+    }
+
+    RETURN(result, jint);
+}
+
+static jint nativeStartRecord(JNIEnv *env, jobject thiz,
+                               ID_TYPE id_camera)
+{
+
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        return camera->startRecord();
+    }
+
+    RETURN(JNI_ERR, jint);
+}
+
+// プレビューを停止
+static jint nativeStopRecord(JNIEnv *env, jobject thiz,
+                              ID_TYPE id_camera)
+{
+
+    jint result = JNI_ERR;
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        result = camera->stopRecord();
     }
 
     RETURN(result, jint);
@@ -2463,9 +2507,12 @@ static JNINativeMethod methods[] = {
     { "nativeSetButtonCallback",		"(JLcom/serenegiant/usb/IButtonCallback;)I", (void *) nativeSetButtonCallback },
 
     { "nativeGetSupportedSize",			"(J)Ljava/lang/String;", (void *) nativeGetSupportedSize },
-    { "nativeSetPreviewSize",			"(JIIIIIF)I", (void *) nativeSetPreviewSize },
+    { "nativeSetPreviewSize",           "(JIIIIIF)I", (void *) nativeSetPreviewSize },
+    { "nativeSetRecordSize",			"(JIIIIIIF)I", (void *) nativeSetRecordSize },
     { "nativeStartPreview",				"(J)I", (void *) nativeStartPreview },
     { "nativeStopPreview",				"(J)I", (void *) nativeStopPreview },
+    { "nativeStartRecord",             "(J)I", (void *) nativeStartRecord },
+    { "nativeStopRecord",              "(J)I", (void *) nativeStopRecord },
     { "nativeSetPreviewDisplay",		"(JLandroid/view/Surface;)I", (void *) nativeSetPreviewDisplay },
     { "nativeSetFrameCallback",			"(JLcom/serenegiant/usb/IFrameCallback;I)I", (void *) nativeSetFrameCallback },
 

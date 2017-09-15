@@ -25,13 +25,11 @@ package com.serenegiant.usbcameratest6;
 
 import java.io.File;
 
-import android.graphics.SurfaceTexture;
 import android.hardware.usb.UsbDevice;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.view.Surface;
-import android.view.TextureView;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.View.OnLongClickListener;
@@ -50,7 +48,6 @@ import com.serenegiant.usb.USBMonitor.UsbControlBlock;
 import com.serenegiant.usb.UVCCamera;
 import com.serenegiant.usbcameracommon.UVCCameraHandlerMultiSurface;
 import com.serenegiant.widget.CameraViewInterface;
-import com.serenegiant.widget.UVCCameraTextureView;
 
 public final class MainActivity extends BaseActivity implements CameraDialog.CameraDialogParent {
 	private static final boolean DEBUG = true;	// TODO set false on release
@@ -126,9 +123,9 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 	protected void onStop() {
 		if (DEBUG) Log.v(TAG, "onStop:");
 		synchronized (mSync) {
-//			mCameraHandler.stopRecording();
+//			mCameraHandler.stopCapture();
 //			mCameraHandler.stopPreview();
-    		mCameraHandler.close();	// #close include #stopRecording and #stopPreview
+    		mCameraHandler.close();	// #close include #stopCapture and #stopPreview
 			mUSBMonitor.unregister();
 		}
 		if (mUVCCameraViewL != null) {
@@ -174,10 +171,10 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 						if (checkPermissionWriteExternalStorage() && checkPermissionAudio()) {
 							if (!mCameraHandler.isRecording()) {
 								mCaptureButton.setColorFilter(0xffff0000);	// turn red
-								mCameraHandler.startRecording();
+								mCameraHandler.startCapture();
 							} else {
 								mCaptureButton.setColorFilter(0);	// return to default color
-								mCameraHandler.stopRecording();
+								mCameraHandler.stopCapture();
 							}
 						}
 					}

@@ -173,10 +173,10 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 					if (checkPermissionWriteExternalStorage() && checkPermissionAudio()) {
 						if (!mCameraHandler.isRecording()) {
 							mCaptureButton.setColorFilter(0xffff0000);	// turn red
-							mCameraHandler.startRecording();
+							mCameraHandler.startCapture();
 						} else {
 							mCaptureButton.setColorFilter(0);	// return to default color
-							mCameraHandler.stopRecording();
+							mCameraHandler.stopCapture();
 						}
 					}
 				}
@@ -355,7 +355,7 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 //		}
 //
 //		public void stopPreview() {
-//			stopRecording();
+//			stopCapture();
 //			final CameraThread thread = mWeakThread.get();
 //			if (thread == null) return;
 //			synchronized (thread.mSync) {
@@ -374,11 +374,11 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 //			sendEmptyMessage(MSG_CAPTURE_STILL);
 //		}
 //
-//		public void startRecording() {
+//		public void startCapture() {
 //			sendEmptyMessage(MSG_CAPTURE_START);
 //		}
 //
-//		public void stopRecording() {
+//		public void stopCapture() {
 //			sendEmptyMessage(MSG_CAPTURE_STOP);
 //		}
 //
@@ -403,10 +403,10 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 //				thread.handleCaptureStill();
 //				break;
 //			case MSG_CAPTURE_START:
-//				thread.handleStartRecording();
+//				thread.handleStartCapture();
 //				break;
 //			case MSG_CAPTURE_STOP:
-//				thread.handleStopRecording();
+//				thread.handleStopCapture();
 //				break;
 //			case MSG_MEDIA_UPDATE:
 //				thread.handleUpdateMedia((String)msg.obj);
@@ -488,7 +488,7 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 //
 //			public void handleClose() {
 //				if (DEBUG) Log.v(TAG_THREAD, "handleClose:");
-//				handleStopRecording();
+//				handleStopCapture();
 //				if (mUVCCamera != null) {
 //					mUVCCamera.stopPreview();
 //					mUVCCamera.destroy();
@@ -552,8 +552,8 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 //				}
 //			}
 //
-//			public void handleStartRecording() {
-//				if (DEBUG) Log.v(TAG_THREAD, "handleStartRecording:");
+//			public void handleStartCapture() {
+//				if (DEBUG) Log.v(TAG_THREAD, "handleStartCapture:");
 //				try {
 //					if ((mUVCCamera == null) || (mMuxer != null)) return;
 //					mMuxer = new MediaMuxerWrapper(".mp4");	// if you record audio only, ".m4a" is also OK.
@@ -564,18 +564,18 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 //						new MediaAudioEncoder(mMuxer, mMediaEncoderListener);
 //					}
 //					mMuxer.prepare();
-//					mMuxer.startRecording();
+//					mMuxer.startCapture();
 //					mUVCCamera.setFrameCallback(mIFrameCallback, UVCCamera.PIXEL_FORMAT_NV21);
 //				} catch (final IOException e) {
 //					Log.e(TAG, "startCapture:", e);
 //				}
 //			}
 //
-//			public void handleStopRecording() {
-//				if (DEBUG) Log.v(TAG_THREAD, "handleStopRecording:mMuxer=" + mMuxer);
+//			public void handleStopCapture() {
+//				if (DEBUG) Log.v(TAG_THREAD, "handleStopCapture:mMuxer=" + mMuxer);
 //				mVideoEncoder = null;
 //				if (mMuxer != null) {
-//					mMuxer.stopRecording();
+//					mMuxer.stopCapture();
 //					mMuxer = null;
 //					// you should not wait here
 //				}

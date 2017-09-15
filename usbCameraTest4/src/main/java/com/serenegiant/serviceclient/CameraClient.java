@@ -436,7 +436,7 @@ public class CameraClient implements ICameraClient {
 			}
 
 			public void handleStartRecording() {
-				if (DEBUG) Log.v(TAG, "handleStartRecording:");
+				if (DEBUG) Log.v(TAG, "handleStartCapture:");
 				final IUVCService service = mParent.getService();
 				if (service != null)
 				try {
@@ -444,12 +444,12 @@ public class CameraClient implements ICameraClient {
 						service.startRecording(mServiceId);
 					}
 				} catch (final RemoteException e) {
-					if (DEBUG) Log.e(TAG_CAMERA, "handleStartRecording:", e);
+					if (DEBUG) Log.e(TAG_CAMERA, "handleStartCapture:", e);
 				}
 			}
 
 			public void handleStopRecording() {
-				if (DEBUG) Log.v(TAG, "handleStopRecording:");
+				if (DEBUG) Log.v(TAG, "handleStopCapture:");
 				final IUVCService service = mParent.getService();
 				if (service != null)
 				try {
@@ -457,7 +457,7 @@ public class CameraClient implements ICameraClient {
 						service.stopRecording(mServiceId);
 					}
 				} catch (final RemoteException e) {
-					if (DEBUG) Log.e(TAG_CAMERA, "handleStopRecording:", e);
+					if (DEBUG) Log.e(TAG_CAMERA, "handleStopCapture:", e);
 				}
 			}
 

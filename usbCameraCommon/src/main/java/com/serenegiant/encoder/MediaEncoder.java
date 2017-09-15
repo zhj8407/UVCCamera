@@ -181,7 +181,7 @@ public abstract class MediaEncoder implements Runnable {
    /*package*/ abstract void prepare() throws IOException;
 
 	/*package*/ void startRecording() {
-   	if (DEBUG) Log.v(TAG, "startRecording");
+   	if (DEBUG) Log.v(TAG, "startCapture");
 		synchronized (mSync) {
 			mIsCapturing = true;
 			mRequestStop = false;
@@ -193,7 +193,7 @@ public abstract class MediaEncoder implements Runnable {
     * the method to request stop encoding
     */
 	/*package*/ void stopRecording() {
-		if (DEBUG) Log.v(TAG, "stopRecording");
+		if (DEBUG) Log.v(TAG, "stopCapture");
 		synchronized (mSync) {
 			if (!mIsCapturing || mRequestStop) {
 				return;

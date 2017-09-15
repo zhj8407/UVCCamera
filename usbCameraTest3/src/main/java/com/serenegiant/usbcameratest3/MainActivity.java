@@ -76,7 +76,7 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
      * {@link UVCCamera#setPreviewSize(int, int, int)} throw exception
      * 0:YUYV, other:MJPEG
      */
-    private static final int PREVIEW_MODE = 1;
+    private static final int PREVIEW_MODE = 0;
 
 	/**
 	 * for accessing USB
@@ -170,10 +170,10 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 					if (checkPermissionWriteExternalStorage() && checkPermissionAudio()) {
 						if (!mCameraHandler.isRecording()) {
 							mCaptureButton.setColorFilter(0xffff0000);	// turn red
-							mCameraHandler.startRecording();
+							mCameraHandler.startCapture();
 						} else {
 							mCaptureButton.setColorFilter(0);	// return to default color
-							mCameraHandler.stopRecording();
+							mCameraHandler.stopCapture();
 						}
 					}
 				}

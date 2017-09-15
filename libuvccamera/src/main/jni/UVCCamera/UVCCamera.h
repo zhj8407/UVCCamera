@@ -34,6 +34,7 @@
 #include "UVCStatusCallback.h"
 #include "UVCButtonCallback.h"
 #include "UVCPreview.h"
+#include "UVCRecord.h"
 
 #define	CTRL_SCANNING		0x000001	// D0:  Scanning Mode
 #define	CTRL_AE				0x000002	// D1:  Auto-Exposure Mode
@@ -118,6 +119,7 @@ class UVCCamera
     UVCButtonCallback *mButtonCallback;
     // プレビュー用
     UVCPreview *mPreview;
+    UVCRecord *mRecord;
     uint64_t mCtrlSupports;
     uint64_t mPUSupports;
     control_value_t mScanningMode;

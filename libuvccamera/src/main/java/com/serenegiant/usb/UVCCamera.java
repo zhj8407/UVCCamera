@@ -61,6 +61,7 @@ public class UVCCamera {
     public static final int PIXEL_FORMAT_RGBX = 3;
     public static final int PIXEL_FORMAT_YUV420SP = 4;
     public static final int PIXEL_FORMAT_NV21 = 5;        // = YVU420SemiPlanar
+    public static final int PIXEL_FORMAT_H_264 = 6;
 
     //--------------------------------------------------------------------------------
     public static final int CTRL_SCANNING = 0x00000001;    // D0:  Scanning Mode
@@ -438,9 +439,26 @@ public class UVCCamera {
      * stop preview
      */
     public synchronized void stopPreview() {
-        setFrameCallback(null, 0);
         if (mCtrlBlock != null) {
             nativeStopPreview(mNativePtr);
+        }
+    }
+
+    /**
+     * start preview
+     */
+    public synchronized void startRecord() {
+        if (mCtrlBlock != null) {
+            nativeStartRecord(mNativePtr);
+        }
+    }
+
+    /**
+     * stop preview
+     */
+    public synchronized void stopRecord() {
+        if (mCtrlBlock != null) {
+            nativeStopRecord(mNativePtr);
         }
     }
 

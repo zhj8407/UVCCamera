@@ -389,7 +389,7 @@ public class UVCService extends BaseService {
 
 		@Override
 		public void startRecording(final int serviceId) throws RemoteException {
-			if (DEBUG) Log.d(TAG, "mBasicBinder#startRecording:");
+			if (DEBUG) Log.d(TAG, "mBasicBinder#startCapture:");
 			final CameraServer server = getCameraServer(serviceId);
 			if ((server != null) && !server.isRecording()) {
 				server.startRecording();
@@ -398,7 +398,7 @@ public class UVCService extends BaseService {
 
 		@Override
 		public void stopRecording(final int serviceId) throws RemoteException {
-			if (DEBUG) Log.d(TAG, "mBasicBinder#stopRecording:");
+			if (DEBUG) Log.d(TAG, "mBasicBinder#stopCapture:");
 			final CameraServer server = getCameraServer(serviceId);
 			if ((server != null) && server.isRecording()) {
 				server.stopRecording();

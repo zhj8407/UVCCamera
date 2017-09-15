@@ -177,6 +177,7 @@ int UVCCamera::connect(int vid, int pid, int fd, int busnum, int devaddr, const 
                 mStatusCallback = new UVCStatusCallback(mDeviceHandle);
                 mButtonCallback = new UVCButtonCallback(mDeviceHandle);
                 mPreview = new UVCPreview(mDeviceHandle);
+                mRecord = new UVCRecord(mDeviceHandle);
             } else {
 
                 LOGE("could not open camera:err=%d", result);
@@ -210,6 +211,7 @@ int UVCCamera::release()
         SAFE_DELETE(mButtonCallback);
         // プレビューオブジェクトを破棄
         SAFE_DELETE(mPreview);
+        SAFE_DELETE(mRecord);
         // カメラをclose
         uvc_close(mDeviceHandle);
         mDeviceHandle = NULL;
@@ -282,6 +284,18 @@ int UVCCamera::setPreviewSize(int width, int height, int min_fps, int max_fps, i
     RETURN(result, int);
 }
 
+int UVCCamera::setRecordSize(int width, int height, int profile, int min_fps, int max_fps, int mode, float bandwidth)
+{
+    ENTER();
+    int result = EXIT_FAILURE;
+
+    if (mRecord) {
+        result = mRecord->setRecordSize(width, height, profile, min_fps, max_fps, mode, bandwidth);
+    }
+
+    RETURN(result, int);
+}
+
 int UVCCamera::setPreviewDisplay(ANativeWindow *preview_window)
 {
     ENTER();
@@ -299,8 +313,12 @@ int UVCCamera::setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pix
     ENTER();
     int result = EXIT_FAILURE;
 
-    if (mPreview) {
+    if (mPreview && pixel_format != 6) {
         result = mPreview->setFrameCallback(env, frame_callback_obj, pixel_format);
+    }
+
+    if (mRecord && pixel_format == 6) {
+        result = mRecord->setFrameCallback(env, frame_callback_obj, pixel_format);
     }
 
     RETURN(result, int);
@@ -312,7 +330,7 @@ int UVCCamera::startPreview()
 
     int result = EXIT_FAILURE;
 
-    if (mDeviceHandle) {
+    if (LIKELY(mDeviceHandle && mPreview)) {
         return mPreview->startPreview();
     }
 
@@ -325,6 +343,30 @@ int UVCCamera::stopPreview()
 
     if (LIKELY(mPreview)) {
         mPreview->stopPreview();
+    }
+
+    RETURN(0, int);
+}
+
+int UVCCamera::startRecord()
+{
+    ENTER();
+
+    int result = EXIT_FAILURE;
+
+    if (LIKELY(mDeviceHandle && mRecord)) {
+        return mRecord->startRecord();
+    }
+
+    RETURN(result, int);
+}
+
+int UVCCamera::stopRecord()
+{
+    ENTER();
+
+    if (LIKELY(mRecord)) {
+        mRecord->stopRecord();
     }
 
     RETURN(0, int);
