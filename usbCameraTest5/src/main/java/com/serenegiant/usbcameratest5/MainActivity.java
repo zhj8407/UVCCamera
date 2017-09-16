@@ -335,9 +335,9 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 //			return thread != null && thread.isOpened();
 //		}
 //
-//		public boolean isRecording() {
+//		public boolean isCaptureing() {
 //			final CameraThread thread = mWeakThread.get();
-//			return thread != null && thread.isRecording();
+//			return thread != null && thread.isCaptureing();
 //		}
 //
 //		public void open(final UsbControlBlock ctrlBlock) {
@@ -474,7 +474,7 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 //				return mUVCCamera != null;
 //			}
 //
-//			public boolean isRecording() {
+//			public boolean isCaptureing() {
 //				return (mUVCCamera != null) && (mMuxer != null);
 //			}
 //

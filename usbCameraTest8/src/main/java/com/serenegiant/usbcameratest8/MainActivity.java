@@ -197,10 +197,12 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 					if (checkPermissionWriteExternalStorage() && checkPermissionAudio()) {
 						if (!mCameraHandler.isRecording()) {
 							mCaptureButton.setColorFilter(0xffff0000);	// turn red
-							mCameraHandler.startCapture();
+							//mCameraHandler.startCapture();
+							mCameraHandler.startRecord();
 						} else {
 							mCaptureButton.setColorFilter(0);	// return to default color
-							mCameraHandler.stopCapture();
+							//mCameraHandler.stopCapture();
+							mCameraHandler.stopRecord();
 						}
 					}
 				}

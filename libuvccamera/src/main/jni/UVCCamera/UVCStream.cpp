@@ -214,7 +214,8 @@ void UVCStream::uvc_streaming_frame_callback(uvc_frame_t *frame, void *vptr_args
     if UNLIKELY(!stream->isRunning() || !frame || !frame->frame_format || !frame->data || !frame->data_bytes) return;
 
     if (UNLIKELY(
-                ((frame->frame_format != UVC_FRAME_FORMAT_MJPEG) && (frame->actual_bytes < stream->frameBytes))
+                (frame->frame_format != UVC_FRAME_FORMAT_MJPEG && frame->frame_format != UVC_FRAME_FORMAT_H_264
+                    && (frame->actual_bytes < stream->frameBytes))
                 || (frame->width != stream->frameWidth) || (frame->height != stream->frameHeight))) {
 
 #if LOCAL_DEBUG

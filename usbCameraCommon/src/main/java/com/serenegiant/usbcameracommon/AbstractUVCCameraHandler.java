@@ -122,6 +122,11 @@ abstract class AbstractUVCCameraHandler extends Handler {
         return thread != null && thread.isPreviewing();
     }
 
+    public boolean isCaptureing() {
+        final CameraThread thread = mWeakThread.get();
+        return thread != null && thread.isCaptureing();
+    }
+
     public boolean isRecording() {
         final CameraThread thread = mWeakThread.get();
         return thread != null && thread.isRecording();
@@ -367,6 +372,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
         private int mRecordProfile;
         private float mRecordBandwidthFactor;
         private boolean mIsPreviewing;
+        private boolean mIsCaptureing;
         private boolean mIsRecording;
         /**
          * shutter sound
@@ -469,6 +475,12 @@ abstract class AbstractUVCCameraHandler extends Handler {
         public boolean isPreviewing() {
             synchronized (mSync) {
                 return mUVCCamera != null && mIsPreviewing;
+            }
+        }
+
+        public boolean isCaptureing() {
+            synchronized (mSync) {
+                return (mUVCCamera != null) && mIsCaptureing;
             }
         }
 
@@ -657,19 +669,20 @@ abstract class AbstractUVCCameraHandler extends Handler {
             }
             if (muxer != null) {
                 muxer.stopRecording();
-                mUVCCamera.setFrameCallback(null, 0);
+                mUVCCamera.setFrameCallback(null, UVCCamera.PIXEL_FORMAT_NV21);
                 // you should not wait here
                 callOnStopRecording();
             }
         }
 
         public void handleStartRecord() {
-            if (DEBUG) Log.v(TAG_THREAD, "handleStartRecord:");
+            if (DEBUG) Log.v(TAG_THREAD, "handleStartRecord#mIsRecording " + mIsRecording);
             if ((mUVCCamera == null) || mIsRecording) return;
             try {
                 mUVCCamera.setRecordSize(mRecordWidth, mRecordHeight, mRecordProfile, 1, 31,
                         mRecordMode, mRecordBandwidthFactor);
             } catch (final IllegalArgumentException e) {
+                Log.e(TAG_THREAD, "Failed to set the record size");
                 callOnError(e);
                 return;
             }
@@ -689,6 +702,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
             if (mIsRecording) {
                 if (mUVCCamera != null) {
                     mUVCCamera.stopRecord();
+                    mUVCCamera.setFrameCallback(null, UVCCamera.PIXEL_FORMAT_H_264);
                 }
                 synchronized (mSync) {
                     mIsRecording = false;
@@ -714,8 +728,10 @@ abstract class AbstractUVCCameraHandler extends Handler {
 
             @Override
             public void onRecordFrame(final ByteBuffer frame) {
+                /*
                 Log.i(TAG_THREAD, "IFrameCallback#onRecordFrame: Received a frame, length: "
                         + frame.capacity() + " bytes");
+                */
             }
         };
 
@@ -743,10 +759,10 @@ abstract class AbstractUVCCameraHandler extends Handler {
         }
 
         public void handleRelease() {
-            if (DEBUG) Log.v(TAG_THREAD, "handleRelease:mIsRecording=" + mIsRecording);
+            if (DEBUG) Log.v(TAG_THREAD, "handleRelease:mIsCaptureing=" + mIsCaptureing);
             handleClose();
             mCallbacks.clear();
-            if (!mIsRecording) {
+            if (!mIsCaptureing) {
                 mHandler.mReleased = true;
                 Looper.myLooper().quit();
             }
@@ -758,7 +774,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
                     @Override
                     public void onPrepared(final MediaEncoder encoder) {
                         if (DEBUG) Log.v(TAG, "onPrepared:encoder=" + encoder);
-                        mIsRecording = true;
+                        mIsCaptureing = true;
                         if (encoder instanceof MediaVideoEncoder) {
                             try {
                                 mWeakCameraView.get().setVideoEncoder((MediaVideoEncoder) encoder);
@@ -784,7 +800,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
                         if ((encoder instanceof MediaVideoEncoder)
                                 || (encoder instanceof MediaSurfaceEncoder)) {
                             try {
-                                mIsRecording = false;
+                                mIsCaptureing = false;
                                 final Activity parent = mWeakParent.get();
                                 mWeakCameraView.get().setVideoEncoder(null);
                                 synchronized (mSync) {

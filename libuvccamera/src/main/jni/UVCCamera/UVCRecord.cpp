@@ -80,7 +80,7 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int min_fps, in
 {
     ENTER();
 
-    int result = -1;
+    int result = 0;
 
     if ((requestWidth != width) || (requestHeight != height) || (requestMode != mode)) {
         requestWidth = width;
@@ -96,6 +96,8 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int min_fps, in
             result = uvc_get_stream_ctrl_format_size_fps(mDeviceHandle, &ctrl,
                      UVC_FRAME_FORMAT_H_264,
                      requestWidth, requestHeight, requestMinFps, requestMaxFps);
+        } else {
+            result = -1;
         }
     }
 
@@ -348,7 +350,7 @@ void UVCRecord::do_capture_callback(JNIEnv *env, uvc_frame_t *frame)
         uvc_frame_t *callback_frame = frame;
 
         if (mFrameCallbackObj) {
-            jobject buf = env->NewDirectByteBuffer(callback_frame->data, callback_frame->data_bytes);
+            jobject buf = env->NewDirectByteBuffer(callback_frame->data, callback_frame->actual_bytes);
             env->CallVoidMethod(mFrameCallbackObj, iframecallback_fields.onRecordFrame, buf);
             env->ExceptionClear();
             env->DeleteLocalRef(buf);

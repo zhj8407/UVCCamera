@@ -402,13 +402,13 @@ public class UVCCamera {
             final int min_fps, final int max_fps, final int frameFormat,
             final float bandwidthFactor) {
         if ((width == 0) || (height == 0)) {
-            throw new IllegalArgumentException("invalid RECORD size");
+            throw new IllegalArgumentException("invalid Record size");
         }
         if (mNativePtr != 0) {
             final int result = nativeSetRecordSize(mNativePtr, width, height, profile, min_fps,
                     max_fps, frameFormat, bandwidthFactor);
             if (result != 0) {
-                throw new IllegalArgumentException("Failed to set RECORD size");
+                throw new IllegalArgumentException("Failed to set Record size");
             }
             mCurrentRecordFrameFormat = frameFormat;
             mCurrentRecordWidth = width;

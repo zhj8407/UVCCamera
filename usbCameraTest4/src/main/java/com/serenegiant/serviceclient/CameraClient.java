@@ -253,7 +253,7 @@ public class CameraClient implements ICameraClient {
 			try {
 				return service.isRecording(mCameraTask.mServiceId);
 			} catch (final RemoteException e) {
-				if (DEBUG) Log.e(TAG, "isRecording:", e);
+				if (DEBUG) Log.e(TAG, "isCaptureing:", e);
 			}
 			return false;
 		}
