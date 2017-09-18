@@ -50,8 +50,8 @@ public class UVCCamera {
     public static final int DEFAULT_PREVIEW_MIN_FPS = 1;
     public static final int DEFAULT_PREVIEW_MAX_FPS = 30;
 
-    public static final int DEFAULT_RECORD_WIDTH = 1280;
-    public static final int DEFAULT_RECORD_HEIGHT = 720;
+    public static final int DEFAULT_RECORD_WIDTH = 1920;
+    public static final int DEFAULT_RECORD_HEIGHT = 1080;
     public static final int DEFAULT_RECORD_MODE = 2;    // H.264 mode
     public static final int DEFAULT_RECORD_PROFILE = 0; // Baseline profile
     public static final int DEFAULT_RECORD_MIN_FPS = 1;

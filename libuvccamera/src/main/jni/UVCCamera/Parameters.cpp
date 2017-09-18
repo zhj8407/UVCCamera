@@ -382,6 +382,7 @@ char *UVCDiags::getSupportedSize(const uvc_device_handle_t *deviceHandle)
                         switch (fmt_desc->bDescriptorSubtype) {
                             case UVC_VS_FORMAT_UNCOMPRESSED:
                             case UVC_VS_FORMAT_MJPEG:
+                            case UVC_VS_FORMAT_H_264:
                                 write(writer, "index", fmt_desc->bFormatIndex);
                                 write(writer, "type", fmt_desc->bDescriptorSubtype);
                                 write(writer, "default", fmt_desc->bDefaultFrameIndex);

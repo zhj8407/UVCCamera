@@ -60,6 +60,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
@@ -390,6 +391,9 @@ abstract class AbstractUVCCameraHandler extends Handler {
         private MediaMuxerWrapper mMuxer;
         private MediaVideoBufferEncoder mVideoEncoder;
 
+        private String mRecordOutputPath;
+        private FileChannel mRecordOutputChannel = null;
+
         /**
          * @param clazz         Class extends AbstractUVCCameraHandler
          * @param parent        parent Activity
@@ -689,6 +693,18 @@ abstract class AbstractUVCCameraHandler extends Handler {
 
             mUVCCamera.setFrameCallback(mIFrameCallback, UVCCamera.PIXEL_FORMAT_H_264);
 
+            //Prepare for the record file
+            mRecordOutputPath = MediaMuxerWrapper.getCaptureFile(Environment.DIRECTORY_MOVIES,
+                    ".h264").toString();
+            try {
+                FileOutputStream fileOutputStream = new FileOutputStream(mRecordOutputPath);
+                mRecordOutputChannel = fileOutputStream.getChannel();
+            } catch (IOException e) {
+                Log.e(TAG_THREAD, "Failed to open the output file: " + e.toString());
+            }
+
+            Log.i(TAG_THREAD, "Save the recorded frames to file : " + mRecordOutputPath);
+
             mUVCCamera.startRecord();
 
             synchronized (mSync) {
@@ -707,6 +723,15 @@ abstract class AbstractUVCCameraHandler extends Handler {
                 synchronized (mSync) {
                     mIsRecording = false;
                     mSync.notifyAll();
+                }
+
+                try {
+                    if (mRecordOutputChannel != null) {
+                        mRecordOutputChannel.close();
+                        mRecordOutputChannel = null;
+                    }
+                } catch (IOException e) {
+                    Log.e(TAG_THREAD, "Failed to close the output channel: " + e.toString());
                 }
                 //callOnStopRecord();
             }
@@ -732,6 +757,18 @@ abstract class AbstractUVCCameraHandler extends Handler {
                 Log.i(TAG_THREAD, "IFrameCallback#onRecordFrame: Received a frame, length: "
                         + frame.capacity() + " bytes");
                 */
+                final FileChannel outputChannel;
+                synchronized (mSync) {
+                    outputChannel = mRecordOutputChannel;
+                }
+
+                try {
+                    if (outputChannel != null) {
+                        outputChannel.write(frame);
+                    }
+                } catch (IOException e) {
+                    Log.e(TAG_THREAD, "Failed to write the recorded frame: " + e.toString());
+                }
             }
         };
 
