@@ -45,7 +45,7 @@ class UVCStream
 {
 protected:
     uvc_device_handle_t *mDeviceHandle;
-    volatile bool mIsRunning;
+
     int requestWidth, requestHeight, requestMode;
     int requestMinFps, requestMaxFps;
     float requestBandwidth;
@@ -53,9 +53,18 @@ protected:
     int frameMode;
     size_t frameBytes;
 //
+    volatile bool mIsRunning;
+    pthread_t streaming_thread;
     pthread_mutex_t streaming_mutex;
     pthread_cond_t streaming_sync;
     ObjectArray<uvc_frame_t *> streamingFrames;
+
+    static void *streaming_thread_func(void *vptr_args);
+    virtual int prepare_streaming(uvc_stream_ctrl_t *ctrl) = 0;
+    virtual void do_streaming(uvc_stream_ctrl_t *ctrl) = 0;
+
+    int startStreaming();
+    int stopStreaming();
 
 // improve performance by reducing memory allocation
     pthread_mutex_t pool_mutex;
@@ -82,8 +91,12 @@ protected:
     void addCaptureFrame(uvc_frame_t *frame);
     uvc_frame_t *waitCaptureFrame();
     void clearCaptureFrame();
-
     virtual void do_capture(JNIEnv *env) = 0;
+//
+    jobject mFrameCallbackObj;
+    Fields_iframecallback iframecallback_fields;
+    int setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int callback_idx,
+        const char *callback_name, const char *callback_sig);
 
     inline const bool isRunning() const {
         return mIsRunning;

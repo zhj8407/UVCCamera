@@ -47,18 +47,11 @@ private:
     int requestProfile;
     int frameProfile;
 
-    pthread_t record_thread;
-
     int recordFormat;
     size_t recordBytes;
 //
-    jobject mFrameCallbackObj;
-    Fields_iframecallback iframecallback_fields;
-    int mPixelFormat;
-//
-    static void *record_thread_func(void *vptr_args);
-    int prepare_record(uvc_stream_ctrl_t *ctrl);
-    void do_record(uvc_stream_ctrl_t *ctrl);
+    virtual int prepare_streaming(uvc_stream_ctrl_t *ctrl);
+    virtual void do_streaming(uvc_stream_ctrl_t *ctrl);
 
     virtual void do_capture(JNIEnv *env);
     void do_capture_idle_loop(JNIEnv *env);

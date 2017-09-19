@@ -49,8 +49,7 @@
 UVCRecord::UVCRecord(uvc_device_handle_t *devh)
     : UVCStream(devh),
       recordBytes(DEFAULT_RECORD_WIDTH * DEFAULT_RECORD_HEIGHT * 3 / 4),
-      recordFormat(WINDOW_FORMAT_RGBA_8888),
-      mFrameCallbackObj(NULL)
+      recordFormat(WINDOW_FORMAT_RGBA_8888)
 {
 
     ENTER();
@@ -108,52 +107,9 @@ int UVCRecord::setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pix
 {
 
     ENTER();
-    pthread_mutex_lock(&capture_mutex);
-    {
-        if (isRunning() && isCapturing()) {
-            mIsCapturing = false;
 
-            if (mFrameCallbackObj) {
-                pthread_cond_signal(&capture_sync);
-                pthread_cond_wait(&capture_sync, &capture_mutex);	// wait finishing capturing
-            }
-        }
+    UVCStream::setFrameCallback(env, frame_callback_obj, 1, "onRecordFrame", "(Ljava/nio/ByteBuffer;)V");
 
-        if (!env->IsSameObject(mFrameCallbackObj, frame_callback_obj))	{
-            iframecallback_fields.onRecordFrame = NULL;
-
-            if (mFrameCallbackObj) {
-                env->DeleteGlobalRef(mFrameCallbackObj);
-            }
-
-            mFrameCallbackObj = frame_callback_obj;
-
-            if (frame_callback_obj) {
-                // get method IDs of Java object for callback
-                jclass clazz = env->GetObjectClass(frame_callback_obj);
-
-                if (LIKELY(clazz)) {
-                    iframecallback_fields.onRecordFrame = env->GetMethodID(clazz,
-                                                    "onRecordFrame",	"(Ljava/nio/ByteBuffer;)V");
-                } else {
-                    LOGW("failed to get object class");
-                }
-
-                env->ExceptionClear();
-
-                if (!iframecallback_fields.onRecordFrame) {
-                    LOGE("Can't find IFrameCallback#onRecordFrame");
-                    env->DeleteGlobalRef(frame_callback_obj);
-                    mFrameCallbackObj = frame_callback_obj = NULL;
-                }
-            }
-        }
-
-        if (frame_callback_obj) {
-            mPixelFormat = pixel_format;
-        }
-    }
-    pthread_mutex_unlock(&capture_mutex);
     RETURN(0, int);
 }
 
@@ -163,24 +119,7 @@ int UVCRecord::startRecord()
 
     int result = EXIT_FAILURE;
 
-    if (!isRunning()) {
-        mIsRunning = true;
-        pthread_mutex_lock(&streaming_mutex);
-        {
-            result = pthread_create(&record_thread, NULL, record_thread_func, (void *)this);
-        }
-        pthread_mutex_unlock(&streaming_mutex);
-
-        if (UNLIKELY(result != EXIT_SUCCESS)) {
-            LOGW("UVCCamera::could not create thread etc.");
-            mIsRunning = false;
-            pthread_mutex_lock(&streaming_mutex);
-            {
-                pthread_cond_signal(&streaming_sync);
-            }
-            pthread_mutex_unlock(&streaming_mutex);
-        }
-    }
+    result = startStreaming();
 
     RETURN(result, int);
 }
@@ -188,50 +127,13 @@ int UVCRecord::startRecord()
 int UVCRecord::stopRecord()
 {
     ENTER();
-    bool b = isRunning();
 
-    if (LIKELY(b)) {
-        mIsRunning = false;
-        pthread_cond_signal(&streaming_sync);
-        pthread_cond_signal(&capture_sync);
-
-        if (pthread_join(capture_thread, NULL) != EXIT_SUCCESS) {
-            LOGW("UVCRecord::terminate record thread: pthread_join failed");
-        }
-
-        if (pthread_join(record_thread, NULL) != EXIT_SUCCESS) {
-            LOGW("UVCPreview::terminate preview thread: pthread_join failed");
-        }
-
-    }
-
-    clearStreamingFrame();
-    clearCaptureFrame();
+    stopStreaming();
 
     RETURN(0, int);
 }
 
-void *UVCRecord::record_thread_func(void *vptr_args)
-{
-    int result;
-
-    ENTER();
-    UVCRecord *record = reinterpret_cast<UVCRecord *>(vptr_args);
-
-    if (LIKELY(record)) {
-        uvc_stream_ctrl_t ctrl;
-        result = record->prepare_record(&ctrl);
-
-        if (LIKELY(!result)) {
-            record->do_record(&ctrl);
-        }
-    }
-
-    PRE_EXIT();
-    pthread_exit(NULL);
-}
-
-int UVCRecord::prepare_record(uvc_stream_ctrl_t *ctrl)
+int UVCRecord::prepare_streaming(uvc_stream_ctrl_t *ctrl)
 {
     uvc_error_t result;
 
@@ -267,7 +169,7 @@ int UVCRecord::prepare_record(uvc_stream_ctrl_t *ctrl)
     RETURN(result, int);
 }
 
-void UVCRecord::do_record(uvc_stream_ctrl_t *ctrl)
+void UVCRecord::do_streaming(uvc_stream_ctrl_t *ctrl)
 {
     ENTER();
 

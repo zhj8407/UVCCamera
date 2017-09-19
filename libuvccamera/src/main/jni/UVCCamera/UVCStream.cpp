@@ -51,7 +51,8 @@ UVCStream::UVCStream(uvc_device_handle_t *devh)
       requestBandwidth(DEFAULT_BANDWIDTH),
       mIsRunning(false),
       mIsCapturing(false),
-      captureQueu(NULL)
+      captureQueu(NULL),
+      mFrameCallbackObj(NULL)
 {
 
     ENTER();
@@ -247,6 +248,75 @@ void UVCStream::uvc_streaming_frame_callback(uvc_frame_t *frame, void *vptr_args
     }
 }
 
+void* UVCStream::streaming_thread_func(void *vptr_args)
+{
+    int result;
+
+    ENTER();
+    UVCStream *streaming = reinterpret_cast<UVCStream *>(vptr_args);
+
+    if (LIKELY(streaming)) {
+        uvc_stream_ctrl_t ctrl;
+        result = streaming->prepare_streaming(&ctrl);
+
+        if (LIKELY(!result)) {
+            streaming->do_streaming(&ctrl);
+        }
+    }
+
+    PRE_EXIT();
+    pthread_exit(NULL);
+}
+
+int UVCStream::startStreaming()
+{
+    ENTER();
+
+    int result = EXIT_FAILURE;
+
+    if (!isRunning()) {
+        mIsRunning = true;
+        result = pthread_create(&streaming_thread, NULL, streaming_thread_func, (void *)this);
+
+        if (UNLIKELY(result != EXIT_SUCCESS)) {
+            LOGW("UVCCamera::could not create thread etc.");
+            mIsRunning = false;
+            pthread_mutex_lock(&streaming_mutex);
+            {
+                pthread_cond_signal(&streaming_sync);
+            }
+            pthread_mutex_unlock(&streaming_mutex);
+        }
+    }
+
+    RETURN(result, int);
+}
+
+int UVCStream::stopStreaming()
+{
+    ENTER();
+    bool b = isRunning();
+
+    if (LIKELY(b)) {
+        mIsRunning = false;
+        pthread_cond_signal(&streaming_sync);
+        pthread_cond_signal(&capture_sync);
+
+        if (pthread_join(capture_thread, NULL) != EXIT_SUCCESS) {
+            LOGW("UVCPreview::terminate capture thread: pthread_join failed");
+        }
+
+        if (pthread_join(streaming_thread, NULL) != EXIT_SUCCESS) {
+            LOGW("UVCPreview::terminate preview thread: pthread_join failed");
+        }
+    }
+
+    clearStreamingFrame();
+    clearCaptureFrame();
+
+    RETURN(0, int);
+}
+
 void UVCStream::addCaptureFrame(uvc_frame_t *frame)
 {
     pthread_mutex_lock(&capture_mutex);
@@ -326,4 +396,64 @@ void *UVCStream::capture_thread_func(void *vptr_args)
 
     PRE_EXIT();
     pthread_exit(NULL);
+}
+
+int UVCStream::setFrameCallback(JNIEnv *env, jobject frame_callback_obj,
+    int callback_idx, const char *callback_name, const char *callback_sig)
+{
+
+    ENTER();
+    pthread_mutex_lock(&capture_mutex);
+    {
+        if (isRunning() && isCapturing()) {
+            mIsCapturing = false;
+
+            if (mFrameCallbackObj) {
+                pthread_cond_signal(&capture_sync);
+                pthread_cond_wait(&capture_sync, &capture_mutex);   // wait finishing capturing
+            }
+        }
+
+        if (!env->IsSameObject(mFrameCallbackObj, frame_callback_obj))  {
+            jmethodID methodID = NULL;
+
+            if (mFrameCallbackObj) {
+                env->DeleteGlobalRef(mFrameCallbackObj);
+            }
+
+            mFrameCallbackObj = frame_callback_obj;
+
+            if (frame_callback_obj) {
+                // get method IDs of Java object for callback
+                jclass clazz = env->GetObjectClass(frame_callback_obj);
+
+                if (LIKELY(clazz)) {
+                    methodID = env->GetMethodID(clazz, callback_name,  callback_sig);
+                } else {
+                    LOGW("failed to get object class");
+                }
+
+                env->ExceptionClear();
+
+                if (!methodID) {
+                    LOGE("Can't find IFrameCallback#%s", callback_name);
+                    env->DeleteGlobalRef(frame_callback_obj);
+                    mFrameCallbackObj = frame_callback_obj = NULL;
+                } else {
+                    switch (callback_idx) {
+                        case 0:
+                            iframecallback_fields.onFrame = methodID;
+                            break;
+                        case 1:
+                            iframecallback_fields.onRecordFrame = methodID;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        }
+    }
+    pthread_mutex_unlock(&capture_mutex);
+    RETURN(0, int);
 }

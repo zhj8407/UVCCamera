@@ -51,24 +51,19 @@ class UVCPreview : public UVCStream
 private:
     ANativeWindow *mPreviewWindow;
 
-    pthread_t preview_thread;
-
     int previewFormat;
     size_t previewBytes;
+    int mPixelFormat;
 //
     ANativeWindow *mCaptureWindow;
 
-    jobject mFrameCallbackObj;
     convFunc_t mFrameCallbackFunc;
-    Fields_iframecallback iframecallback_fields;
 
-    int mPixelFormat;
     size_t callbackPixelBytes;
 //
     void clearDisplay();
-    static void *preview_thread_func(void *vptr_args);
-    int prepare_preview(uvc_stream_ctrl_t *ctrl);
-    void do_preview(uvc_stream_ctrl_t *ctrl);
+    virtual int prepare_streaming(uvc_stream_ctrl_t *ctrl);
+    virtual void do_streaming(uvc_stream_ctrl_t *ctrl);
     uvc_frame_t *draw_preview_one(uvc_frame_t *frame, ANativeWindow **window, convFunc_t func, int pixelBytes);
 //
     virtual void do_capture(JNIEnv *env);

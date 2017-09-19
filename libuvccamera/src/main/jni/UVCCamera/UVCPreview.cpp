@@ -53,7 +53,6 @@ UVCPreview::UVCPreview(uvc_device_handle_t *devh)
       mCaptureWindow(NULL),
       previewBytes(DEFAULT_PREVIEW_WIDTH * DEFAULT_PREVIEW_HEIGHT * PREVIEW_PIXEL_BYTES),
       previewFormat(WINDOW_FORMAT_RGBA_8888),
-      mFrameCallbackObj(NULL),
       mFrameCallbackFunc(NULL),
       callbackPixelBytes(2)
 {
@@ -139,47 +138,11 @@ int UVCPreview::setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pi
 {
 
     ENTER();
+
+    UVCStream::setFrameCallback(env, frame_callback_obj, 0, "onFrame", "(Ljava/nio/ByteBuffer;)V");
+
     pthread_mutex_lock(&capture_mutex);
     {
-        if (isRunning() && isCapturing()) {
-            mIsCapturing = false;
-
-            if (mFrameCallbackObj) {
-                pthread_cond_signal(&capture_sync);
-                pthread_cond_wait(&capture_sync, &capture_mutex);	// wait finishing capturing
-            }
-        }
-
-        if (!env->IsSameObject(mFrameCallbackObj, frame_callback_obj))	{
-            iframecallback_fields.onFrame = NULL;
-
-            if (mFrameCallbackObj) {
-                env->DeleteGlobalRef(mFrameCallbackObj);
-            }
-
-            mFrameCallbackObj = frame_callback_obj;
-
-            if (frame_callback_obj) {
-                // get method IDs of Java object for callback
-                jclass clazz = env->GetObjectClass(frame_callback_obj);
-
-                if (LIKELY(clazz)) {
-                    iframecallback_fields.onFrame = env->GetMethodID(clazz,
-                                                    "onFrame",	"(Ljava/nio/ByteBuffer;)V");
-                } else {
-                    LOGW("failed to get object class");
-                }
-
-                env->ExceptionClear();
-
-                if (!iframecallback_fields.onFrame) {
-                    LOGE("Can't find IFrameCallback#onFrame");
-                    env->DeleteGlobalRef(frame_callback_obj);
-                    mFrameCallbackObj = frame_callback_obj = NULL;
-                }
-            }
-        }
-
         if (frame_callback_obj) {
             mPixelFormat = pixel_format;
             callbackPixelFormatChanged();
@@ -282,25 +245,12 @@ int UVCPreview::startPreview()
 
     int result = EXIT_FAILURE;
 
-    if (!isRunning()) {
-        mIsRunning = true;
-        pthread_mutex_lock(&streaming_mutex);
-        {
-            if (LIKELY(mPreviewWindow)) {
-                result = pthread_create(&preview_thread, NULL, preview_thread_func, (void *)this);
-            }
-        }
+    pthread_mutex_lock(&streaming_mutex);
+    if (LIKELY(mPreviewWindow)) {
         pthread_mutex_unlock(&streaming_mutex);
-
-        if (UNLIKELY(result != EXIT_SUCCESS)) {
-            LOGW("UVCCamera::window does not exist/already running/could not create thread etc.");
-            mIsRunning = false;
-            pthread_mutex_lock(&streaming_mutex);
-            {
-                pthread_cond_signal(&streaming_sync);
-            }
-            pthread_mutex_unlock(&streaming_mutex);
-        }
+        result = startStreaming();
+    } else {
+        pthread_mutex_unlock(&streaming_mutex);
     }
 
     RETURN(result, int);
@@ -311,24 +261,12 @@ int UVCPreview::stopPreview()
     ENTER();
     bool b = isRunning();
 
+    stopStreaming();
+
     if (LIKELY(b)) {
-        mIsRunning = false;
-        pthread_cond_signal(&streaming_sync);
-        pthread_cond_signal(&capture_sync);
-
-        if (pthread_join(capture_thread, NULL) != EXIT_SUCCESS) {
-            LOGW("UVCPreview::terminate capture thread: pthread_join failed");
-        }
-
-        if (pthread_join(preview_thread, NULL) != EXIT_SUCCESS) {
-            LOGW("UVCPreview::terminate preview thread: pthread_join failed");
-        }
-
         clearDisplay();
     }
 
-    clearStreamingFrame();
-    clearCaptureFrame();
     pthread_mutex_lock(&streaming_mutex);
 
     if (mPreviewWindow) {
@@ -352,27 +290,7 @@ int UVCPreview::stopPreview()
 //
 //**********************************************************************
 
-void *UVCPreview::preview_thread_func(void *vptr_args)
-{
-    int result;
-
-    ENTER();
-    UVCPreview *preview = reinterpret_cast<UVCPreview *>(vptr_args);
-
-    if (LIKELY(preview)) {
-        uvc_stream_ctrl_t ctrl;
-        result = preview->prepare_preview(&ctrl);
-
-        if (LIKELY(!result)) {
-            preview->do_preview(&ctrl);
-        }
-    }
-
-    PRE_EXIT();
-    pthread_exit(NULL);
-}
-
-int UVCPreview::prepare_preview(uvc_stream_ctrl_t *ctrl)
+int UVCPreview::prepare_streaming(uvc_stream_ctrl_t *ctrl)
 {
     uvc_error_t result;
 
@@ -416,7 +334,7 @@ int UVCPreview::prepare_preview(uvc_stream_ctrl_t *ctrl)
     RETURN(result, int);
 }
 
-void UVCPreview::do_preview(uvc_stream_ctrl_t *ctrl)
+void UVCPreview::do_streaming(uvc_stream_ctrl_t *ctrl)
 {
     ENTER();
 

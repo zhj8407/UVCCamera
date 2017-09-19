@@ -50,7 +50,6 @@ import com.polycom.uvccamera.usb.USBMonitor;
 import com.polycom.uvccamera.usb.UVCCamera;
 import com.polycom.widget.CameraViewInterface;
 import com.polycom.encoder.MediaAudioEncoder;
-import com.serenegiant.usbcameracommon.R;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
