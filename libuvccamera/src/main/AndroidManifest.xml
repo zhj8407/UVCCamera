@@ -22,7 +22,7 @@
   -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.serenegiant.uvccamera"
+    package="com.polycom.uvccamera"
     android:versionCode="2"
     android:versionName="1.1" >
 

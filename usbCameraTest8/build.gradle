@@ -28,7 +28,7 @@ android {
         config {
             keyAlias 'debugkey'
             keyPassword 'zhangjie'
-            storeFile file('/home/jiezhang/.android/debug.keystore')
+            storeFile file('/home/jiezhang/.android/keys/debug.keystore')
             storePassword 'zhangjie'
         }
     }
@@ -39,7 +39,7 @@ android {
         targetCompatibility javaTargetCompatibility
     }
     defaultConfig {
-        applicationId "com.serenegiant.usbcameratest8"
+        applicationId "com.polycom.usbcameratest8"
         minSdkVersion 18
         targetSdkVersion versionTarget
         versionCode 1

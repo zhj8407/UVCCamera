@@ -62,7 +62,7 @@ LOCAL_SRC_FILES := \
 		UVCButtonCallback.cpp \
 		UVCStatusCallback.cpp \
 		Parameters.cpp \
-		serenegiant_usb_UVCCamera.cpp
+		polycom_usb_UVCCamera.cpp
 
 LOCAL_MODULE    := UVCCamera
 include $(BUILD_SHARED_LIBRARY)

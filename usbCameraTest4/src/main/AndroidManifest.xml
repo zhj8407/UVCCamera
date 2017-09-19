@@ -23,7 +23,7 @@
   -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.serenegiant.usbcameratest4" >
+    package="com.polycom.usbcameratest4" >
 
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
@@ -37,7 +37,7 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
         <activity
-            android:name=".MainActivity"
+            android:name="com.polycom.usbcameratest4.MainActivity"
             android:label="@string/app_name"
             android:launchMode="singleTask" >
             <intent-filter>
@@ -56,11 +56,11 @@
 				android:resource="@xml/device_filter" />
             </activity>
         <service
-            android:name="com.serenegiant.service.UVCService"
+            android:name="com.polycom.service.UVCService"
 			android:process=":uvcservice" >
             <intent-filter>
-                <action android:name="com.serenegiant.service.IUVCService" />
-                <action android:name="com.serenegiant.service.IUVCSlaveService" />
+                <action android:name="com.polycom.service.IUVCService" />
+                <action android:name="com.polycom.service.IUVCSlaveService" />
 			</intent-filter>
 		</service>
 	</application>

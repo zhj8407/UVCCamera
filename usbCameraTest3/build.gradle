@@ -39,7 +39,7 @@ android {
         targetCompatibility javaTargetCompatibility
     }
     defaultConfig {
-        applicationId "com.serenegiant.usbcameratest3"
+        applicationId "com.polycom.usbcameratest3"
         minSdkVersion 18
         targetSdkVersion versionTarget
         versionCode 8

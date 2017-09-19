@@ -26,7 +26,7 @@
     android:id="@+id/container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="com.serenegiant.usbcameratest0.MainActivity"
+    tools:context="com.polycom.usbcameratest0.MainActivity"
     tools:ignore="MergeRootFrame" >
 
     <SurfaceView

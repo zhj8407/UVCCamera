@@ -27,10 +27,10 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
 	android:background="#ff000000"
-	tools:context="com.serenegiant.usbcameratest5.MainActivity"
+	tools:context="com.polycom.usbcameratest5.MainActivity"
     tools:ignore="MergeRootFrame" >
 
-    <com.serenegiant.widget.UVCCameraTextureView
+    <com.polycom.widget.UVCCameraTextureView
         android:id="@+id/camera_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"

@@ -31,10 +31,10 @@
     android:paddingLeft="@dimen/horizontal_margin"
     android:paddingRight="@dimen/horizontal_margin"
     android:paddingTop="@dimen/vertical_margin"
-    tools:context="com.serenegiant.serviceviewtest.MainActivity" >
+    tools:context="com.polycom.serviceviewtest.MainActivity" >
 
 
-	<com.serenegiant.widget.UVCCameraTextureView
+	<com.polycom.widget.UVCCameraTextureView
         android:id="@+id/camera_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
