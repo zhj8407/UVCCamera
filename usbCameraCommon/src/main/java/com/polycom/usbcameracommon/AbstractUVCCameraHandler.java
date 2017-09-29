@@ -677,6 +677,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
                 // you should not wait here
                 callOnStopRecording();
             }
+            if (DEBUG) Log.v(TAG_THREAD, "handleStopCapture:finished");
         }
 
         public void handleStartRecord() {
@@ -753,10 +754,8 @@ abstract class AbstractUVCCameraHandler extends Handler {
 
             @Override
             public void onRecordFrame(final ByteBuffer frame) {
-                /*
                 Log.i(TAG_THREAD, "IFrameCallback#onRecordFrame: Received a frame, length: "
                         + frame.capacity() + " bytes");
-                */
                 final FileChannel outputChannel;
                 synchronized (mSync) {
                     outputChannel = mRecordOutputChannel;

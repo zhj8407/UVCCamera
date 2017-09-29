@@ -35,10 +35,12 @@ import android.support.annotation.StringRes;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.serenegiant.dialog.MessageDialogFragment;
-import com.serenegiant.utils.BuildCheck;
-import com.serenegiant.utils.HandlerThreadHandler;
-import com.serenegiant.utils.PermissionCheck;
+import com.polycom.uvccamera.R;
+import com.polycom.uvccamera.utils.BuildCheck;
+import com.polycom.uvccamera.utils.HandlerThreadHandler;
+import com.polycom.uvccamera.utils.PermissionCheck;
+
+import com.polycom.uvccamera.dialog.MessageDialogFragment;
 
 /**
  * Created by saki on 2016/11/18.
@@ -46,9 +48,13 @@ import com.serenegiant.utils.PermissionCheck;
 public class BaseActivity extends Activity
         implements MessageDialogFragment.MessageDialogListener {
 
-    private static boolean DEBUG = false;    // FIXME 実働時はfalseにセットすること
+    // 動的パーミッション要求時の要求コード
+    protected static final int REQUEST_PERMISSION_WRITE_EXTERNAL_STORAGE = 0x12345;
+    protected static final int REQUEST_PERMISSION_AUDIO_RECORDING = 0x234567;
+    protected static final int REQUEST_PERMISSION_NETWORK = 0x345678;
+    protected static final int REQUEST_PERMISSION_CAMERA = 0x537642;
     private static final String TAG = BaseActivity.class.getSimpleName();
-
+    private static boolean DEBUG = false;    // FIXME 実働時はfalseにセットすること
     /**
      * UI操作のためのHandler
      */
@@ -58,7 +64,12 @@ public class BaseActivity extends Activity
      * ワーカースレッド上で処理するためのHandler
      */
     private Handler mWorkerHandler;
+
+    //================================================================================
     private long mWorkerThreadID = -1;
+    //================================================================================
+    private Toast mToast;
+    private ShowToastTask mShowToastTask;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -89,8 +100,6 @@ public class BaseActivity extends Activity
         }
         super.onDestroy();
     }
-
-//================================================================================
 
     /**
      * UIスレッドでRunnableを実行するためのヘルパーメソッド
@@ -137,6 +146,8 @@ public class BaseActivity extends Activity
         }
     }
 
+//================================================================================
+
     /**
      * 指定したRunnableをワーカースレッド上で実行予定であればキャンセルする
      */
@@ -148,9 +159,6 @@ public class BaseActivity extends Activity
             // ignore
         }
     }
-
-    //================================================================================
-    private Toast mToast;
 
     /**
      * Toastでメッセージを表示
@@ -176,39 +184,6 @@ public class BaseActivity extends Activity
             // ignore
         }
     }
-
-    private ShowToastTask mShowToastTask;
-
-    private final class ShowToastTask implements Runnable {
-        final int msg;
-        final Object args;
-
-        private ShowToastTask(@StringRes final int msg, final Object... args) {
-            this.msg = msg;
-            this.args = args;
-        }
-
-        @Override
-        public void run() {
-            try {
-                if (mToast != null) {
-                    mToast.cancel();
-                    mToast = null;
-                }
-                if (args != null) {
-                    final String _msg = getString(msg, args);
-                    mToast = Toast.makeText(BaseActivity.this, _msg, Toast.LENGTH_SHORT);
-                } else {
-                    mToast = Toast.makeText(BaseActivity.this, msg, Toast.LENGTH_SHORT);
-                }
-                mToast.show();
-            } catch (final Exception e) {
-                // ignore
-            }
-        }
-    }
-
-//================================================================================
 
     /**
      * MessageDialogFragmentメッセージダイアログからのコールバックリスナー
@@ -255,22 +230,16 @@ public class BaseActivity extends Activity
         // パーミッションがないときにはメッセージを表示する
         if (!result && (permission != null)) {
             if (Manifest.permission.RECORD_AUDIO.equals(permission)) {
-                showToast(com.serenegiant.common.R.string.permission_audio);
+                showToast(R.string.permission_audio);
             }
             if (Manifest.permission.WRITE_EXTERNAL_STORAGE.equals(permission)) {
-                showToast(com.serenegiant.common.R.string.permission_ext_storage);
+                showToast(R.string.permission_ext_storage);
             }
             if (Manifest.permission.INTERNET.equals(permission)) {
-                showToast(com.serenegiant.common.R.string.permission_network);
+                showToast(R.string.permission_network);
             }
         }
     }
-
-    // 動的パーミッション要求時の要求コード
-    protected static final int REQUEST_PERMISSION_WRITE_EXTERNAL_STORAGE = 0x12345;
-    protected static final int REQUEST_PERMISSION_AUDIO_RECORDING = 0x234567;
-    protected static final int REQUEST_PERMISSION_NETWORK = 0x345678;
-    protected static final int REQUEST_PERMISSION_CAMERA = 0x537642;
 
     /**
      * 外部ストレージへの書き込みパーミッションが有るかどうかをチェック
@@ -281,8 +250,8 @@ public class BaseActivity extends Activity
     protected boolean checkPermissionWriteExternalStorage() {
         if (!PermissionCheck.hasWriteExternalStorage(this)) {
             MessageDialogFragment.showDialog(this, REQUEST_PERMISSION_WRITE_EXTERNAL_STORAGE,
-                    com.serenegiant.common.R.string.permission_title,
-                    com.serenegiant.common.R.string.permission_ext_storage_request,
+                    R.string.permission_title,
+                    R.string.permission_ext_storage_request,
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE});
             return false;
         }
@@ -298,8 +267,8 @@ public class BaseActivity extends Activity
     protected boolean checkPermissionAudio() {
         if (!PermissionCheck.hasAudio(this)) {
             MessageDialogFragment.showDialog(this, REQUEST_PERMISSION_AUDIO_RECORDING,
-                    com.serenegiant.common.R.string.permission_title,
-                    com.serenegiant.common.R.string.permission_audio_recording_request,
+                    R.string.permission_title,
+                    R.string.permission_audio_recording_request,
                     new String[]{Manifest.permission.RECORD_AUDIO});
             return false;
         }
@@ -315,8 +284,8 @@ public class BaseActivity extends Activity
     protected boolean checkPermissionNetwork() {
         if (!PermissionCheck.hasNetwork(this)) {
             MessageDialogFragment.showDialog(this, REQUEST_PERMISSION_NETWORK,
-                    com.serenegiant.common.R.string.permission_title,
-                    com.serenegiant.common.R.string.permission_network_request,
+                    R.string.permission_title,
+                    R.string.permission_network_request,
                     new String[]{Manifest.permission.INTERNET});
             return false;
         }
@@ -332,12 +301,41 @@ public class BaseActivity extends Activity
     protected boolean checkPermissionCamera() {
         if (!PermissionCheck.hasCamera(this)) {
             MessageDialogFragment.showDialog(this, REQUEST_PERMISSION_CAMERA,
-                    com.serenegiant.common.R.string.permission_title,
-                    com.serenegiant.common.R.string.permission_camera_request,
+                    R.string.permission_title,
+                    R.string.permission_camera_request,
                     new String[]{Manifest.permission.CAMERA});
             return false;
         }
         return true;
+    }
+
+    private final class ShowToastTask implements Runnable {
+        final int msg;
+        final Object args;
+
+        private ShowToastTask(@StringRes final int msg, final Object... args) {
+            this.msg = msg;
+            this.args = args;
+        }
+
+        @Override
+        public void run() {
+            try {
+                if (mToast != null) {
+                    mToast.cancel();
+                    mToast = null;
+                }
+                if (args != null) {
+                    final String _msg = getString(msg, args);
+                    mToast = Toast.makeText(BaseActivity.this, _msg, Toast.LENGTH_SHORT);
+                } else {
+                    mToast = Toast.makeText(BaseActivity.this, msg, Toast.LENGTH_SHORT);
+                }
+                mToast.show();
+            } catch (final Exception e) {
+                // ignore
+            }
+        }
     }
 
 }

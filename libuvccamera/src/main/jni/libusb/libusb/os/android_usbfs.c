@@ -1302,7 +1302,7 @@ static int android_initialize_device(struct libusb_device *dev,
 
 	struct android_device_priv *priv = _device_priv(dev);
 	struct libusb_context *ctx = DEVICE_CTX(dev);
-	uint8_t desc[4096]; // max descriptor size is 4096 bytes
+	uint8_t desc[8192]; // max descriptor size is 4096 bytes
 	int speed;
 	ssize_t r;
 

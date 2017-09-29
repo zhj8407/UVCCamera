@@ -69,13 +69,13 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
      * if your camera does not support specific resolution and mode,
      * {@link UVCCamera#setPreviewSize(int, int, int)} throw exception
      */
-    private static final int PREVIEW_WIDTH = 1920;
+    private static final int PREVIEW_WIDTH = 640;
     /**
      * preview resolution(height)
      * if your camera does not support specific resolution and mode,
      * {@link UVCCamera#setPreviewSize(int, int, int)} throw exception
      */
-    private static final int PREVIEW_HEIGHT = 1080;
+    private static final int PREVIEW_HEIGHT = 360;
     /**
      * preview mode
      * if your camera does not support specific resolution and mode,

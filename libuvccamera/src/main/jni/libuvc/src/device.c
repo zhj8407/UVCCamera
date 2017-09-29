@@ -381,8 +381,26 @@ uvc_error_t uvc_get_device_info(uvc_device_t *dev, uvc_device_info_t **info)
 {
     uvc_error_t ret;
     uvc_device_info_t *internal_info;
+    struct libusb_device_descriptor usb_desc;
+    uint8_t config_index = 0;
 
     UVC_ENTER();
+
+    ret = libusb_get_device_descriptor(dev->usb_dev, &usb_desc);
+
+    if (ret != UVC_SUCCESS) {
+        UVC_EXIT(ret);
+        return ret;
+    }
+
+    /*
+     * Hack for Logitech C930e.
+     * C930e camera hide the 2nd configuration. It is designed
+     * for supporting uvc1.5
+     */
+    if (usb_desc.idVendor == 0x046D && usb_desc.idProduct == 0x0843) {
+        config_index = 1;
+    }
 
     internal_info = calloc(1, sizeof(*internal_info));
 
@@ -391,7 +409,7 @@ uvc_error_t uvc_get_device_info(uvc_device_t *dev, uvc_device_info_t **info)
         return UVC_ERROR_NO_MEM;
     }
 
-    if (libusb_get_config_descriptor(dev->usb_dev, 0, &(internal_info->config)) != 0) {
+    if (libusb_get_config_descriptor(dev->usb_dev, config_index, &(internal_info->config)) != 0) {
 //	if (libusb_get_active_config_descriptor(dev->usb_dev, &(internal_info->config)) != 0) {
         // XXX assume libusb_get_active_config_descriptor　is better
         // but some buggy device will return error when get active config.

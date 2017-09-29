@@ -35,12 +35,12 @@ import android.support.annotation.StringRes;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.serenegiant.dialog.MessageDialogFragment;
-import com.serenegiant.utils.BuildCheck;
-import com.serenegiant.utils.HandlerThreadHandler;
-import com.serenegiant.utils.PermissionCheck;
+import com.polycom.uvccamera.dialog.MessageDialogFragment;
+import com.polycom.uvccamera.utils.BuildCheck;
+import com.polycom.uvccamera.utils.HandlerThreadHandler;
+import com.polycom.uvccamera.utils.PermissionCheck;
 
-import com.serenegiant.common.R;
+import com.polycom.uvccamera.R;
 
 /**
  * Created by saki on 2016/11/19.
@@ -48,9 +48,13 @@ import com.serenegiant.common.R;
 public class BaseFragment extends Fragment
         implements MessageDialogFragment.MessageDialogListener {
 
-    private static boolean DEBUG = false;    // FIXME 実働時はfalseにセットすること
+    // 動的パーミッション要求時の要求コード
+    protected static final int REQUEST_PERMISSION_WRITE_EXTERNAL_STORAGE = 0x12345;
+    protected static final int REQUEST_PERMISSION_AUDIO_RECORDING = 0x234567;
+    protected static final int REQUEST_PERMISSION_NETWORK = 0x345678;
+    protected static final int REQUEST_PERMISSION_CAMERA = 0x537642;
     private static final String TAG = BaseFragment.class.getSimpleName();
-
+    private static boolean DEBUG = false;    // FIXME 実働時はfalseにセットすること
     /**
      * UI操作のためのHandler
      */
@@ -61,6 +65,11 @@ public class BaseFragment extends Fragment
      */
     private Handler mWorkerHandler;
     private long mWorkerThreadID = -1;
+
+    //================================================================================
+    //================================================================================
+    private Toast mToast;
+    private ShowToastTask mShowToastTask;
 
     public BaseFragment() {
         super();
@@ -95,8 +104,6 @@ public class BaseFragment extends Fragment
         }
         super.onDestroy();
     }
-
-//================================================================================
 
     /**
      * UIスレッドでRunnableを実行するためのヘルパーメソッド
@@ -143,6 +150,8 @@ public class BaseFragment extends Fragment
         }
     }
 
+//================================================================================
+
     /**
      * 指定したRunnableをワーカースレッド上で実行予定であればキャンセルする
      */
@@ -154,9 +163,6 @@ public class BaseFragment extends Fragment
             // ignore
         }
     }
-
-    //================================================================================
-    private Toast mToast;
 
     /**
      * Toastでメッセージを表示
@@ -182,39 +188,6 @@ public class BaseFragment extends Fragment
             // ignore
         }
     }
-
-    private ShowToastTask mShowToastTask;
-
-    private final class ShowToastTask implements Runnable {
-        final int msg;
-        final Object args;
-
-        private ShowToastTask(@StringRes final int msg, final Object... args) {
-            this.msg = msg;
-            this.args = args;
-        }
-
-        @Override
-        public void run() {
-            try {
-                if (mToast != null) {
-                    mToast.cancel();
-                    mToast = null;
-                }
-                if (args != null) {
-                    final String _msg = getString(msg, args);
-                    mToast = Toast.makeText(getActivity(), _msg, Toast.LENGTH_SHORT);
-                } else {
-                    mToast = Toast.makeText(getActivity(), msg, Toast.LENGTH_SHORT);
-                }
-                mToast.show();
-            } catch (final Exception e) {
-                // ignore
-            }
-        }
-    }
-
-//================================================================================
 
     /**
      * MessageDialogFragmentメッセージダイアログからのコールバックリスナー
@@ -271,12 +244,6 @@ public class BaseFragment extends Fragment
             }
         }
     }
-
-    // 動的パーミッション要求時の要求コード
-    protected static final int REQUEST_PERMISSION_WRITE_EXTERNAL_STORAGE = 0x12345;
-    protected static final int REQUEST_PERMISSION_AUDIO_RECORDING = 0x234567;
-    protected static final int REQUEST_PERMISSION_NETWORK = 0x345678;
-    protected static final int REQUEST_PERMISSION_CAMERA = 0x537642;
 
     /**
      * 外部ストレージへの書き込みパーミッションが有るかどうかをチェック
@@ -344,5 +311,34 @@ public class BaseFragment extends Fragment
             return false;
         }
         return true;
+    }
+
+    private final class ShowToastTask implements Runnable {
+        final int msg;
+        final Object args;
+
+        private ShowToastTask(@StringRes final int msg, final Object... args) {
+            this.msg = msg;
+            this.args = args;
+        }
+
+        @Override
+        public void run() {
+            try {
+                if (mToast != null) {
+                    mToast.cancel();
+                    mToast = null;
+                }
+                if (args != null) {
+                    final String _msg = getString(msg, args);
+                    mToast = Toast.makeText(getActivity(), _msg, Toast.LENGTH_SHORT);
+                } else {
+                    mToast = Toast.makeText(getActivity(), msg, Toast.LENGTH_SHORT);
+                }
+                mToast.show();
+            } catch (final Exception e) {
+                // ignore
+            }
+        }
     }
 }

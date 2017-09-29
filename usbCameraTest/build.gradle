@@ -28,7 +28,7 @@ android {
         config {
             keyAlias 'debugkey'
             keyPassword 'zhangjie'
-            storeFile file('/home/jiezhang/.android/debug.keystore')
+            storeFile file('/home/jiezhang/.android/keys/debug.keystore')
             storePassword 'zhangjie'
         }
     }

@@ -28,12 +28,11 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
-import com.serenegiant.utils.HandlerThreadHandler;
+import com.polycom.uvccamera.utils.HandlerThreadHandler;
 
 public abstract class BaseService extends Service {
-    private static boolean DEBUG = false;    // FIXME 実働時はfalseにセットすること
     private static final String TAG = BaseService.class.getSimpleName();
-
+    private static boolean DEBUG = false;    // FIXME 実働時はfalseにセットすること
     /**
      * UI操作のためのHandler
      */
