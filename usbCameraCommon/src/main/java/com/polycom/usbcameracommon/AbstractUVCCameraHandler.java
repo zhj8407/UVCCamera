@@ -279,6 +279,8 @@ abstract class AbstractUVCCameraHandler extends Handler {
                 return camera.getBrightness();
             } else if (flag == UVCCamera.PU_CONTRAST) {
                 return camera.getContrast();
+            } else if (flag == UVCCamera.EU_AVERAGE_BIT_RATE) {
+                return camera.getAverageBitrate();
             }
         }
         throw new IllegalStateException();
@@ -295,6 +297,9 @@ abstract class AbstractUVCCameraHandler extends Handler {
             } else if (flag == UVCCamera.PU_CONTRAST) {
                 camera.setContrast(value);
                 return camera.getContrast();
+            } else if (flag == UVCCamera.EU_AVERAGE_BIT_RATE) {
+                camera.setAverageBitrate(value);
+                return camera.getAverageBitrate();
             }
         }
         throw new IllegalStateException();
@@ -707,6 +712,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
             Log.i(TAG_THREAD, "Save the recorded frames to file : " + mRecordOutputPath);
 
             mUVCCamera.startRecord();
+            // mUVCCamera.updateCameraParams();
 
             synchronized (mSync) {
                 mIsRecording = true;
@@ -754,8 +760,8 @@ abstract class AbstractUVCCameraHandler extends Handler {
 
             @Override
             public void onRecordFrame(final ByteBuffer frame) {
-                Log.i(TAG_THREAD, "IFrameCallback#onRecordFrame: Received a frame, length: "
-                        + frame.capacity() + " bytes");
+/*                Log.i(TAG_THREAD, "IFrameCallback#onRecordFrame: Received a frame, length: "
+                        + frame.capacity() + " bytes");*/
                 final FileChannel outputChannel;
                 synchronized (mSync) {
                     outputChannel = mRecordOutputChannel;

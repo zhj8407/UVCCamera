@@ -199,6 +199,7 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 							mCaptureButton.setColorFilter(0xffff0000);	// turn red
 							//mCameraHandler.startCapture();
 							mCameraHandler.startRecord();
+							setValue(UVCCamera.EU_AVERAGE_BIT_RATE, 4000000);
 						} else {
 							mCaptureButton.setColorFilter(0);	// return to default color
 							//mCameraHandler.stopCapture();

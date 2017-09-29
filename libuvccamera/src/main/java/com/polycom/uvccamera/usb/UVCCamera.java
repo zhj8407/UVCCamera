@@ -116,6 +116,20 @@ public class UVCCamera {
     public static final int PU_AVIDEO_LOCK = 0x80020000;    // D17: Analog Video Lock Status
     public static final int PU_CONTRAST_AUTO = 0x80040000;    // D18: Contrast, Auto
 
+    public static final int EU_SELECT_LAYER = 0x00000001;  // D0: Select Layer
+    public static final int EU_PROFILE_TOOLSET = 0x00000002;  // D1: Profile and Toolset
+    public static final int EU_VIDEO_RESOLUTION = 0x00000004;  // D2: Video Resolution
+    public static final int EU_MIN_FRAME_INTERVAL = 0x00000008;  // D3: Minimum Frame Interval
+    public static final int EU_SLICE_MODE = 0x00000010;  // D4: Slice Mode
+    public static final int EU_RATE_CONTROL_MODE = 0x00000020;  // D5: Rate Control Mode
+    public static final int EU_AVERAGE_BIT_RATE = 0x00000040;  // D6: Average Bit Rate
+    public static final int EU_CPB_SIZE = 0x00000080;  // D7: CPB Size
+    public static final int EU_PEAK_BIT_RATE = 0x00000100;  // D8: Peak Bit Rate
+    public static final int EU_QUANTIZATION_PARAMS = 0x00000200;  // D9: Quantization Parameter
+    public static final int EU_SYNC_REF_FRAME = 0x00000400;  // D10: Synchronization and Long Term Reference Frame
+    public static final int EU_PRIORITY_ID = 0x00000800;  // D11: Priority ID
+    public static final int EU_START_OR_STOP_LAYER = 0x00001000;  // D12: Start or Stop Layer/View.
+
     // uvc_status_class from libuvc.h
     public static final int STATUS_CLASS_CONTROL = 0x10;
     public static final int STATUS_CLASS_CONTROL_CAMERA = 0x11;
@@ -142,6 +156,8 @@ public class UVCCamera {
     private UsbControlBlock mCtrlBlock;
     protected long mControlSupports;
     protected long mProcSupports;
+    protected long mEncSupports;
+    protected long mEncRunningSupports;
     protected int mCurrentFrameFormat = FRAME_FORMAT_MJPEG;
     protected int mCurrentWidth = DEFAULT_PREVIEW_WIDTH, mCurrentHeight = DEFAULT_PREVIEW_HEIGHT;
     protected float mCurrentBandwidthFactor = DEFAULT_BANDWIDTH;
@@ -190,6 +206,7 @@ public class UVCCamera {
     protected int mMultiplierLimitMin, mMultiplierLimitMax, mMultiplierLimitDef;
     protected int mAnalogVideoStandardMin, mAnalogVideoStandardMax, mAnalogVideoStandardDef;
     protected int mAnalogVideoLockStateMin, mAnalogVideoLockStateMax, mAnalogVideoLockStateDef;
+    protected int mAverageBitrateMin, mAverageBitrateMax, mAverageBitrateDef;
     // until here
 
     /**
@@ -1015,6 +1032,20 @@ public class UVCCamera {
         }
     }
 
+    public void setAverageBitrate(final int bitrate) {
+        if (mNativePtr != 0) {
+            nativeSetAverageBitrate(mNativePtr, bitrate);
+        }
+    }
+
+    /**
+     *
+     * @return bitrate
+     */
+    public int getAverageBitrate() {
+        return nativeGetAverageBitrate(mNativePtr);
+    }
+
     //================================================================================
     public synchronized void updateCameraParams() {
         if (mNativePtr != 0) {
@@ -1025,6 +1056,12 @@ public class UVCCamera {
                 }
                 if (mProcSupports == 0) {
                     mProcSupports = nativeGetProcSupports(mNativePtr);
+                }
+                if (mEncSupports == 0) {
+                    mEncSupports = nativeGetEncSupports(mNativePtr);
+                }
+                if (mEncRunningSupports == 0) {
+                    mEncRunningSupports = nativeGetEncRunningSupports(mNativePtr);
                 }
                 // 設定値を取得
                 if ((mControlSupports != 0) && (mProcSupports != 0)) {
@@ -1038,6 +1075,9 @@ public class UVCCamera {
                     nativeUpdateZoomLimit(mNativePtr);
                     nativeUpdateWhiteBlanceLimit(mNativePtr);
                     nativeUpdateFocusLimit(mNativePtr);
+                }
+                if (mEncSupports != 0) {
+                    nativeUpdateAverageBitrateLimit(mNativePtr);
                 }
                 if (DEBUG) {
                     dumpControls(mControlSupports);
@@ -1066,6 +1106,7 @@ public class UVCCamera {
             }
         } else {
             mControlSupports = mProcSupports = 0;
+            mEncSupports = mEncRunningSupports = 0;
         }
     }
 
@@ -1225,6 +1266,10 @@ public class UVCCamera {
     private static final native long nativeGetCtrlSupports(final long id_camera);
 
     private static final native long nativeGetProcSupports(final long id_camera);
+
+    private static final native long nativeGetEncSupports(final long id_camera);
+
+    private static final native long nativeGetEncRunningSupports(final long id_camera);
 
     private final native int nativeUpdateScanningModeLimit(final long id_camera);
 
@@ -1463,6 +1508,13 @@ public class UVCCamera {
             final int state);
 
     private static final native int nativeGetAnalogVideoLoackState(final long id_camera);
+
+    private final native int nativeUpdateAverageBitrateLimit(final long id_camera);
+
+    private static final native int nativeSetAverageBitrate(final long id_camera,
+            final int bitrate);
+
+    private static final native int nativeGetAverageBitrate(final long id_camera);
 
     private final native int nativeUpdatePrivacyLimit(final long id_camera);
 

@@ -80,6 +80,8 @@ uvc_error_t uvc_parse_vc_input_terminal(uvc_device_t *dev,
                                         uvc_device_info_t *info, const unsigned char *block, size_t block_size);
 uvc_error_t uvc_parse_vc_processing_unit(uvc_device_t *dev,
         uvc_device_info_t *info, const unsigned char *block, size_t block_size);
+uvc_error_t uvc_parse_vc_encoding_unit(uvc_device_t *dev,
+        uvc_device_info_t *info, const unsigned char *block, size_t block_size);
 
 uvc_error_t uvc_scan_streaming(uvc_device_t *dev, uvc_device_info_t *info,
                                int interface_idx);
@@ -819,6 +821,20 @@ const uvc_extension_unit_t *uvc_get_extension_units(uvc_device_handle_t *devh)
 }
 
 /**
+ * @brief Get encoding unit descriptors for the open device.
+ *
+ * @note Do not modify the returned structure.
+ * @note The returned structure is part of a linked list. Iterate through
+ *       it by using the 'next' pointers.
+ *
+ * @param devh Device handle to an open UVC device
+ */
+const uvc_encoding_unit_t *uvc_get_encoding_units(uvc_device_handle_t *devh)
+{
+    return devh->info->ctrl_if.encoding_unit_descs;
+}
+
+/**
  * @brief Increment the reference count for a device
  * @ingroup device
  *
@@ -1218,6 +1234,7 @@ uvc_error_t uvc_parse_vc_encoding_unit(uvc_device_t *dev,
                                        uvc_device_info_t *info, const unsigned char *block, size_t block_size)
 {
     uvc_encoding_unit_t *unit;
+    int i;
 
     UVC_ENTER();
 
@@ -1229,12 +1246,15 @@ uvc_error_t uvc_parse_vc_encoding_unit(uvc_device_t *dev,
     unit->bmControls = 0;	// XXX
     unit->bmRunningControls = 0;
 
-#if 0
-
-    for (i = 7 + block[7]; i >= 8; i--)
+    for (i = 6 + block[6]; i >= 7; i--)
         unit->bmControls = block[i] + (unit->bmControls << 8);
 
-#endif
+    for (i = 6 + 2 * block[6]; i >= 7 + block[6]; i--)
+        unit->bmRunningControls = block[i] + (unit->bmRunningControls << 8);
+
+    LOGI("Encoding Unit: bmControls: %llx, bmRunningControls: %llx\n",
+        unit->bmControls, unit->bmRunningControls);
+
     DL_APPEND(info->ctrl_if.encoding_unit_descs, unit);
 
     UVC_EXIT(UVC_SUCCESS);

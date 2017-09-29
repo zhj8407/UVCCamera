@@ -324,6 +324,24 @@ enum uvc_pu_ctrl_selector {
     UVC_PU_CONTRAST_AUTO_CONTROL = 0x13,		// XXX
 };
 
+/** Encoding unit control selector */
+enum uvc_eu_ctrl_selector {
+    UVC_EU_CONTROL_UNDEFINED = 0x00,
+    UVC_EU_SELECT_LAYER_CONTROL = 0x01,
+    UVC_EU_PROFILE_TOOLSET_CONTROL = 0x02,
+    UVC_EU_VIDEO_RESOLUTION_CONTROL = 0x03,
+    UVC_EU_MIN_FRAME_INTERVAL_CONTROL = 0x04,
+    UVC_EU_SLICE_MODE_CONTROL = 0x05,
+    UVC_EU_RATE_CONTROL_MODE_CONTROL = 0x06,
+    UVC_EU_AVERAGE_BITRATE_CONTROL = 0x07,
+    UVC_EU_CPB_SIZE_CONTROL = 0x08,
+    UVC_EU_PEAK_BIT_RATE_CONTROL = 0x09,
+    UVC_EU_QUANTIZATION_PARAMS_CONTROL = 0x0A,
+    UVC_EU_SYNC_REF_FRAME_CONTROL = 0x0B,
+    UVC_EU_PRIORITY_ID_CONTROL = 0x0C,
+    UVC_EU_START_OR_STOP_LAYER_CONTROL = 0x0D,
+};
+
 /** USB terminal type (B.1) */
 enum uvc_term_type {
     UVC_TT_VENDOR_SPECIFIC = 0x0100,
@@ -617,6 +635,7 @@ const uvc_input_terminal_t *uvc_get_input_terminals(uvc_device_handle_t *devh);
 const uvc_output_terminal_t *uvc_get_output_terminals(uvc_device_handle_t *devh);
 const uvc_processing_unit_t *uvc_get_processing_units(uvc_device_handle_t *devh);
 const uvc_extension_unit_t *uvc_get_extension_units(uvc_device_handle_t *devh);
+const uvc_encoding_unit_t *uvc_get_encoding_units(uvc_device_handle_t *devh);
 
 uvc_error_t uvc_get_stream_ctrl_format_size(uvc_device_handle_t *devh,
         uvc_stream_ctrl_t *ctrl, enum uvc_frame_format format, int width,
@@ -824,6 +843,9 @@ uvc_error_t uvc_set_analog_video_standard(uvc_device_handle_t *devh, uint8_t sta
 //----------------------------------------------------------------------
 uvc_error_t uvc_get_analog_video_lockstate(uvc_device_handle_t *devh, uint8_t* state, enum uvc_req_code req_code);
 uvc_error_t uvc_set_analog_video_lockstate(uvc_device_handle_t *devh, uint8_t status);
+//----------------------------------------------------------------------
+uvc_error_t uvc_get_average_bit_rate(uvc_device_handle_t *devh, uint32_t* bitrate, enum uvc_req_code req_code);
+uvc_error_t uvc_set_average_bit_rate(uvc_device_handle_t *devh, uint32_t bitrate);
 //----------------------------------------------------------------------
 uvc_error_t uvc_get_input_select(uvc_device_handle_t *devh, uint8_t* selector, enum uvc_req_code req_code);
 uvc_error_t uvc_set_input_select(uvc_device_handle_t *devh, uint8_t selector);

@@ -422,6 +422,44 @@ static jlong nativeGetProcSupports(JNIEnv *env, jobject thiz,
     RETURN(result, jlong);
 }
 
+static jlong nativeGetEncSupports(JNIEnv *env, jobject thiz,
+                                  ID_TYPE id_camera)
+{
+
+    jlong result = 0;
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        uint64_t supports;
+        int r = camera->getEncodeSupports(&supports);
+
+        if (!r)
+            result = supports;
+    }
+
+    RETURN(result, jlong);
+}
+
+static jlong nativeGetEncRunningSupports(JNIEnv *env, jobject thiz,
+                                         ID_TYPE id_camera)
+{
+
+    jlong result = 0;
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        uint64_t supports;
+        int r = camera->getEncodeRunningSupports(&supports);
+
+        if (!r)
+            result = supports;
+    }
+
+    RETURN(result, jlong);
+}
+
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateScanningModeLimit(JNIEnv *env, jobject thiz,
@@ -2421,6 +2459,61 @@ static jint nativeGetAnalogVideoLockState(JNIEnv *env, jobject thiz,
 }
 
 //======================================================================
+// Java mnethod correspond to this function should not be a static mathod
+static jint nativeUpdateAverageBitrateLimit(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera)
+{
+    jint result = JNI_ERR;
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        int min, max, def;
+        result = camera->updateAverageBitrateLimit(min, max, def);
+
+        if (!result) {
+            // Java側へ書き込む
+            setField_int(env, thiz, "mAverageBitrateMin", min);
+            setField_int(env, thiz, "mAverageBitrateMax", max);
+            setField_int(env, thiz, "mAverageBitrateDef", def);
+        }
+    }
+
+    RETURN(result, jint);
+}
+
+static jint nativeSetAverageBitrate(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera, jint bitrate)
+{
+
+    jint result = JNI_ERR;
+    ENTER();
+
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        result = camera->setAverageBitrate(bitrate);
+    }
+
+    RETURN(result, jint);
+}
+
+static jint nativeGetAverageBitrate(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera)
+{
+
+    jint result = 0;
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        result = camera->getAverageBitrate();
+    }
+
+    RETURN(result, jint);
+}
+
+//======================================================================
 // Java method correspond to this function should not be a static mathod
 static jint nativeUpdatePrivacyLimit(JNIEnv *env, jobject thiz,
                                      ID_TYPE id_camera)
@@ -2520,6 +2613,8 @@ static JNINativeMethod methods[] = {
 
     { "nativeGetCtrlSupports",			"(J)J", (void *) nativeGetCtrlSupports },
     { "nativeGetProcSupports",			"(J)J", (void *) nativeGetProcSupports },
+    { "nativeGetEncSupports",           "(J)J", (void *) nativeGetEncSupports },
+    { "nativeGetEncRunningSupports",    "(J)J", (void *) nativeGetEncRunningSupports },
 
     { "nativeUpdateScanningModeLimit",	"(J)I", (void *) nativeUpdateScanningModeLimit },
     { "nativeSetScanningMode",			"(JI)I", (void *) nativeSetScanningMode },
@@ -2672,6 +2767,10 @@ static JNINativeMethod methods[] = {
     { "nativeUpdateAnalogVideoLockStateLimit", "(J)I", (void *) nativeUpdateAnalogVideoLockStateLimit },
     { "nativeSetAnalogVideoLoackState",	"(JI)I", (void *) nativeSetAnalogVideoLockState },
     { "nativeGetAnalogVideoLoackState",	"(J)I", (void *) nativeGetAnalogVideoLockState },
+
+    { "nativeUpdateAverageBitrateLimit", "(J)I", (void *) nativeUpdateAverageBitrateLimit },
+    { "nativeSetAverageBitrate", "(JI)I", (void *) nativeSetAverageBitrate },
+    { "nativeGetAverageBitrate", "(J)I", (void *) nativeGetAverageBitrate },
 
     { "nativeUpdatePrivacyLimit",		"(J)I", (void *) nativeUpdatePrivacyLimit },
     { "nativeSetPrivacy",				"(JZ)I", (void *) nativeSetPrivacy },

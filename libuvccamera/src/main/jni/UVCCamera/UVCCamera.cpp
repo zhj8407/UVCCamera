@@ -64,7 +64,9 @@ UVCCamera::UVCCamera()
       mButtonCallback(NULL),
       mPreview(NULL),
       mCtrlSupports(0),
-      mPUSupports(0)
+      mPUSupports(0),
+      mEUSupports(0),
+      mEURuntimeSupports(0)
 {
 
     ENTER();
@@ -438,6 +440,60 @@ int UVCCamera::getProcSupports(uint64_t *supports)
 
     if (supports)
         *supports = mPUSupports;
+
+    RETURN(ret, int);
+}
+
+int UVCCamera::getEncodeSupports(uint64_t *supports)
+{
+    ENTER();
+    uvc_error_t ret = UVC_ERROR_NOT_FOUND;
+
+    if (LIKELY(mDeviceHandle)) {
+        if (!mEUSupports) {
+            const uvc_encoding_unit_t *eu_units = uvc_get_encoding_units(mDeviceHandle);
+            const uvc_encoding_unit_t *eu;
+            DL_FOREACH(eu_units, eu) {
+                if (eu) {
+                    mEUSupports = eu->bmControls;
+                    MARK("getEUSupports=%lx", (unsigned long)mEUSupports);
+                    ret = UVC_SUCCESS;
+                    break;
+                }
+            }
+        } else
+            ret = UVC_SUCCESS;
+    }
+
+    if (supports)
+        *supports = mEUSupports;
+
+    RETURN(ret, int);
+}
+
+int UVCCamera::getEncodeRunningSupports(uint64_t *runningSupports)
+{
+    ENTER();
+    uvc_error_t ret = UVC_ERROR_NOT_FOUND;
+
+    if (LIKELY(mDeviceHandle)) {
+        if (!mEURuntimeSupports) {
+            const uvc_encoding_unit_t *eu_units = uvc_get_encoding_units(mDeviceHandle);
+            const uvc_encoding_unit_t *eu;
+            DL_FOREACH(eu_units, eu) {
+                if (eu) {
+                    mEURuntimeSupports = eu->bmRunningControls;
+                    MARK("getEURunningSupports=%lx", (unsigned long)mEURuntimeSupports);
+                    ret = UVC_SUCCESS;
+                    break;
+                }
+            }
+        } else
+            ret = UVC_SUCCESS;
+    }
+
+    if (runningSupports)
+        *runningSupports = mEURuntimeSupports;
 
     RETURN(ret, int);
 }
@@ -2853,6 +2909,51 @@ static uvc_error_t update_ctrl_values(uvc_device_handle_t *devh, control_value_t
 //			LOGI("status:%d", status);
                 if (LIKELY(!ret))
                     return status;
+            }
+        }
+
+        RETURN(0, int);
+    }
+
+//======================================================================
+// AverateBitrateStatus
+    int UVCCamera::updateAverageBitrateLimit(int &min, int &max, int &def)
+    {
+        ENTER();
+        int ret = UVC_ERROR_IO;
+
+        if (mEUSupports & EU_AVERAGE_BIT_RATE) {
+            UPDATE_CTRL_VALUES(mAverageBitrate, uvc_get_average_bit_rate)
+        }
+
+        RETURN(ret, int);
+    }
+
+    int UVCCamera::setAverageBitrate(int bitrate)
+    {
+        ENTER();
+        int ret = UVC_ERROR_IO;
+
+        if (mEUSupports & EU_AVERAGE_BIT_RATE) {
+            ret = internalSetCtrlValue(mAverageBitrate, bitrate, uvc_get_average_bit_rate, uvc_set_average_bit_rate);
+        }
+
+        RETURN(ret, int);
+    }
+
+    int UVCCamera::getAverageBitrate()
+    {
+        ENTER();
+
+        if (mEUSupports & EU_AVERAGE_BIT_RATE) {
+            int ret = update_ctrl_values(mDeviceHandle, mAverageBitrate, uvc_get_average_bit_rate);
+
+            if (LIKELY(!ret)) { // 正常に最小・最大値を取得出来た時
+                uint32_t bitrate;
+                ret = uvc_get_average_bit_rate(mDeviceHandle, &bitrate, UVC_GET_CUR);
+
+                if (LIKELY(!ret))
+                    return bitrate;
             }
         }
 

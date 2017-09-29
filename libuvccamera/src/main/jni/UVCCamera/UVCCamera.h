@@ -78,6 +78,21 @@
 #define PU_AVIDEO_LOCK		0x020000	// D17: Analog Video Lock Status
 #define PU_CONTRAST_AUTO	0x040000	// D18: Contrast, Auto
 
+#define EU_SELECT_LAYER         0x00000001  // D0: Select Layer
+#define EU_PROFILE_TOOLSET      0x00000002  // D1: Profile and Toolset
+#define EU_VIDEO_RESOLUTION     0x00000004  // D2: Video Resolution
+#define EU_MIN_FRAME_INTERVAL   0x00000008  // D3: Minimum Frame Interval
+#define EU_SLICE_MODE           0x00000010  // D4: Slice Mode
+#define EU_RATE_CONTROL_MODE    0x00000020  // D5: Rate Control Mode
+#define EU_AVERAGE_BIT_RATE     0x00000040  // D6: Average Bit Rate
+#define EU_CPB_SIZE             0x00000080  // D7: CPB Size
+#define EU_PEAK_BIT_RATE        0x00000100  // D8: Peak Bit Rate
+#define EU_QUANTIZATION_PARAMS  0x00000200  // D9: Quantization Parameter
+#define EU_SYNC_REF_FRAME       0x00000400  // D10: Synchronization and Long Term Reference Frame
+#define EU_PRIORITY_ID          0x00000800  // D11: Priority ID
+#define EU_START_OR_STOP_LAYER  0x00001000  // D12: Start or Stop Layer/View.
+//TODO
+
 typedef struct control_value {
     int res;	// unused
     int min;
@@ -122,6 +137,8 @@ class UVCCamera
     UVCRecord *mRecord;
     uint64_t mCtrlSupports;
     uint64_t mPUSupports;
+    uint64_t mEUSupports;
+    uint64_t mEURuntimeSupports;
     control_value_t mScanningMode;
     control_value_t mExposureMode;
     control_value_t mExposurePriority;
@@ -160,6 +177,10 @@ class UVCCamera
     control_value_t mMultiplierLimit;
     control_value_t mAnalogVideoStandard;
     control_value_t mAnalogVideoLockState;
+
+    /* Encoding Unit for H.264 stream. */
+    control_value_t mAverageBitrate;
+    control_value_t mSyncRefFrame;
 
     void clearCameraParams();
     int internalSetCtrlValue(control_value_t &values, int8_t value,
@@ -203,6 +224,8 @@ public:
 
     int getCtrlSupports(uint64_t *supports);
     int getProcSupports(uint64_t *supports);
+    int getEncodeSupports(uint64_t *supports);
+    int getEncodeRunningSupports(uint64_t *runningSupports);
 
     int updateScanningModeLimit(int &min, int &max, int &def);
     int setScanningMode(int mode);
@@ -359,6 +382,10 @@ public:
     int updateAnalogVideoLockStateLimit(int &min, int &max, int &def);
     int setAnalogVideoLockState(int status);
     int getAnalogVideoLockState();
+
+    int updateAverageBitrateLimit(int &min, int &max, int &def);
+    int setAverageBitrate(int bitrate);
+    int getAverageBitrate();
 };
 
 #endif /* UVCCAMERA_H_ */
