@@ -138,6 +138,7 @@ void UVCCamera::clearCameraParams()
     mAnalogVideoStandard.min = mAnalogVideoStandard.max = mAnalogVideoStandard.def = 0;
     mAnalogVideoLockState.min = mAnalogVideoLockState.max = mAnalogVideoLockState.def = 0;
     mAverageBitrate.min = mAverageBitrate.max = mAverageBitrate.def = 0;
+    mSyncRefFrame.min = mSyncRefFrame.max = mSyncRefFrame.def = 0;
 }
 
 //======================================================================
@@ -2955,6 +2956,51 @@ static uvc_error_t update_ctrl_values(uvc_device_handle_t *devh, control_value_t
 
                 if (LIKELY(!ret))
                     return bitrate;
+            }
+        }
+
+        RETURN(0, int);
+    }
+
+//======================================================================
+// SyncRefFrameStatus
+    int UVCCamera::updateSyncRefFrameLimit(int &min, int &max, int &def)
+    {
+        ENTER();
+        int ret = UVC_ERROR_IO;
+
+        if (mEUSupports & EU_SYNC_REF_FRAME) {
+            UPDATE_CTRL_VALUES(mSyncRefFrame, uvc_get_sync_ref_frame)
+        }
+
+        RETURN(ret, int);
+    }
+
+    int UVCCamera::setSyncRefFrame(int value)
+    {
+        ENTER();
+        int ret = UVC_ERROR_IO;
+
+        if (mEUSupports & EU_SYNC_REF_FRAME) {
+            ret = internalSetCtrlValue(mSyncRefFrame, value, uvc_get_sync_ref_frame, uvc_set_sync_ref_frame);
+        }
+
+        RETURN(ret, int);
+    }
+
+    int UVCCamera::getSyncRefFrame()
+    {
+        ENTER();
+
+        if (mEUSupports & EU_SYNC_REF_FRAME) {
+            int ret = update_ctrl_values(mDeviceHandle, mSyncRefFrame, uvc_get_sync_ref_frame);
+
+            if (LIKELY(!ret)) { // 正常に最小・最大値を取得出来た時
+                uint32_t value;
+                ret = uvc_get_sync_ref_frame(mDeviceHandle, &value, UVC_GET_CUR);
+
+                if (LIKELY(!ret))
+                    return value;
             }
         }
 

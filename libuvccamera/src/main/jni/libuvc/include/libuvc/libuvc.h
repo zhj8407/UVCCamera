@@ -847,6 +847,9 @@ uvc_error_t uvc_set_analog_video_lockstate(uvc_device_handle_t *devh, uint8_t st
 uvc_error_t uvc_get_average_bit_rate(uvc_device_handle_t *devh, uint32_t* bitrate, enum uvc_req_code req_code);
 uvc_error_t uvc_set_average_bit_rate(uvc_device_handle_t *devh, uint32_t bitrate);
 //----------------------------------------------------------------------
+uvc_error_t uvc_get_sync_ref_frame(uvc_device_handle_t *devh, uint32_t* value, enum uvc_req_code req_code);
+uvc_error_t uvc_set_sync_ref_frame(uvc_device_handle_t *devh, uint32_t value);
+//----------------------------------------------------------------------
 uvc_error_t uvc_get_input_select(uvc_device_handle_t *devh, uint8_t* selector, enum uvc_req_code req_code);
 uvc_error_t uvc_set_input_select(uvc_device_handle_t *devh, uint8_t selector);
 //----------------------------------------------------------------------

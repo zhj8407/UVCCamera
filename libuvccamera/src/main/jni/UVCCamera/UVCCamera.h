@@ -386,6 +386,10 @@ public:
     int updateAverageBitrateLimit(int &min, int &max, int &def);
     int setAverageBitrate(int bitrate);
     int getAverageBitrate();
+
+    int updateSyncRefFrameLimit(int &min, int &max, int &def);
+    int setSyncRefFrame(int value);
+    int getSyncRefFrame();
 };
 
 #endif /* UVCCAMERA_H_ */

@@ -207,6 +207,7 @@ public class UVCCamera {
     protected int mAnalogVideoStandardMin, mAnalogVideoStandardMax, mAnalogVideoStandardDef;
     protected int mAnalogVideoLockStateMin, mAnalogVideoLockStateMax, mAnalogVideoLockStateDef;
     protected int mAverageBitrateMin, mAverageBitrateMax, mAverageBitrateDef;
+    protected int mSyncRefFrameMin, mSyncRefFrameMax, mSyncRefFrameDef;
     // until here
 
     /**
@@ -1046,6 +1047,20 @@ public class UVCCamera {
         return nativeGetAverageBitrate(mNativePtr);
     }
 
+    public void setSyncRefFrame(final int bitrate) {
+        if (mNativePtr != 0) {
+            nativeSetSyncRefFrame(mNativePtr, bitrate);
+        }
+    }
+
+    /**
+     *
+     * @return bitrate
+     */
+    public int getSyncRefFrame() {
+        return nativeGetSyncRefFrame(mNativePtr);
+    }
+
     //================================================================================
     public synchronized void updateCameraParams() {
         if (mNativePtr != 0) {
@@ -1078,6 +1093,7 @@ public class UVCCamera {
                 }
                 if (mEncSupports != 0) {
                     nativeUpdateAverageBitrateLimit(mNativePtr);
+                    nativeUpdateSyncRefFrameLimit(mNativePtr);
                 }
                 if (DEBUG) {
                     dumpControls(mControlSupports);
@@ -1515,6 +1531,13 @@ public class UVCCamera {
             final int bitrate);
 
     private static final native int nativeGetAverageBitrate(final long id_camera);
+
+    private final native int nativeUpdateSyncRefFrameLimit(final long id_camera);
+
+    private static final native int nativeSetSyncRefFrame(final long id_camera,
+            final int value);
+
+    private static final native int nativeGetSyncRefFrame(final long id_camera);
 
     private final native int nativeUpdatePrivacyLimit(final long id_camera);
 

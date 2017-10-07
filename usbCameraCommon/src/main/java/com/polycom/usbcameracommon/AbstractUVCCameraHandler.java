@@ -281,6 +281,8 @@ abstract class AbstractUVCCameraHandler extends Handler {
                 return camera.getContrast();
             } else if (flag == UVCCamera.EU_AVERAGE_BIT_RATE) {
                 return camera.getAverageBitrate();
+            } else if (flag == UVCCamera.EU_SYNC_REF_FRAME) {
+                return camera.getSyncRefFrame();
             }
         }
         throw new IllegalStateException();
@@ -300,6 +302,9 @@ abstract class AbstractUVCCameraHandler extends Handler {
             } else if (flag == UVCCamera.EU_AVERAGE_BIT_RATE) {
                 camera.setAverageBitrate(value);
                 return camera.getAverageBitrate();
+            } else if (flag == UVCCamera.EU_SYNC_REF_FRAME) {
+                camera.setSyncRefFrame(value);
+                return camera.getSyncRefFrame();
             }
         }
         throw new IllegalStateException();

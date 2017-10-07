@@ -189,6 +189,7 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 	 * event handler when click camera / capture button
 	 */
 	private final OnClickListener mOnClickListener = new OnClickListener() {
+		int count = 0;
 		@Override
 		public void onClick(final View view) {
 			switch (view.getId()) {
@@ -201,9 +202,14 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 							mCameraHandler.startRecord();
 							setValue(UVCCamera.EU_AVERAGE_BIT_RATE, 4000000);
 						} else {
-							mCaptureButton.setColorFilter(0);	// return to default color
-							//mCameraHandler.stopCapture();
-							mCameraHandler.stopRecord();
+							if (count++ > 5) {
+								mCaptureButton.setColorFilter(0);    // return to default color
+								//mCameraHandler.stopCapture();
+								mCameraHandler.stopRecord();
+								count = 0;
+							} else {
+								setValue(UVCCamera.EU_SYNC_REF_FRAME, 0x138801);
+							}
 						}
 					}
 				}

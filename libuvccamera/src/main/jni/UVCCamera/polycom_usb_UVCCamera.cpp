@@ -2514,6 +2514,61 @@ static jint nativeGetAverageBitrate(JNIEnv *env, jobject thiz,
 }
 
 //======================================================================
+// Java mnethod correspond to this function should not be a static mathod
+static jint nativeUpdateSyncRefFrameLimit(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera)
+{
+    jint result = JNI_ERR;
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        int min, max, def;
+        result = camera->updateSyncRefFrameLimit(min, max, def);
+
+        if (!result) {
+            // Java側へ書き込む
+            setField_int(env, thiz, "mSyncRefFrameMin", min);
+            setField_int(env, thiz, "mSyncRefFrameMax", max);
+            setField_int(env, thiz, "mSyncRefFrameDef", def);
+        }
+    }
+
+    RETURN(result, jint);
+}
+
+static jint nativeSetSyncRefFrame(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera, jint bitrate)
+{
+
+    jint result = JNI_ERR;
+    ENTER();
+
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        result = camera->setSyncRefFrame(bitrate);
+    }
+
+    RETURN(result, jint);
+}
+
+static jint nativeGetSyncRefFrame(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera)
+{
+
+    jint result = 0;
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        result = camera->getSyncRefFrame();
+    }
+
+    RETURN(result, jint);
+}
+
+//======================================================================
 // Java method correspond to this function should not be a static mathod
 static jint nativeUpdatePrivacyLimit(JNIEnv *env, jobject thiz,
                                      ID_TYPE id_camera)
@@ -2771,6 +2826,10 @@ static JNINativeMethod methods[] = {
     { "nativeUpdateAverageBitrateLimit", "(J)I", (void *) nativeUpdateAverageBitrateLimit },
     { "nativeSetAverageBitrate", "(JI)I", (void *) nativeSetAverageBitrate },
     { "nativeGetAverageBitrate", "(J)I", (void *) nativeGetAverageBitrate },
+
+    { "nativeUpdateSyncRefFrameLimit", "(J)I", (void *) nativeUpdateSyncRefFrameLimit },
+    { "nativeSetSyncRefFrame", "(JI)I", (void *) nativeSetSyncRefFrame },
+    { "nativeGetSyncRefFrame", "(J)I", (void *) nativeGetSyncRefFrame },
 
     { "nativeUpdatePrivacyLimit",		"(J)I", (void *) nativeUpdatePrivacyLimit },
     { "nativeSetPrivacy",				"(JZ)I", (void *) nativeSetPrivacy },
