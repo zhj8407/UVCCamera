@@ -137,6 +137,7 @@ void UVCCamera::clearCameraParams()
     mMultiplierLimit.min = mMultiplierLimit.max = mMultiplierLimit.def = 0;
     mAnalogVideoStandard.min = mAnalogVideoStandard.max = mAnalogVideoStandard.def = 0;
     mAnalogVideoLockState.min = mAnalogVideoLockState.max = mAnalogVideoLockState.def = 0;
+    mAverageBitrate.min = mAverageBitrate.max = mAverageBitrate.def = 0;
 }
 
 //======================================================================
