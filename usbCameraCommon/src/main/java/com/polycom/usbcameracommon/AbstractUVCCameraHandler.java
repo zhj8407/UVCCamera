@@ -381,6 +381,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
         private float mPreviewBandwidthFactor;
         private int mRecordWidth, mRecordHeight, mRecordMode;
         private int mRecordProfile;
+		private int mRecordUsage;
         private float mRecordBandwidthFactor;
         private boolean mIsPreviewing;
         private boolean mIsCaptureing;
@@ -418,7 +419,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
                 final int encoderType, final int previewWidth, final int previewHeight,
                 final int previewFormat,
                 final float previewBandwidthFactor, int recordWidth, int recordHeight,
-                int recordFormat, int recordProfile, float recordBandwidthFactor) {
+				int recordFormat, int recordProfile, int recordUsage, float recordBandwidthFactor) {
 
             super("CameraThread");
             mHandlerClass = clazz;
@@ -431,6 +432,7 @@ abstract class AbstractUVCCameraHandler extends Handler {
             mRecordHeight = recordHeight;
             mRecordMode = recordFormat;
             mRecordProfile = recordProfile;
+			mRecordUsage = recordUsage;
             mRecordBandwidthFactor = recordBandwidthFactor;
             mWeakParent = new WeakReference<Activity>(parent);
             mWeakCameraView = new WeakReference<CameraViewInterface>(cameraView);
@@ -694,7 +696,8 @@ abstract class AbstractUVCCameraHandler extends Handler {
             if (DEBUG) Log.v(TAG_THREAD, "handleStartRecord#mIsRecording " + mIsRecording);
             if ((mUVCCamera == null) || mIsRecording) return;
             try {
-                mUVCCamera.setRecordSize(mRecordWidth, mRecordHeight, mRecordProfile, 1, 31,
+                mUVCCamera.setRecordSize(mRecordWidth, mRecordHeight, mRecordProfile, mRecordUsage,
+                        1, 31,
                         mRecordMode, mRecordBandwidthFactor);
             } catch (final IllegalArgumentException e) {
                 Log.e(TAG_THREAD, "Failed to set the record size");

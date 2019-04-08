@@ -139,6 +139,7 @@ void UVCCamera::clearCameraParams()
     mAnalogVideoLockState.min = mAnalogVideoLockState.max = mAnalogVideoLockState.def = 0;
     mAverageBitrate.min = mAverageBitrate.max = mAverageBitrate.def = 0;
     mSyncRefFrame.min = mSyncRefFrame.max = mSyncRefFrame.def = 0;
+    mCPBSize.min = mCPBSize.max = mCPBSize.def = 0;
 }
 
 //======================================================================
@@ -295,6 +296,30 @@ int UVCCamera::setRecordSize(int width, int height, int profile, int min_fps, in
 
     if (mRecord) {
         result = mRecord->setRecordSize(width, height, profile, min_fps, max_fps, mode, bandwidth);
+    }
+
+    RETURN(result, int);
+}
+
+int UVCCamera::setRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth)
+{
+    ENTER();
+    int result = EXIT_FAILURE;
+
+    if (mRecord) {
+        result = mRecord->setRecordSize(width, height, profile, usage, min_fps, max_fps, mode, bandwidth);
+    }
+
+    RETURN(result, int);
+}
+
+int UVCCamera::commitRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth)
+{
+    ENTER();
+    int result = EXIT_FAILURE;
+
+    if (mRecord) {
+        result = mRecord->commitRecordSize(width, height, profile, usage, min_fps, max_fps, mode, bandwidth);
     }
 
     RETURN(result, int);
@@ -3002,6 +3027,78 @@ static uvc_error_t update_ctrl_values(uvc_device_handle_t *devh, control_value_t
                 if (LIKELY(!ret))
                     return value;
             }
+        }
+
+        RETURN(0, int);
+    }
+
+//======================================================================
+// CPBSizeStatus
+    int UVCCamera::updateCPBSizeLimit(int &min, int &max, int &def)
+    {
+        ENTER();
+        int ret = UVC_ERROR_IO;
+
+        if (mEUSupports & EU_CPB_SIZE) {
+            UPDATE_CTRL_VALUES(mCPBSize, uvc_get_cpb_size)
+        }
+
+        RETURN(ret, int);
+    }
+
+    int UVCCamera::setCPBSize(int value)
+    {
+        ENTER();
+        int ret = UVC_ERROR_IO;
+
+        if (mEUSupports & EU_CPB_SIZE) {
+            ret = internalSetCtrlValue(mCPBSize, value, uvc_get_cpb_size, uvc_set_cpb_size);
+        }
+
+        RETURN(ret, int);
+    }
+
+    int UVCCamera::getCPBSize()
+    {
+        ENTER();
+
+        if (mEUSupports & EU_CPB_SIZE) {
+            int ret = update_ctrl_values(mDeviceHandle, mCPBSize, uvc_get_cpb_size);
+
+            if (LIKELY(!ret)) { // 正常に最小・最大値を取得出来た時
+                uint32_t value;
+                ret = uvc_get_cpb_size(mDeviceHandle, &value, UVC_GET_CUR);
+
+                if (LIKELY(!ret))
+                    return value;
+            }
+        }
+
+        RETURN(0, int);
+    }
+
+    int UVCCamera::setSelectLayer(int value)
+    {
+        ENTER();
+        int ret = UVC_ERROR_IO;
+
+        if (mEUSupports & EU_SELECT_LAYER) {
+            ret = uvc_set_select_layer(mDeviceHandle, (uint16_t)value);
+        }
+
+        RETURN(ret, int);
+    }
+
+    int UVCCamera::getSelectLayer()
+    {
+        ENTER();
+
+        if (mEUSupports & EU_SELECT_LAYER) {
+            uint16_t value;
+            int ret = uvc_get_select_layer(mDeviceHandle, &value, UVC_GET_CUR);
+
+            if (LIKELY(!ret))
+                return (int)value;
         }
 
         RETURN(0, int);

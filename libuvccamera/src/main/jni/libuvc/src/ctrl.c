@@ -1899,3 +1899,81 @@ uvc_error_t uvc_set_sync_ref_frame(uvc_device_handle_t *devh, uint32_t value)
     else
         return ret;
 }
+
+uvc_error_t uvc_get_select_layer(uvc_device_handle_t *devh, uint16_t *value,
+        enum uvc_req_code req_code)
+{
+    uint8_t data[2];
+    uvc_error_t ret;
+
+    ret = libusb_control_transfer(devh->usb_devh, REQ_TYPE_GET, req_code,
+                                  UVC_EU_SELECT_LAYER_CONTROL << 8,
+                                  devh->info->ctrl_if.encoding_unit_descs->request,
+                                  data, sizeof(data), CTRL_TIMEOUT_MILLIS);
+
+    if (LIKELY(ret == sizeof(data))) {
+        *value = *((uint16_t *)data);
+        return UVC_SUCCESS;
+    } else {
+        return ret;
+    }
+
+    RETURN(-1, uvc_error_t);
+}
+
+uvc_error_t uvc_set_select_layer(uvc_device_handle_t *devh, uint16_t value)
+{
+    uint8_t data[2];
+    uvc_error_t ret;
+
+    memcpy(data, &value, sizeof(data));
+
+    ret = libusb_control_transfer(devh->usb_devh, REQ_TYPE_SET, UVC_SET_CUR,
+                                  UVC_EU_SELECT_LAYER_CONTROL << 8,
+                                  devh->info->ctrl_if.encoding_unit_descs->request,
+                                  data, sizeof(data), CTRL_TIMEOUT_MILLIS);
+
+    if (LIKELY(ret == sizeof(data)))
+        return UVC_SUCCESS;
+    else
+        return ret;
+}
+
+uvc_error_t uvc_get_cpb_size(uvc_device_handle_t *devh, uint32_t *value,
+        enum uvc_req_code req_code)
+{
+    uint8_t data[4];
+    uvc_error_t ret;
+
+    ret = libusb_control_transfer(devh->usb_devh, REQ_TYPE_GET, req_code,
+                                  UVC_EU_CPB_SIZE_CONTROL << 8,
+                                  devh->info->ctrl_if.encoding_unit_descs->request,
+                                  data, sizeof(data), CTRL_TIMEOUT_MILLIS);
+
+    if (LIKELY(ret == sizeof(data))) {
+        *value = *((uint32_t *)data);
+        return UVC_SUCCESS;
+    } else {
+        return ret;
+    }
+
+    RETURN(-1, uvc_error_t);
+}
+
+uvc_error_t uvc_set_cpb_size(uvc_device_handle_t *devh, uint32_t value)
+{
+    uint8_t data[4];
+    uvc_error_t ret;
+
+    memcpy(data, &value, sizeof(data));
+
+    ret = libusb_control_transfer(devh->usb_devh, REQ_TYPE_SET, UVC_SET_CUR,
+                                  UVC_EU_CPB_SIZE_CONTROL << 8,
+                                  devh->info->ctrl_if.encoding_unit_descs->request,
+                                  data, sizeof(data), CTRL_TIMEOUT_MILLIS);
+
+    if (LIKELY(ret == sizeof(data)))
+        return UVC_SUCCESS;
+    else
+        return ret;
+}

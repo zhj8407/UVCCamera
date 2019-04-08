@@ -40,8 +40,8 @@ public class UVCCameraHandler extends AbstractUVCCameraHandler {
         return createHandler(parent, cameraView, 1, width, height, UVCCamera.FRAME_FORMAT_MJPEG,
                 UVCCamera.DEFAULT_BANDWIDTH,
                 UVCCamera.DEFAULT_RECORD_WIDTH, UVCCamera.DEFAULT_RECORD_HEIGHT,
-                UVCCamera.DEFAULT_RECORD_MODE, UVCCamera.DEFAULT_RECORD_PROFILE,
-                UVCCamera.DEFAULT_BANDWIDTH);
+				UVCCamera.DEFAULT_RECORD_MODE,  UVCCamera.H264_PROFILE_CONSTRAINED_BASELINE,
+				UVCCamera.H264_USAGE_1, UVCCamera.DEFAULT_BANDWIDTH);
     }
 
     /**
@@ -54,8 +54,9 @@ public class UVCCameraHandler extends AbstractUVCCameraHandler {
         return createHandler(parent, cameraView, 1, width, height, UVCCamera.FRAME_FORMAT_MJPEG,
                 bandwidthFactor,
                 UVCCamera.DEFAULT_RECORD_WIDTH, UVCCamera.DEFAULT_RECORD_HEIGHT,
-                UVCCamera.DEFAULT_RECORD_MODE, UVCCamera.DEFAULT_RECORD_PROFILE,
-                UVCCamera.DEFAULT_BANDWIDTH);
+				UVCCamera.DEFAULT_RECORD_MODE, UVCCamera.H264_PROFILE_CONSTRAINED_BASELINE,
+				UVCCamera.H264_USAGE_1, UVCCamera.DEFAULT_BANDWIDTH);
+
     }
 
     /**
@@ -71,8 +72,8 @@ public class UVCCameraHandler extends AbstractUVCCameraHandler {
         return createHandler(parent, cameraView, encoderType, width, height,
                 UVCCamera.FRAME_FORMAT_MJPEG, UVCCamera.DEFAULT_BANDWIDTH,
                 UVCCamera.DEFAULT_RECORD_WIDTH, UVCCamera.DEFAULT_RECORD_HEIGHT,
-                UVCCamera.DEFAULT_RECORD_MODE, UVCCamera.DEFAULT_RECORD_PROFILE,
-                UVCCamera.DEFAULT_BANDWIDTH);
+                UVCCamera.DEFAULT_RECORD_MODE, UVCCamera.H264_PROFILE_CONSTRAINED_BASELINE,
+                UVCCamera.H264_USAGE_1, UVCCamera.DEFAULT_BANDWIDTH);
     }
 
     /**
@@ -89,8 +90,8 @@ public class UVCCameraHandler extends AbstractUVCCameraHandler {
         return createHandler(parent, cameraView, encoderType, width, height, format,
                 UVCCamera.DEFAULT_BANDWIDTH,
                 UVCCamera.DEFAULT_RECORD_WIDTH, UVCCamera.DEFAULT_RECORD_HEIGHT,
-                UVCCamera.DEFAULT_RECORD_MODE, UVCCamera.DEFAULT_RECORD_PROFILE,
-                UVCCamera.DEFAULT_BANDWIDTH);
+                UVCCamera.DEFAULT_RECORD_MODE, UVCCamera.H264_PROFILE_CONSTRAINED_BASELINE,
+				UVCCamera.H264_USAGE_1, UVCCamera.DEFAULT_BANDWIDTH);
     }
 
     /**
@@ -105,12 +106,14 @@ public class UVCCameraHandler extends AbstractUVCCameraHandler {
             final int encoderType, final int previewWidth, final int previewHeight,
             final int previewFormat,
             final float previewBandwidthFactor,
-            int recordWidth, int recordHeight, int recordFormat, int recordProfile,
+            int recordWidth, int recordHeight, int recordFormat,
+			int recordProfile, int recordUsage,
             float recordBandwidthFactor) {
 
         final CameraThread thread = new CameraThread(UVCCameraHandler.class, parent, cameraView,
                 encoderType, previewWidth, previewHeight, previewFormat, previewBandwidthFactor,
-                recordWidth, recordHeight, recordFormat, recordProfile, recordBandwidthFactor);
+                recordWidth, recordHeight, recordFormat, recordProfile,
+				recordUsage, recordBandwidthFactor);
         thread.start();
         return (UVCCameraHandler) thread.getHandler();
     }

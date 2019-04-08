@@ -48,8 +48,12 @@
 
 UVCRecord::UVCRecord(uvc_device_handle_t *devh)
     : UVCStream(devh),
+      requestProfile(DEFAULT_RECORD_PROFILE),
+      requestUsage(DEFAULT_RECORD_USAGE),
       recordBytes(DEFAULT_RECORD_WIDTH * DEFAULT_RECORD_HEIGHT * 3 / 4),
-      recordFormat(WINDOW_FORMAT_RGBA_8888)
+      recordFormat(WINDOW_FORMAT_RGBA_8888),
+      stream_probed(false),
+      stream_committed(false)
 {
 
     ENTER();
@@ -63,6 +67,8 @@ UVCRecord::UVCRecord(uvc_device_handle_t *devh)
     frameHeight = DEFAULT_RECORD_HEIGHT;
     frameBytes = DEFAULT_RECORD_WIDTH * DEFAULT_RECORD_HEIGHT * 2; // YUYV
     frameMode = 0;
+
+    memset(&stream_ctrl, 0, sizeof(uvc_stream_ctrl_t));
 
     EXIT();
 }
@@ -81,24 +87,89 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int min_fps, in
 
     int result = 0;
 
-    if ((requestWidth != width) || (requestHeight != height) || (requestMode != mode)) {
+    if (mode == DEFAULT_RECORD_MODE) {
         requestWidth = width;
         requestHeight = height;
         requestMinFps = min_fps;
         requestMaxFps = max_fps;
         requestMode = mode;
         requestProfile = profile;
+        requestUsage = DEFAULT_RECORD_USAGE;
         requestBandwidth = bandwidth;
 
-        if (requestMode == 2) {
-            uvc_stream_ctrl_t ctrl;
-            result = uvc_get_stream_ctrl_format_size_fps(mDeviceHandle, &ctrl,
-                     UVC_FRAME_FORMAT_H_264,
-                     requestWidth, requestHeight, requestMinFps, requestMaxFps);
-        } else {
-            result = -1;
-        }
+        result = uvc_get_stream_ctrl_format_size_fps_profile_usage(mDeviceHandle, &stream_ctrl,
+                 UVC_FRAME_FORMAT_H_264,
+                 requestWidth, requestHeight,
+                 requestProfile, requestUsage,
+                 requestMinFps, requestMaxFps);
+    } else {
+        result = -1;
     }
+
+    if (!result)
+        stream_probed = true;
+
+    RETURN(result, int);
+}
+
+int UVCRecord::setRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth)
+{
+    ENTER();
+
+    int result = 0;
+
+    if (mode == DEFAULT_RECORD_MODE) {
+        requestWidth = width;
+        requestHeight = height;
+        requestMinFps = min_fps;
+        requestMaxFps = max_fps;
+        requestMode = mode;
+        requestProfile = profile;
+        requestUsage = usage;
+        requestBandwidth = bandwidth;
+
+        result = uvc_get_stream_ctrl_format_size_fps_profile_usage(mDeviceHandle, &stream_ctrl,
+                 UVC_FRAME_FORMAT_H_264,
+                 requestWidth, requestHeight,
+                 requestProfile, requestUsage,
+                 requestMinFps, requestMaxFps);
+    } else {
+        result = -1;
+    }
+
+    if (!result)
+        stream_probed = true;
+
+    RETURN(result, int);
+}
+
+int UVCRecord::commitRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth)
+{
+    ENTER();
+
+    int result = 0;
+
+    if (mode == DEFAULT_RECORD_MODE) {
+        requestWidth = width;
+        requestHeight = height;
+        requestMinFps = min_fps;
+        requestMaxFps = max_fps;
+        requestMode = mode;
+        requestProfile = profile;
+        requestUsage = usage;
+        requestBandwidth = bandwidth;
+
+        result = uvc_get_and_commit_stream_ctrl_format_size_fps_profile_usage(mDeviceHandle, &stream_ctrl,
+                 UVC_FRAME_FORMAT_H_264,
+                 requestWidth, requestHeight,
+                 requestProfile, requestUsage,
+                 requestMinFps, requestMaxFps);
+    } else {
+        result = -1;
+    }
+
+    if (!result)
+        stream_probed = stream_committed = true;
 
     RETURN(result, int);
 }
@@ -130,18 +201,26 @@ int UVCRecord::stopRecord()
 
     stopStreaming();
 
+    stream_probed = stream_committed = false;
+
     RETURN(0, int);
 }
 
 int UVCRecord::prepare_streaming(uvc_stream_ctrl_t *ctrl)
 {
-    uvc_error_t result;
+    uvc_error_t result = UVC_SUCCESS;
 
     ENTER();
-    result = uvc_get_stream_ctrl_format_size_fps(mDeviceHandle, ctrl,
-             UVC_FRAME_FORMAT_H_264, /* requestProfile, */
-             requestWidth, requestHeight, requestMinFps, requestMaxFps
-                                                );
+
+    if (stream_probed) {
+        memcpy(ctrl, &stream_ctrl, sizeof(uvc_stream_ctrl_t));
+    } else {
+        result = uvc_get_stream_ctrl_format_size_fps_profile_usage(mDeviceHandle, ctrl,
+                 UVC_FRAME_FORMAT_H_264,
+                 requestWidth, requestHeight,
+                 requestProfile, requestUsage,
+                 requestMinFps, requestMaxFps);
+    }
 
     if (LIKELY(!result)) {
 #if LOCAL_DEBUG
@@ -174,8 +253,14 @@ void UVCRecord::do_streaming(uvc_stream_ctrl_t *ctrl)
     ENTER();
 
     uvc_frame_t *frame = NULL;
-    uvc_error_t result = uvc_start_streaming_bandwidth(
-                             mDeviceHandle, ctrl, uvc_streaming_frame_callback, (void *)this, requestBandwidth, 0);
+    uvc_error_t result = uvc_start_streaming_bandwidth_committed(
+                             mDeviceHandle,
+                             ctrl,
+                             uvc_streaming_frame_callback,
+                             (void *)this,
+                             requestBandwidth,
+                             0,
+                             stream_committed ? 1 : 0);
 
     if (LIKELY(!result)) {
         clearStreamingFrame();

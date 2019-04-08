@@ -23,13 +23,6 @@
 
 package com.polycom.uvccamera.usb;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import android.graphics.SurfaceTexture;
 import android.hardware.usb.UsbDevice;
 import android.text.TextUtils;
@@ -38,6 +31,13 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 
 import com.polycom.uvccamera.usb.USBMonitor.UsbControlBlock;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class UVCCamera {
     private static final boolean DEBUG = false;    // TODO set false when releasing
@@ -63,38 +63,41 @@ public class UVCCamera {
     public static final int FRAME_FORMAT_MJPEG = 1;
     public static final int FRAME_FORMAT_H_264 = 2;
 
-    public static final int H_264_BASELINE_PROFILE = 0;
-    public static final int H_264_MAIN_PROFILE = 1;
-    public static final int H_264_HIGH_PROFILE = 2;
-
     public static final int PIXEL_FORMAT_RAW = 0;
     public static final int PIXEL_FORMAT_YUV = 1;
     public static final int PIXEL_FORMAT_RGB565 = 2;
     public static final int PIXEL_FORMAT_RGBX = 3;
     public static final int PIXEL_FORMAT_YUV420SP = 4;
-    public static final int PIXEL_FORMAT_NV21 = 5;        // = YVU420SemiPlanar
+    public static final int PIXEL_FORMAT_NV21 = 5; // = YVU420SemiPlanar
     public static final int PIXEL_FORMAT_H_264 = 6;
 
-    //--------------------------------------------------------------------------------
-    public static final int CTRL_SCANNING = 0x00000001;    // D0:  Scanning Mode
-    public static final int CTRL_AE = 0x00000002;    // D1:  Auto-Exposure Mode
-    public static final int CTRL_AE_PRIORITY = 0x00000004;    // D2:  Auto-Exposure Priority
-    public static final int CTRL_AE_ABS = 0x00000008;    // D3:  Exposure Time (Absolute)
-    public static final int CTRL_AR_REL = 0x00000010;    // D4:  Exposure Time (Relative)
-    public static final int CTRL_FOCUS_ABS = 0x00000020;    // D5:  Focus (Absolute)
-    public static final int CTRL_FOCUS_REL = 0x00000040;    // D6:  Focus (Relative)
-    public static final int CTRL_IRIS_ABS = 0x00000080;    // D7:  Iris (Absolute)
-    public static final int CTRL_IRIS_REL = 0x00000100;    // D8:  Iris (Relative)
-    public static final int CTRL_ZOOM_ABS = 0x00000200;    // D9:  Zoom (Absolute)
-    public static final int CTRL_ZOOM_REL = 0x00000400;    // D10: Zoom (Relative)
-    public static final int CTRL_PANTILT_ABS = 0x00000800;    // D11: PanTilt (Absolute)
-    public static final int CTRL_PANTILT_REL = 0x00001000;    // D12: PanTilt (Relative)
-    public static final int CTRL_ROLL_ABS = 0x00002000;    // D13: Roll (Absolute)
-    public static final int CTRL_ROLL_REL = 0x00004000;    // D14: Roll (Relative)
-    public static final int CTRL_FOCUS_AUTO = 0x00020000;    // D17: Focus, Auto
-    public static final int CTRL_PRIVACY = 0x00040000;    // D18: Privacy
-    public static final int CTRL_FOCUS_SIMPLE = 0x00080000;    // D19: Focus, Simple
-    public static final int CTRL_WINDOW = 0x00100000;    // D20: Window
+    public static final int H264_PROFILE_CONSTRAINED_BASELINE = 16960;
+    public static final int H264_PROFILE_HIGH = 25600;
+    public static final int H264_PROFILE_CONSTRAINED_HIGH = 25612;
+
+    public static final int H264_USAGE_1 = 1;
+    public static final int H264_USAGE_2 = 2;
+
+    // --------------------------------------------------------------------------------
+    public static final int CTRL_SCANNING = 0x00000001; // D0: Scanning Mode
+    public static final int CTRL_AE = 0x00000002; // D1: Auto-Exposure Mode
+    public static final int CTRL_AE_PRIORITY = 0x00000004; // D2: Auto-Exposure Priority
+    public static final int CTRL_AE_ABS = 0x00000008; // D3: Exposure Time (Absolute)
+    public static final int CTRL_AR_REL = 0x00000010; // D4: Exposure Time (Relative)
+    public static final int CTRL_FOCUS_ABS = 0x00000020; // D5: Focus (Absolute)
+    public static final int CTRL_FOCUS_REL = 0x00000040; // D6: Focus (Relative)
+    public static final int CTRL_IRIS_ABS = 0x00000080; // D7: Iris (Absolute)
+    public static final int CTRL_IRIS_REL = 0x00000100; // D8: Iris (Relative)
+    public static final int CTRL_ZOOM_ABS = 0x00000200; // D9: Zoom (Absolute)
+    public static final int CTRL_ZOOM_REL = 0x00000400; // D10: Zoom (Relative)
+    public static final int CTRL_PANTILT_ABS = 0x00000800; // D11: PanTilt (Absolute)
+    public static final int CTRL_PANTILT_REL = 0x00001000; // D12: PanTilt (Relative)
+    public static final int CTRL_ROLL_ABS = 0x00002000; // D13: Roll (Absolute)
+    public static final int CTRL_ROLL_REL = 0x00004000; // D14: Roll (Relative)
+    public static final int CTRL_FOCUS_AUTO = 0x00020000; // D17: Focus, Auto
+    public static final int CTRL_PRIVACY = 0x00040000; // D18: Privacy
+    public static final int CTRL_FOCUS_SIMPLE = 0x00080000; // D19: Focus, Simple
+    public static final int CTRL_WINDOW = 0x00100000; // D20: Window
 
     public static final int PU_BRIGHTNESS = 0x80000001;    // D0: Brightness
     public static final int PU_CONTRAST = 0x80000002;    // D1: Contrast
@@ -126,7 +129,8 @@ public class UVCCamera {
     public static final int EU_CPB_SIZE = 0x00000080;  // D7: CPB Size
     public static final int EU_PEAK_BIT_RATE = 0x00000100;  // D8: Peak Bit Rate
     public static final int EU_QUANTIZATION_PARAMS = 0x00000200;  // D9: Quantization Parameter
-    public static final int EU_SYNC_REF_FRAME = 0x00000400;  // D10: Synchronization and Long Term Reference Frame
+    public static final int EU_SYNC_REF_FRAME = 0x00000400;
+            // D10: Synchronization and Long Term Reference Frame
     public static final int EU_PRIORITY_ID = 0x00000800;  // D11: Priority ID
     public static final int EU_START_OR_STOP_LAYER = 0x00001000;  // D12: Start or Stop Layer/View.
 
@@ -165,6 +169,8 @@ public class UVCCamera {
     protected int mCurrentRecordWidth = DEFAULT_RECORD_WIDTH;
     protected int mCurrentRecordHeight = DEFAULT_RECORD_HEIGHT;
     protected float mCurrentRecordBandwidthFactor = DEFAULT_BANDWIDTH;
+    protected int mCurrentRecordProfile = H264_PROFILE_CONSTRAINED_BASELINE;
+    protected int mCurrentRecordUsage = H264_USAGE_1;
     protected String mSupportedSize;
     protected List<Size> mCurrentSizeList;
     // these fields from here are accessed from native code and do not change name and remove
@@ -208,6 +214,7 @@ public class UVCCamera {
     protected int mAnalogVideoLockStateMin, mAnalogVideoLockStateMax, mAnalogVideoLockStateDef;
     protected int mAverageBitrateMin, mAverageBitrateMax, mAverageBitrateDef;
     protected int mSyncRefFrameMin, mSyncRefFrameMax, mSyncRefFrameDef;
+    protected int mCPBSizeMin, mCPBSizeMax, mCPBSizeDef;
     // until here
 
     /**
@@ -374,7 +381,8 @@ public class UVCCamera {
      * Set record size and record mode
      */
     public void setRecordSize(final int width, final int height) {
-        setRecordSize(width, height, DEFAULT_RECORD_PROFILE, DEFAULT_RECORD_MIN_FPS,
+        setRecordSize(width, height,
+                H264_PROFILE_CONSTRAINED_BASELINE, H264_USAGE_1, DEFAULT_RECORD_MIN_FPS,
                 DEFAULT_RECORD_MAX_FPS, mCurrentFrameFormat, mCurrentBandwidthFactor);
     }
 
@@ -384,7 +392,8 @@ public class UVCCamera {
      * @param frameFormat So far, shall be FRAME_FORMAT_H_264(2)
      */
     public void setRecordSize(final int width, final int height, final int frameFormat) {
-        setRecordSize(width, height, DEFAULT_RECORD_PROFILE, DEFAULT_RECORD_MIN_FPS,
+        setRecordSize(width, height, H264_PROFILE_CONSTRAINED_BASELINE,
+                H264_USAGE_1, DEFAULT_RECORD_MIN_FPS,
                 DEFAULT_RECORD_MAX_FPS, frameFormat, mCurrentBandwidthFactor);
     }
 
@@ -392,10 +401,12 @@ public class UVCCamera {
      * Set RECORD size and RECORD mode
      *
      * @param frameFormat So far, shall be FRAME_FORMAT_H_264(2)
+     * @param profile     H.264 profile
      */
     public void setRecordSize(final int width, final int height, final int frameFormat,
             final int profile) {
-        setRecordSize(width, height, profile, DEFAULT_RECORD_MIN_FPS, DEFAULT_RECORD_MAX_FPS,
+        setRecordSize(width, height, profile, H264_USAGE_1, DEFAULT_RECORD_MIN_FPS,
+                DEFAULT_RECORD_MAX_FPS,
                 frameFormat, mCurrentBandwidthFactor);
     }
 
@@ -403,11 +414,26 @@ public class UVCCamera {
      * Set RECORD size and RECORD mode
      *
      * @param frameFormat So far, shall be FRAME_FORMAT_H_264(2)
+     * @param profile     H.264 profile
+     * @param profile     H.264 usage
+     */
+    public void setRecordSize(final int width, final int height, final int frameFormat,
+            final int profile, final int usage) {
+        setRecordSize(width, height, profile, usage, DEFAULT_RECORD_MIN_FPS, DEFAULT_RECORD_MAX_FPS,
+                frameFormat, mCurrentBandwidthFactor);
+    }
+
+    /**
+     * Set RECORD size and RECORD mode
+     *
+     * @param frameFormat So far, shall be FRAME_FORMAT_H_264(2)
+     * @param profile     H.264 profile
+     * @param profile     H.264 usage
      * @param bandwidth   [0.0f,1.0f]
      */
     public void setRecordSize(final int width, final int height, final int frameFormat,
-            final int profile, final float bandwidth) {
-        setRecordSize(width, height, profile, DEFAULT_RECORD_MIN_FPS, DEFAULT_RECORD_MAX_FPS,
+            final int profile, final int usage, final float bandwidth) {
+        setRecordSize(width, height, profile, usage, DEFAULT_RECORD_MIN_FPS, DEFAULT_RECORD_MAX_FPS,
                 frameFormat, bandwidth);
     }
 
@@ -417,13 +443,14 @@ public class UVCCamera {
      * @param frameFormat So far, shall be FRAME_FORMAT_H_264(2)
      */
     public void setRecordSize(final int width, final int height, final int profile,
-            final int min_fps, final int max_fps, final int frameFormat,
+            final int usage, final int min_fps, final int max_fps, final int frameFormat,
             final float bandwidthFactor) {
         if ((width == 0) || (height == 0)) {
             throw new IllegalArgumentException("invalid Record size");
         }
         if (mNativePtr != 0) {
-            final int result = nativeSetRecordSize(mNativePtr, width, height, profile, min_fps,
+            final int result = nativeSetRecordSize(mNativePtr, width, height, profile, usage,
+                    min_fps,
                     max_fps, frameFormat, bandwidthFactor);
             if (result != 0) {
                 throw new IllegalArgumentException("Failed to set Record size");
@@ -432,6 +459,35 @@ public class UVCCamera {
             mCurrentRecordWidth = width;
             mCurrentRecordHeight = height;
             mCurrentRecordBandwidthFactor = bandwidthFactor;
+            mCurrentRecordProfile = profile;
+            mCurrentRecordUsage = usage;
+        }
+    }
+
+    /**
+     * Commit RECORD size and RECORD mode
+     *
+     * @param frameFormat So far, shall be FRAME_FORMAT_H_264(2)
+     */
+    public void commitRecordSize(final int width, final int height, final int profile,
+            final int usage, final int min_fps, final int max_fps, final int frameFormat,
+            final float bandwidthFactor) {
+        if ((width == 0) || (height == 0)) {
+            throw new IllegalArgumentException("invalid Record size");
+        }
+        if (mNativePtr != 0) {
+            final int result = nativeCommitRecordSize(mNativePtr, width, height, profile, usage,
+                    min_fps,
+                    max_fps, frameFormat, bandwidthFactor);
+            if (result != 0) {
+                throw new IllegalArgumentException("Failed to set Record size");
+            }
+            mCurrentRecordFrameFormat = frameFormat;
+            mCurrentRecordWidth = width;
+            mCurrentRecordHeight = height;
+            mCurrentRecordBandwidthFactor = bandwidthFactor;
+            mCurrentRecordProfile = profile;
+            mCurrentRecordUsage = usage;
         }
     }
 
@@ -1033,35 +1089,71 @@ public class UVCCamera {
         }
     }
 
-    public void setAverageBitrate(final int bitrate) {
+    public synchronized void setAverageBitrate(final int bitrate) {
         if (mNativePtr != 0) {
             nativeSetAverageBitrate(mNativePtr, bitrate);
         }
     }
 
     /**
-     *
      * @return bitrate
      */
-    public int getAverageBitrate() {
+    public synchronized int getAverageBitrate() {
         return nativeGetAverageBitrate(mNativePtr);
     }
 
-    public void setSyncRefFrame(final int bitrate) {
+    public synchronized void resetAverageBitrate() {
         if (mNativePtr != 0) {
-            nativeSetSyncRefFrame(mNativePtr, bitrate);
+            nativeSetAverageBitrate(mNativePtr, mAverageBitrateDef);
+        }
+    }
+
+    public synchronized void setSyncRefFrame(final int value) {
+        if (mNativePtr != 0) {
+            nativeSetSyncRefFrame(mNativePtr, value);
         }
     }
 
     /**
-     *
-     * @return bitrate
+     * @return value
      */
-    public int getSyncRefFrame() {
+    public synchronized int getSyncRefFrame() {
         return nativeGetSyncRefFrame(mNativePtr);
     }
 
-    //================================================================================
+    public synchronized void setCPBSize(final int value) {
+        if (mNativePtr != 0) {
+            nativeSetCPBSize(mNativePtr, value);
+        }
+    }
+
+    /**
+     * @return value
+     */
+    public synchronized int getCPBSize() {
+        return nativeGetCPBSize(mNativePtr);
+    }
+
+    public synchronized void resetCPBSize() {
+        if (mNativePtr != 0) {
+            nativeSetCPBSize(mNativePtr, mCPBSizeDef);
+        }
+    }
+
+    public synchronized void setSelectLayer(final int value) {
+        if (mNativePtr != 0) {
+            nativeSetSelectLayer(mNativePtr, value);
+        }
+    }
+
+    /**
+     * @return value
+     */
+    public synchronized int getSelectLayer() {
+        return nativeGetSelectLayer(mNativePtr);
+    }
+
+    // ================================================================================
     public synchronized void updateCameraParams() {
         if (mNativePtr != 0) {
             if ((mControlSupports == 0) || (mProcSupports == 0)) {
@@ -1094,6 +1186,7 @@ public class UVCCamera {
                 if (mEncSupports != 0) {
                     nativeUpdateAverageBitrateLimit(mNativePtr);
                     nativeUpdateSyncRefFrameLimit(mNativePtr);
+                    nativeUpdateCPBSizeLimit(mNativePtr);
                 }
                 if (DEBUG) {
                     dumpControls(mControlSupports);
@@ -1235,7 +1328,11 @@ public class UVCCamera {
             final float bandwidth);
 
     private static final native int nativeSetRecordSize(final long id_camera, final int width,
-            final int height, final int profile,
+            final int height, final int profile, final int usage,
+            final int min_fps, final int max_fps, final int mode, final float bandwidth);
+
+    private static final native int nativeCommitRecordSize(final long id_camera, final int width,
+            final int height, final int profile, final int usage,
             final int min_fps, final int max_fps, final int mode, final float bandwidth);
 
     private static final native String nativeGetSupportedSize(final long id_camera);
@@ -1538,6 +1635,18 @@ public class UVCCamera {
             final int value);
 
     private static final native int nativeGetSyncRefFrame(final long id_camera);
+
+    private final native int nativeUpdateCPBSizeLimit(final long id_camera);
+
+    private static final native int nativeSetCPBSize(final long id_camera,
+            final int value);
+
+    private static final native int nativeGetCPBSize(final long id_camera);
+
+    private static final native int nativeSetSelectLayer(final long id_camera,
+            final int value);
+
+    private static final native int nativeGetSelectLayer(final long id_camera);
 
     private final native int nativeUpdatePrivacyLimit(final long id_camera);
 

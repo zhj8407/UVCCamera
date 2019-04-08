@@ -68,6 +68,10 @@ uvc_frame_desc_t *uvc_find_frame_desc(uvc_device_handle_t *devh,
                                       uint16_t format_id, uint16_t frame_id);
 static void *_uvc_user_caller(void *arg);
 static void _uvc_populate_frame(uvc_stream_handle_t *strmh);
+static uvc_error_t _uvc_stream_open_ctrl(uvc_device_handle_t *devh,
+        uvc_stream_handle_t **strmhp,
+        uvc_stream_ctrl_t *ctrl,
+        int committed);
 
 struct format_table_entry {
     enum uvc_frame_format format;
@@ -296,6 +300,40 @@ uvc_error_t uvc_query_stream_ctrl(uvc_device_handle_t *devh,
     return UVC_SUCCESS;
 }
 
+/** Internal
+ * @brief Reconfigure stream with a new stream format.
+ * @ingroup streaming
+ *
+ * This may be executed whether or not the stream is running.
+ *
+ * @param[in] strmh Stream handle
+ * @param[in] ctrl Control block, processed using {uvc_probe_stream_ctrl} or
+ *             {uvc_get_stream_ctrl_format_size}
+ * @param[in] commited Flag to indicate whether the stream ctrl is committed
+ */
+static uvc_error_t _uvc_stream_ctrl(uvc_stream_handle_t *strmh, uvc_stream_ctrl_t *ctrl,
+                                    uint8_t committed)
+{
+    uvc_error_t ret;
+
+    if (UNLIKELY(strmh->stream_if->bInterfaceNumber != ctrl->bInterfaceNumber))
+        return UVC_ERROR_INVALID_PARAM;
+
+    /* @todo Allow the stream to be modified without restarting the stream */
+    if (UNLIKELY(strmh->running))
+        return UVC_ERROR_BUSY;
+
+    if (!committed) {
+        ret = uvc_query_stream_ctrl(strmh->devh, ctrl, 0, UVC_SET_CUR); // commit query
+
+        if (UNLIKELY(ret != UVC_SUCCESS))
+            return ret;
+    }
+
+    strmh->cur_ctrl = *ctrl;
+    return UVC_SUCCESS;
+}
+
 /** @brief Reconfigure stream with a new stream format.
  * @ingroup streaming
  *
@@ -307,22 +345,7 @@ uvc_error_t uvc_query_stream_ctrl(uvc_device_handle_t *devh,
  */
 uvc_error_t uvc_stream_ctrl(uvc_stream_handle_t *strmh, uvc_stream_ctrl_t *ctrl)
 {
-    uvc_error_t ret;
-
-    if (UNLIKELY(strmh->stream_if->bInterfaceNumber != ctrl->bInterfaceNumber))
-        return UVC_ERROR_INVALID_PARAM;
-
-    /* @todo Allow the stream to be modified without restarting the stream */
-    if (UNLIKELY(strmh->running))
-        return UVC_ERROR_BUSY;
-
-    ret = uvc_query_stream_ctrl(strmh->devh, ctrl, 0, UVC_SET_CUR);	// commit query
-
-    if (UNLIKELY(ret != UVC_SUCCESS))
-        return ret;
-
-    strmh->cur_ctrl = *ctrl;
-    return UVC_SUCCESS;
+    return _uvc_stream_ctrl(strmh, ctrl, 0);
 }
 
 /** @internal
@@ -432,9 +455,10 @@ static uvc_error_t _prepare_stream_ctrl(uvc_device_handle_t *devh, uvc_stream_ct
     return result;
 }
 
-static uvc_error_t _uvc_get_stream_ctrl_format(uvc_device_handle_t *devh,
+static uvc_error_t _uvc_get_stream_ctrl_format_with_profile(uvc_device_handle_t *devh,
         uvc_streaming_interface_t *stream_if, uvc_stream_ctrl_t *ctrl, uvc_format_desc_t *format,
         const int width, const int height,
+        const int profile, const int usage,
         const int min_fps, const int max_fps)
 {
 
@@ -494,8 +518,13 @@ static uvc_error_t _uvc_get_stream_ctrl_format(uvc_device_handle_t *devh,
 
 #endif
     DL_FOREACH(format->frame_descs, frame) {
-        if (frame->wWidth != width || frame->wHeight != height)
-            continue;
+        if (profile == -1) {
+            if (frame->wWidth != width || frame->wHeight != height)
+                continue;
+        } else {
+            if (frame->wWidth != width || frame->wHeight != height || (frame->h_264_props.wProfile & 0xFF00) != (((unsigned short)profile) & 0xFF00))
+                continue;
+        }
 
         uint32_t *interval;
 
@@ -545,7 +574,19 @@ fail:
     RETURN(result, uvc_error_t);
 
 found:
+
+    if (usage != -1)
+        ctrl->bUsage = usage;
+
     RETURN(UVC_SUCCESS, uvc_error_t);
+}
+
+static uvc_error_t _uvc_get_stream_ctrl_format(uvc_device_handle_t *devh,
+        uvc_streaming_interface_t *stream_if, uvc_stream_ctrl_t *ctrl, uvc_format_desc_t *format,
+        const int width, const int height,
+        const int min_fps, const int max_fps)
+{
+    _uvc_get_stream_ctrl_format_with_profile(devh, stream_if, ctrl, format, width, height, -1, -1, min_fps, max_fps);
 }
 
 /** Get a negotiated streaming control block for some common parameters.
@@ -606,6 +647,134 @@ uvc_error_t uvc_get_stream_ctrl_format_size_fps(uvc_device_handle_t *devh,
 
 found:
     RETURN(uvc_probe_stream_ctrl(devh, ctrl), uvc_error_t);
+}
+
+/** Get a negotiated streaming control block for some common parameters.
+ * @ingroup streaming
+ *
+ * @param[in] devh Device handle
+ * @param[in,out] ctrl Control block
+ * @param[in] cf Type of streaming format
+ * @param[in] width Desired frame width
+ * @param[in] height Desired frame height
+ * @param[in] profile Desired h264 profile setting
+ * @param[in] usage Desired h264 svc setting
+ * @param[in] min_fps Frame rate, minimum frames per second, this value is included
+ * @param[in] max_fps Frame rate, maximum frames per second, this value is included
+ */
+uvc_error_t uvc_get_stream_ctrl_format_size_fps_profile_usage(uvc_device_handle_t *devh,
+        uvc_stream_ctrl_t *ctrl, enum uvc_frame_format cf, int width,
+        int height, int profile, int usage, int min_fps, int max_fps)
+{
+
+    ENTER();
+
+    uvc_streaming_interface_t *stream_if;
+    uvc_error_t result;
+
+    memset(ctrl, 0, sizeof(*ctrl)); // XXX add
+    /* find a matching frame descriptor and interval */
+    uvc_format_desc_t *format;
+    DL_FOREACH(devh->info->stream_ifs, stream_if) {
+        DL_FOREACH(stream_if->format_descs, format) {
+            if (!_uvc_frame_format_matches_guid(cf, format->guidFormat))
+                continue;
+
+            result = _uvc_get_stream_ctrl_format_with_profile(devh, stream_if, ctrl, format, width, height,
+                     profile, usage, min_fps, max_fps);
+
+            if (!result) {  // UVC_SUCCESS
+                goto found;
+            }
+        }
+    }
+
+    RETURN(UVC_ERROR_INVALID_MODE, uvc_error_t);
+
+found:
+    RETURN(uvc_probe_stream_ctrl(devh, ctrl), uvc_error_t);
+}
+
+static uvc_error_t _uvc_probe_and_commitstream_ctrl(uvc_device_handle_t *devh,
+        uvc_stream_ctrl_t *ctrl)
+{
+    uvc_error_t err;
+
+    err = uvc_claim_if(devh, ctrl->bInterfaceNumber);
+
+    if (UNLIKELY(err)) {
+        LOGE("uvc_claim_if:err=%d", err);
+        return err;
+    }
+
+    err = uvc_query_stream_ctrl(devh, ctrl, 1, UVC_SET_CUR);    // probe query
+
+    if (UNLIKELY(err)) {
+        LOGE("uvc_query_stream_ctrl(UVC_SET_CUR):err=%d", err);
+        return err;
+    }
+
+    err = uvc_query_stream_ctrl(devh, ctrl, 1, UVC_GET_CUR);    // probe query ここでエラーが返ってくる
+
+    if (UNLIKELY(err)) {
+        LOGE("uvc_query_stream_ctrl(UVC_GET_CUR):err=%d", err);
+        return err;
+    }
+
+    err = uvc_query_stream_ctrl(devh, ctrl, 0, UVC_SET_CUR);
+
+    if (UNLIKELY(err)) {
+        LOGE("uvc_query_stream_ctrl(UVC_SET_CUR COMMIT):err=%d", err);
+        return err;
+    }
+
+    return UVC_SUCCESS;
+}
+
+/** Get a negotiated streaming control block for some common parameters.
+ * @ingroup streaming
+ *
+ * @param[in] devh Device handle
+ * @param[in,out] ctrl Control block
+ * @param[in] cf Type of streaming format
+ * @param[in] width Desired frame width
+ * @param[in] height Desired frame height
+ * @param[in] profile Desired h264 profile setting
+ * @param[in] usage Desired h264 svc setting
+ * @param[in] min_fps Frame rate, minimum frames per second, this value is included
+ * @param[in] max_fps Frame rate, maximum frames per second, this value is included
+ */
+uvc_error_t uvc_get_and_commit_stream_ctrl_format_size_fps_profile_usage(uvc_device_handle_t *devh,
+        uvc_stream_ctrl_t *ctrl, enum uvc_frame_format cf, int width,
+        int height, int profile, int usage, int min_fps, int max_fps)
+{
+
+    ENTER();
+
+    uvc_streaming_interface_t *stream_if;
+    uvc_error_t result;
+
+    memset(ctrl, 0, sizeof(*ctrl)); // XXX add
+    /* find a matching frame descriptor and interval */
+    uvc_format_desc_t *format;
+    DL_FOREACH(devh->info->stream_ifs, stream_if) {
+        DL_FOREACH(stream_if->format_descs, format) {
+            if (!_uvc_frame_format_matches_guid(cf, format->guidFormat))
+                continue;
+
+            result = _uvc_get_stream_ctrl_format_with_profile(devh, stream_if, ctrl, format, width, height,
+                     profile, usage, min_fps, max_fps);
+
+            if (!result) {  // UVC_SUCCESS
+                goto found;
+            }
+        }
+    }
+
+    RETURN(UVC_ERROR_INVALID_MODE, uvc_error_t);
+
+found:
+    RETURN(_uvc_probe_and_commitstream_ctrl(devh, ctrl), uvc_error_t);
 }
 
 /** @internal
@@ -1306,6 +1475,44 @@ static void _uvc_iso_callback(struct libusb_transfer *transfer)
 }
 #endif
 
+/** Internal
+ * Begin streaming video from the camera into the callback function.
+ * @ingroup streaming
+ *
+ * @param devh UVC device
+ * @param ctrl Control block, processed using {uvc_probe_stream_ctrl} or
+ *             {uvc_get_stream_ctrl_format_size}
+ * @param cb   User callback function. See {uvc_frame_callback_t} for restrictions.
+ * @param bandwidth_factor [0.0f, 1.0f]
+ * @param flags Stream setup flags, currently undefined. Set this to zero. The lower bit
+ * @param committed Flags to indicate whether the stream ctrl is committed
+ * is reserved for backward compatibility.
+ */
+static uvc_error_t _uvc_start_streaming_bandwidth(uvc_device_handle_t *devh,
+        uvc_stream_ctrl_t *ctrl, uvc_frame_callback_t *cb, void *user_ptr,
+        float bandwidth_factor,
+        uint8_t flags,
+        uint8_t committed)
+{
+    uvc_error_t ret;
+    uvc_stream_handle_t *strmh;
+
+    ret = _uvc_stream_open_ctrl(devh, &strmh, ctrl, committed);
+
+    if (UNLIKELY(ret != UVC_SUCCESS))
+        return ret;
+
+    ret = uvc_stream_start_bandwidth(strmh, cb, user_ptr, bandwidth_factor, flags);
+
+    if (UNLIKELY(ret != UVC_SUCCESS)) {
+        uvc_stream_close(strmh);
+        return ret;
+    }
+
+    return UVC_SUCCESS;
+}
+
+
 /** Begin streaming video from the camera into the callback function.
  * @ingroup streaming
  *
@@ -1330,6 +1537,46 @@ uvc_error_t uvc_start_streaming(uvc_device_handle_t *devh,
  * @param ctrl Control block, processed using {uvc_probe_stream_ctrl} or
  *             {uvc_get_stream_ctrl_format_size}
  * @param cb   User callback function. See {uvc_frame_callback_t} for restrictions.
+ * @param flags Stream setup flags, currently undefined. Set this to zero. The lower bit
+ * @param committed Flags to indicate whether the stream ctrl is committed
+ * is reserved for backward compatibility.
+ */
+uvc_error_t uvc_start_streaming_committed(uvc_device_handle_t *devh,
+        uvc_stream_ctrl_t *ctrl, uvc_frame_callback_t *cb, void *user_ptr,
+        uint8_t flags,
+        uint8_t committed)
+{
+    return uvc_start_streaming_bandwidth_committed(devh, ctrl, cb, user_ptr, 0, flags, committed);
+}
+
+/** Begin streaming video from the camera into the callback function.
+ * @ingroup streaming
+ *
+ * @param devh UVC device
+ * @param ctrl Control block, processed using {uvc_probe_stream_ctrl} or
+ *             {uvc_get_stream_ctrl_format_size}
+ * @param cb   User callback function. See {uvc_frame_callback_t} for restrictions.
+ * @param bandwidth_factor [0.0f, 1.0f]
+ * @param flags Stream setup flags, currently undefined. Set this to zero. The lower bit
+ * @param committed Flags to indicate whether the stream ctrl is committed
+ * is reserved for backward compatibility.
+ */
+uvc_error_t uvc_start_streaming_bandwidth_committed(uvc_device_handle_t *devh,
+        uvc_stream_ctrl_t *ctrl, uvc_frame_callback_t *cb, void *user_ptr,
+        float bandwidth_factor,
+        uint8_t flags,
+        uint8_t committed)
+{
+    return _uvc_start_streaming_bandwidth(devh, ctrl, cb, user_ptr, bandwidth_factor, flags, committed);
+}
+
+/** Begin streaming video from the camera into the callback function.
+ * @ingroup streaming
+ *
+ * @param devh UVC device
+ * @param ctrl Control block, processed using {uvc_probe_stream_ctrl} or
+ *             {uvc_get_stream_ctrl_format_size}
+ * @param cb   User callback function. See {uvc_frame_callback_t} for restrictions.
  * @param bandwidth_factor [0.0f, 1.0f]
  * @param flags Stream setup flags, currently undefined. Set this to zero. The lower bit
  * is reserved for backward compatibility.
@@ -1339,22 +1586,7 @@ uvc_error_t uvc_start_streaming_bandwidth(uvc_device_handle_t *devh,
         float bandwidth_factor,
         uint8_t flags)
 {
-    uvc_error_t ret;
-    uvc_stream_handle_t *strmh;
-
-    ret = uvc_stream_open_ctrl(devh, &strmh, ctrl);
-
-    if (UNLIKELY(ret != UVC_SUCCESS))
-        return ret;
-
-    ret = uvc_stream_start_bandwidth(strmh, cb, user_ptr, bandwidth_factor, flags);
-
-    if (UNLIKELY(ret != UVC_SUCCESS)) {
-        uvc_stream_close(strmh);
-        return ret;
-    }
-
-    return UVC_SUCCESS;
+    return _uvc_start_streaming_bandwidth(devh, ctrl, cb, user_ptr, bandwidth_factor, flags, 0);
 }
 
 /** Begin streaming video from the camera into the callback function.
@@ -1402,19 +1634,24 @@ static uvc_streaming_interface_t *_uvc_get_stream_if(uvc_device_handle_t *devh,
     return NULL;
 }
 
-/** Open a new video stream.
+/** Internal. Open a new video stream.
  * @ingroup streaming
  *
  * @param devh UVC device
  * @param ctrl Control block, processed using {uvc_probe_stream_ctrl} or
  *             {uvc_get_stream_ctrl_format_size}
+ * @param committed Flag to indicate whether the stream ctrl is committed
  */
-uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh,
-                                 uvc_stream_handle_t **strmhp, uvc_stream_ctrl_t *ctrl)
+static uvc_error_t _uvc_stream_open_ctrl(uvc_device_handle_t *devh,
+        uvc_stream_handle_t **strmhp,
+        uvc_stream_ctrl_t *ctrl,
+        int committed)
 {
     /* Chosen frame and format descriptors */
     uvc_stream_handle_t *strmh = NULL;
     uvc_streaming_interface_t *stream_if;
+    const struct libusb_interface *interface;
+    int interface_id;
     uvc_error_t ret;
 
     UVC_ENTER();
@@ -1447,7 +1684,18 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh,
     if (UNLIKELY(ret != UVC_SUCCESS))
         goto fail;
 
-    ret = uvc_stream_ctrl(strmh, ctrl);
+    // Get the interface that provides the chosen format and frame configuration
+    interface_id = strmh->stream_if->bInterfaceNumber;
+    interface = &strmh->devh->info->config->interface[interface_id];
+
+    /* A VS interface uses isochronous transfers if it has multiple altsettings.
+     * (UVC 1.5: 2.4.3. VideoStreaming Interface, on page 19) */
+    // If bulk mode and non H264, we should re-commit the stream request
+    if (interface->num_altsetting <= 1 &&
+        strmh->frame_format != UVC_FRAME_FORMAT_H_264)
+        committed = 0;
+
+    ret = _uvc_stream_ctrl(strmh, ctrl, committed);
 
     if (UNLIKELY(ret != UVC_SUCCESS))
         goto fail;
@@ -1457,7 +1705,7 @@ uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh,
     /** @todo take only what we need */
     strmh->outbuf = malloc(LIBUVC_XFER_BUF_SIZE);
     strmh->holdbuf = malloc(LIBUVC_XFER_BUF_SIZE);
-    strmh->size_buf = LIBUVC_XFER_BUF_SIZE;	// xxx for boundary check
+    strmh->size_buf = LIBUVC_XFER_BUF_SIZE; // xxx for boundary check
 
     pthread_mutex_init(&strmh->cb_mutex, NULL);
     pthread_cond_init(&strmh->cb_cond, NULL);
@@ -1476,6 +1724,19 @@ fail:
 
     UVC_EXIT(ret);
     return ret;
+}
+
+/** Open a new video stream.
+ * @ingroup streaming
+ *
+ * @param devh UVC device
+ * @param ctrl Control block, processed using {uvc_probe_stream_ctrl} or
+ *             {uvc_get_stream_ctrl_format_size}
+ */
+uvc_error_t uvc_stream_open_ctrl(uvc_device_handle_t *devh,
+                                 uvc_stream_handle_t **strmhp, uvc_stream_ctrl_t *ctrl)
+{
+    return _uvc_stream_open_ctrl(devh, strmhp, ctrl, 0);
 }
 
 /** Begin streaming video from the stream into the callback function.

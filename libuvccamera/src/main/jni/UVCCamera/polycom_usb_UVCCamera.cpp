@@ -260,14 +260,28 @@ static jint nativeSetPreviewSize(JNIEnv *env, jobject thiz,
 }
 
 static jint nativeSetRecordSize(JNIEnv *env, jobject thiz,
-                                 ID_TYPE id_camera, jint width, jint height, jint profile, jint min_fps, jint max_fps, jint mode, jfloat bandwidth)
+                                 ID_TYPE id_camera, jint width, jint height, jint profile, jint usage, jint min_fps, jint max_fps, jint mode, jfloat bandwidth)
 {
 
     ENTER();
     UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
 
     if (LIKELY(camera)) {
-        return camera->setRecordSize(width, height, profile, min_fps, max_fps, mode, bandwidth);
+        return camera->setRecordSize(width, height, profile, usage, min_fps, max_fps, mode, bandwidth);
+    }
+
+    RETURN(JNI_ERR, jint);
+}
+
+static jint nativeCommitRecordSize(JNIEnv *env, jobject thiz,
+                                 ID_TYPE id_camera, jint width, jint height, jint profile, jint usage, jint min_fps, jint max_fps, jint mode, jfloat bandwidth)
+{
+
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        return camera->commitRecordSize(width, height, profile, usage, min_fps, max_fps, mode, bandwidth);
     }
 
     RETURN(JNI_ERR, jint);
@@ -2569,6 +2583,94 @@ static jint nativeGetSyncRefFrame(JNIEnv *env, jobject thiz,
 }
 
 //======================================================================
+// Java mnethod correspond to this function should not be a static mathod
+static jint nativeUpdateCPBSizeLimit(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera)
+{
+    jint result = JNI_ERR;
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        int min, max, def;
+        result = camera->updateCPBSizeLimit(min, max, def);
+
+        if (!result) {
+            // Java側へ書き込む
+            setField_int(env, thiz, "mCPBSizeMin", min);
+            setField_int(env, thiz, "mCPBSizeMax", max);
+            setField_int(env, thiz, "mCPBSizeDef", def);
+        }
+    }
+
+    RETURN(result, jint);
+}
+
+static jint nativeSetCPBSize(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera, jint value)
+{
+
+    jint result = JNI_ERR;
+    ENTER();
+
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        result = camera->setCPBSize(value);
+    }
+
+    RETURN(result, jint);
+}
+
+static jint nativeGetCPBSize(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera)
+{
+
+    jint result = 0;
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        result = camera->getCPBSize();
+    }
+
+    RETURN(result, jint);
+}
+
+//======================================================================
+// Java mnethod correspond to this function should not be a static mathod
+static jint nativeSetSelectLayer(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera, jint value)
+{
+
+    jint result = JNI_ERR;
+    ENTER();
+
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        result = camera->setSelectLayer(value);
+    }
+
+    RETURN(result, jint);
+}
+
+static jint nativeGetSelectLayer(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera)
+{
+
+    jint result = 0;
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera)) {
+        result = camera->getSelectLayer();
+    }
+
+    RETURN(result, jint);
+}
+
+//======================================================================
 // Java method correspond to this function should not be a static mathod
 static jint nativeUpdatePrivacyLimit(JNIEnv *env, jobject thiz,
                                      ID_TYPE id_camera)
@@ -2656,7 +2758,8 @@ static JNINativeMethod methods[] = {
 
     { "nativeGetSupportedSize",			"(J)Ljava/lang/String;", (void *) nativeGetSupportedSize },
     { "nativeSetPreviewSize",           "(JIIIIIF)I", (void *) nativeSetPreviewSize },
-    { "nativeSetRecordSize",			"(JIIIIIIF)I", (void *) nativeSetRecordSize },
+    { "nativeSetRecordSize",            "(JIIIIIIIF)I", (void *) nativeSetRecordSize },
+    { "nativeCommitRecordSize",			"(JIIIIIIIF)I", (void *) nativeCommitRecordSize },
     { "nativeStartPreview",				"(J)I", (void *) nativeStartPreview },
     { "nativeStopPreview",				"(J)I", (void *) nativeStopPreview },
     { "nativeStartRecord",             "(J)I", (void *) nativeStartRecord },
@@ -2830,6 +2933,13 @@ static JNINativeMethod methods[] = {
     { "nativeUpdateSyncRefFrameLimit", "(J)I", (void *) nativeUpdateSyncRefFrameLimit },
     { "nativeSetSyncRefFrame", "(JI)I", (void *) nativeSetSyncRefFrame },
     { "nativeGetSyncRefFrame", "(J)I", (void *) nativeGetSyncRefFrame },
+
+    { "nativeUpdateCPBSizeLimit", "(J)I", (void *) nativeUpdateCPBSizeLimit },
+    { "nativeSetCPBSize", "(JI)I", (void *) nativeSetCPBSize },
+    { "nativeGetCPBSize", "(J)I", (void *) nativeGetCPBSize },
+
+    { "nativeSetSelectLayer", "(JI)I", (void *) nativeSetSelectLayer },
+    { "nativeGetSelectLayer", "(J)I", (void *) nativeGetSelectLayer },
 
     { "nativeUpdatePrivacyLimit",		"(J)I", (void *) nativeUpdatePrivacyLimit },
     { "nativeSetPrivacy",				"(JZ)I", (void *) nativeSetPrivacy },

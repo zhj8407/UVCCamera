@@ -34,21 +34,35 @@
 
 #include "UVCStream.h"
 
+#define H264_PROFILE_CONSTRAINED_BASELINE 16960
+#define H264_PROFILE_HIGH 25600
+#define H264_PROFILE_CONSTRAINED_HIGH 25612
+
+#define H264_USAGE_1 1
+#define H264_USAGE_2 2
+
 #define DEFAULT_RECORD_WIDTH 1920
 #define DEFAULT_RECORD_HEIGHT 1080
-#define DEFAULT_RECORD_PROFILE 0
 #define DEFAULT_RECORD_FPS_MIN 1
 #define DEFAULT_RECORD_FPS_MAX 30
-#define DEFAULT_RECORD_MODE 3
+#define DEFAULT_RECORD_MODE 2
+#define DEFAULT_RECORD_PROFILE H264_PROFILE_CONSTRAINED_BASELINE
+#define DEFAULT_RECORD_USAGE H264_USAGE_1
 
 class UVCRecord : public UVCStream
 {
 private:
     int requestProfile;
     int frameProfile;
+    int requestUsage;
 
     int recordFormat;
     size_t recordBytes;
+
+    uvc_stream_ctrl_t stream_ctrl;
+
+    bool stream_probed;
+    bool stream_committed;
 //
     virtual int prepare_streaming(uvc_stream_ctrl_t *ctrl);
     virtual void do_streaming(uvc_stream_ctrl_t *ctrl);
@@ -62,6 +76,8 @@ public:
     virtual ~UVCRecord();
 
     int setRecordSize(int width, int height, int profile, int min_fps, int max_fps, int mode, float bandwidth = 1.0f);
+    int setRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth = 1.0f);
+    int commitRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth = 1.0f);
     int setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pixel_format);
     int startRecord();
     int stopRecord();

@@ -6,9 +6,12 @@
 #define LIBUVC_INTERNAL_H
 
 #include <assert.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <pthread.h>
 #include <signal.h>
 #include "utilbase.h"

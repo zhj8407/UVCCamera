@@ -1295,6 +1295,8 @@ retry:
 	return LIBUSB_SUCCESS;
 }
 
+static uint8_t desc[16384];
+
 static int android_initialize_device(struct libusb_device *dev,
 	uint8_t busnum, uint8_t devaddr, int fd) {
 
@@ -1302,7 +1304,6 @@ static int android_initialize_device(struct libusb_device *dev,
 
 	struct android_device_priv *priv = _device_priv(dev);
 	struct libusb_context *ctx = DEVICE_CTX(dev);
-	uint8_t desc[8192]; // max descriptor size is 4096 bytes
 	int speed;
 	ssize_t r;
 
@@ -1314,6 +1315,7 @@ static int android_initialize_device(struct libusb_device *dev,
 	priv->descriptors_len = 0;
 	priv->fd = 0;
 	memset(desc, 0, sizeof(desc));
+
     if (!lseek(fd, 0, SEEK_SET)) {
         // ディスクリプタを読み込んでローカルキャッシュする
         int length = read(fd, desc, sizeof(desc));

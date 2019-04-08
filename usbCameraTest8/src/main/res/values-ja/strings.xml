@@ -22,5 +22,5 @@
   -->
 
 <resources>
-	<string name="app_name">USBカメラテスト8(カメラコントロール)</string>
+    <string name="app_name">USBカメラテスト8(カメラコントロール)</string>
 </resources>

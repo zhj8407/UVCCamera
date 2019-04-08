@@ -181,6 +181,8 @@ class UVCCamera
     /* Encoding Unit for H.264 stream. */
     control_value_t mAverageBitrate;
     control_value_t mSyncRefFrame;
+    control_value_t mCPBSize;
+    control_value_t mSelectLayer;
 
     void clearCameraParams();
     int internalSetCtrlValue(control_value_t &values, int8_t value,
@@ -214,6 +216,8 @@ public:
     char *getSupportedSize();
     int setPreviewSize(int width, int height, int min_fps, int max_fps, int mode, float bandwidth = DEFAULT_BANDWIDTH);
     int setRecordSize(int width, int height, int profile, int min_fps, int max_fps, int mode, float bandwidth = DEFAULT_BANDWIDTH);
+    int setRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth = DEFAULT_BANDWIDTH);
+    int commitRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth = DEFAULT_BANDWIDTH);
     int setPreviewDisplay(ANativeWindow *preview_window);
     int setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pixel_format);
     int startPreview();
@@ -390,6 +394,13 @@ public:
     int updateSyncRefFrameLimit(int &min, int &max, int &def);
     int setSyncRefFrame(int value);
     int getSyncRefFrame();
+
+    int updateCPBSizeLimit(int &min, int &max, int &def);
+    int setCPBSize(int value);
+    int getCPBSize();
+
+    int setSelectLayer(int value);
+    int getSelectLayer();
 };
 
 #endif /* UVCCAMERA_H_ */

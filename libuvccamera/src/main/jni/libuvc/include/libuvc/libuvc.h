@@ -643,6 +643,12 @@ uvc_error_t uvc_get_stream_ctrl_format_size(uvc_device_handle_t *devh,
 uvc_error_t uvc_get_stream_ctrl_format_size_fps(uvc_device_handle_t *devh,
         uvc_stream_ctrl_t *ctrl, enum uvc_frame_format cf, int width,
         int height, int min_fps, int max_fps);	// XXX added
+uvc_error_t uvc_get_stream_ctrl_format_size_fps_profile_usage(uvc_device_handle_t *devh,
+        uvc_stream_ctrl_t *ctrl, enum uvc_frame_format cf, int width,
+        int height, int profile, int usage, int min_fps, int max_fps);  // XXX added
+uvc_error_t uvc_get_and_commit_stream_ctrl_format_size_fps_profile_usage(uvc_device_handle_t *devh,
+        uvc_stream_ctrl_t *ctrl, enum uvc_frame_format cf, int width,
+        int height, int profile, int usage, int min_fps, int max_fps);  // Jerry added
 
 uvc_error_t uvc_probe_stream_ctrl(uvc_device_handle_t *devh,
                                   uvc_stream_ctrl_t *ctrl);
@@ -657,6 +663,15 @@ uvc_error_t uvc_start_streaming_bandwidth(uvc_device_handle_t *devh,
         uvc_stream_ctrl_t *ctrl, uvc_frame_callback_t *cb, void *user_ptr,
         float bandwidth,
         uint8_t flags);	// XXX added saki
+uvc_error_t uvc_start_streaming_committed(uvc_device_handle_t *devh,
+                                uvc_stream_ctrl_t *ctrl, uvc_frame_callback_t *cb, void *user_ptr,
+                                uint8_t flags,
+                                uint8_t committed);
+uvc_error_t uvc_start_streaming_bandwidth_committed(uvc_device_handle_t *devh,
+        uvc_stream_ctrl_t *ctrl, uvc_frame_callback_t *cb, void *user_ptr,
+        float bandwidth,
+        uint8_t flags,
+        uint8_t committed); // XXX added saki
 
 uvc_error_t uvc_start_iso_streaming(uvc_device_handle_t *devh,
                                     uvc_stream_ctrl_t *ctrl, uvc_frame_callback_t *cb, void *user_ptr);
@@ -849,6 +864,12 @@ uvc_error_t uvc_set_average_bit_rate(uvc_device_handle_t *devh, uint32_t bitrate
 //----------------------------------------------------------------------
 uvc_error_t uvc_get_sync_ref_frame(uvc_device_handle_t *devh, uint32_t* value, enum uvc_req_code req_code);
 uvc_error_t uvc_set_sync_ref_frame(uvc_device_handle_t *devh, uint32_t value);
+//----------------------------------------------------------------------
+uvc_error_t uvc_get_select_layer(uvc_device_handle_t *devh, uint16_t* value, enum uvc_req_code req_code);
+uvc_error_t uvc_set_select_layer(uvc_device_handle_t *devh, uint16_t value);
+//----------------------------------------------------------------------
+uvc_error_t uvc_get_cpb_size(uvc_device_handle_t *devh, uint32_t* value, enum uvc_req_code req_code);
+uvc_error_t uvc_set_cpb_size(uvc_device_handle_t *devh, uint32_t value);
 //----------------------------------------------------------------------
 uvc_error_t uvc_get_input_select(uvc_device_handle_t *devh, uint8_t* selector, enum uvc_req_code req_code);
 uvc_error_t uvc_set_input_select(uvc_device_handle_t *devh, uint8_t selector);

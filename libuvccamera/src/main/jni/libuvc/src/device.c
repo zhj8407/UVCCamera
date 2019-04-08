@@ -370,6 +370,61 @@ fail2:
     return ret;
 }
 
+#define USBCORE_PARAM_VIDPID_LIST   "/sys/module/usbcore/parameters/hacked_vidpid_list"
+#define USBCORE_PARAM_HIDDEN_CFG    "/sys/module/usbcore/parameters/select_hidden_cfg"
+
+static int get_param_from_sys_module(const char *module_param_path,
+    char *module_param_value, size_t size)
+{
+    int fd = 0;
+    int len;
+
+    fd = open(module_param_path, O_RDONLY);
+
+    if (fd < 0) {
+        LOGW("No %s found\n", module_param_path);
+        return -1;
+    }
+
+    len = read(fd, module_param_value, size);
+
+    if (len <= 0) {
+        LOGW("Can not read data from file %s\n", module_param_path);
+        close(fd);
+        return -1;
+    }
+
+    if ((size_t)len == size)
+        module_param_value[len - 1] = '\0';
+
+    close(fd);
+
+    return fd;
+}
+
+static uint8_t hack_special_usb_cameras(uint16_t idVendor, uint16_t idProduct)
+{
+    char hacked_vidpid_list[128] = { '\0' };
+    char select_hidden_cfg[8] = { '\0' };
+    char vid_pid_pair[32] = { '\0' };
+
+    uint8_t ret = 0;
+
+    snprintf(vid_pid_pair, sizeof(vid_pid_pair), "0x%04X:0x%04X", idVendor, idProduct);
+
+    if (get_param_from_sys_module(USBCORE_PARAM_HIDDEN_CFG,
+            select_hidden_cfg, sizeof(select_hidden_cfg)) > 0 &&
+        get_param_from_sys_module(USBCORE_PARAM_VIDPID_LIST,
+            hacked_vidpid_list, sizeof(hacked_vidpid_list)) > 0 &&
+        strncmp(select_hidden_cfg, "Y", 1) == 0 &&
+        strstr(hacked_vidpid_list, vid_pid_pair) != NULL) {
+
+        ret = 1;
+    }
+
+    return ret;
+}
+
 /**
  * @internal
  * @brief Parses the complete device descriptor for a device
@@ -396,13 +451,10 @@ uvc_error_t uvc_get_device_info(uvc_device_t *dev, uvc_device_info_t **info)
     }
 
     /*
-     * Hack for Logitech C930e.
-     * C930e camera hide the 2nd configuration. It is designed
-     * for supporting uvc1.5
+     * Hack for special usb cameras
      */
-    if (usb_desc.idVendor == 0x046D && usb_desc.idProduct == 0x0843) {
+    if (hack_special_usb_cameras(usb_desc.idVendor, usb_desc.idProduct))
         config_index = 1;
-    }
 
     internal_info = calloc(1, sizeof(*internal_info));
 
