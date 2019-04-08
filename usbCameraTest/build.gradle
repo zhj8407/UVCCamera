@@ -33,7 +33,6 @@ android {
         }
     }
     compileSdkVersion versionCompiler
-    buildToolsVersion versionBuildTool
     compileOptions {
         sourceCompatibility javaSourceCompatibility
         targetCompatibility javaTargetCompatibility
@@ -54,8 +53,11 @@ android {
             signingConfig signingConfigs.config
         }
     }
+    lintOptions {
+        abortOnError false
+    }
 }
 
 dependencies {
-    compile project(':libuvccamera')
+    implementation project(':libuvccamera')
 }

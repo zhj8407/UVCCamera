@@ -2,9 +2,10 @@
 buildscript {
     repositories {
         jcenter()
-    }
+		google()
+	}
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.3.3'
+        classpath 'com.android.tools.build:gradle:3.3.2'
     }
 }
 
@@ -12,6 +13,7 @@ allprojects {
     repositories {
 		maven { url 'http://raw.github.com/saki4510t/libcommon/master/repository/' }
         jcenter()
+		google()
     }
 }
 

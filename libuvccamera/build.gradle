@@ -26,7 +26,6 @@ import org.apache.tools.ant.taskdefs.condition.Os
 
 android {
 	compileSdkVersion versionCompiler
-	buildToolsVersion versionBuildTool
 
 	compileOptions {
 		sourceCompatibility javaSourceCompatibility
@@ -50,6 +49,10 @@ android {
 			jni.srcDirs = []
 		}
 	}
+
+    lintOptions {
+        abortOnError false
+    }
 }
 
 tasks.withType(JavaCompile) {
@@ -84,6 +87,6 @@ task ndkClean(type: Exec, description: 'clean JNI libraries') {
 clean.dependsOn 'ndkClean'
 
 dependencies {
-    compile fileTree(dir: new File(buildDir, 'libs'), include: '*.jar')
-	compile "com.android.support:support-annotations:${supportLibVersion}"
+	implementation fileTree(dir: new File(buildDir, 'libs'), include: '*.jar')
+	implementation "com.android.support:support-annotations:${supportLibVersion}"
 }

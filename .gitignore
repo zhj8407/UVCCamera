@@ -71,3 +71,6 @@ libuvccamera/src/main/libs
 .idea/copyright
 .idea/scopes
 .tags*
+
+.idea/caches/
+.idea/codeStyles/

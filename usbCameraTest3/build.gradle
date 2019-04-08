@@ -28,12 +28,11 @@ android {
         config {
             keyAlias 'debugkey'
             keyPassword 'zhangjie'
-            storeFile file('/home/jiezhang/.android/debug.keystore')
+            storeFile file('/home/jiezhang/.android/keys/debug.keystore')
             storePassword 'zhangjie'
         }
     }
     compileSdkVersion versionCompiler
-    buildToolsVersion versionBuildTool
     compileOptions {
         sourceCompatibility javaSourceCompatibility
         targetCompatibility javaTargetCompatibility
@@ -54,8 +53,13 @@ android {
             signingConfig signingConfigs.config
         }
     }
+    lintOptions {
+        abortOnError false
+    }
 }
 
 dependencies {
-    compile project(':usbCameraCommon')
+    implementation project(':libuvccamera')
+    implementation project(':usbCameraCommon')
+    implementation 'com.serenegiant:common:1.5.20'
 }
