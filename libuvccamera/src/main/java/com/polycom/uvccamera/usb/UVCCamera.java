@@ -74,6 +74,7 @@ public class UVCCamera {
     public static final int H264_PROFILE_CONSTRAINED_BASELINE = 16960;
     public static final int H264_PROFILE_HIGH = 25600;
     public static final int H264_PROFILE_CONSTRAINED_HIGH = 25612;
+    public static final int H264_PROFILE_DEFAULT = H264_PROFILE_CONSTRAINED_HIGH;
 
     public static final int H264_USAGE_1 = 1;
     public static final int H264_USAGE_2 = 2;

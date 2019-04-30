@@ -55,7 +55,9 @@
  * コンストラクタ
  */
 UVCCamera::UVCCamera()
-    :	mFd(0),
+    : mDeviceFd(-1),
+      mCameraId("/dev/video0"),
+      mFd(0),
       mUsbFs(NULL),
       mContext(NULL),
       mDevice(NULL),
@@ -149,6 +151,7 @@ int UVCCamera::connect(int vid, int pid, int fd, int busnum, int devaddr, const 
     ENTER();
     uvc_error_t result = UVC_ERROR_BUSY;
 
+#if 0
     if (!mDeviceHandle && fd) {
         if (mUsbFs)
             free(mUsbFs);
@@ -198,6 +201,23 @@ int UVCCamera::connect(int vid, int pid, int fd, int busnum, int devaddr, const 
     } else {
         LOGW("camera is already opened. you should release first");
     }
+#else
+    if (mDeviceFd < 0)
+    {
+        mDeviceFd = ::open(mCameraId.c_str(), O_RDWR);
+        if (mDeviceFd < 0)
+        {
+            LOGE("%s: v4l2 device open %s failed\n", __FUNCTION__, mCameraId.c_str());
+            return UVC_ERROR_NO_DEVICE;
+        }
+    }
+    else
+    {
+        LOGW("camera is already opened. you should release firstly\n");
+    }
+
+    result = UVC_SUCCESS;
+#endif
 
     RETURN(result, int);
 }
@@ -236,6 +256,11 @@ int UVCCamera::release()
         mFd = 0;
         free(mUsbFs);
         mUsbFs = NULL;
+    }
+
+    if (mDeviceFd >= 0) {
+        close(mDeviceFd);
+        mDeviceFd = -1;
     }
 
     RETURN(0, int);

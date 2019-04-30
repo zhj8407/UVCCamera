@@ -36,6 +36,8 @@
 #include "UVCPreview.h"
 #include "UVCRecord.h"
 
+#include <string>
+
 #define	CTRL_SCANNING		0x000001	// D0:  Scanning Mode
 #define	CTRL_AE				0x000002	// D1:  Auto-Exposure Mode
 #define	CTRL_AE_PRIORITY	0x000004	// D2:  Auto-Exposure Priority
@@ -125,6 +127,9 @@ typedef uvc_error_t (*paramset_func_i32i32)(uvc_device_handle_t *devh, int32_t v
 
 class UVCCamera
 {
+    int mDeviceFd;
+    std::string mCameraId;
+
     char *mUsbFs;
     uvc_context_t *mContext;
     int mFd;
