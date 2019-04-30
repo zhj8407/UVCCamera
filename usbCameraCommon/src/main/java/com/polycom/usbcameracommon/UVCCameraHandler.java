@@ -40,7 +40,7 @@ public class UVCCameraHandler extends AbstractUVCCameraHandler {
         return createHandler(parent, cameraView, 1, width, height, UVCCamera.FRAME_FORMAT_MJPEG,
                 UVCCamera.DEFAULT_BANDWIDTH,
                 UVCCamera.DEFAULT_RECORD_WIDTH, UVCCamera.DEFAULT_RECORD_HEIGHT,
-				UVCCamera.DEFAULT_RECORD_MODE,  UVCCamera.H264_PROFILE_CONSTRAINED_BASELINE,
+				UVCCamera.DEFAULT_RECORD_MODE,  UVCCamera.H264_PROFILE_DEFAULT,
 				UVCCamera.H264_USAGE_1, UVCCamera.DEFAULT_BANDWIDTH);
     }
 
@@ -54,7 +54,7 @@ public class UVCCameraHandler extends AbstractUVCCameraHandler {
         return createHandler(parent, cameraView, 1, width, height, UVCCamera.FRAME_FORMAT_MJPEG,
                 bandwidthFactor,
                 UVCCamera.DEFAULT_RECORD_WIDTH, UVCCamera.DEFAULT_RECORD_HEIGHT,
-				UVCCamera.DEFAULT_RECORD_MODE, UVCCamera.H264_PROFILE_CONSTRAINED_BASELINE,
+				UVCCamera.DEFAULT_RECORD_MODE, UVCCamera.H264_PROFILE_DEFAULT,
 				UVCCamera.H264_USAGE_1, UVCCamera.DEFAULT_BANDWIDTH);
 
     }
@@ -72,7 +72,7 @@ public class UVCCameraHandler extends AbstractUVCCameraHandler {
         return createHandler(parent, cameraView, encoderType, width, height,
                 UVCCamera.FRAME_FORMAT_MJPEG, UVCCamera.DEFAULT_BANDWIDTH,
                 UVCCamera.DEFAULT_RECORD_WIDTH, UVCCamera.DEFAULT_RECORD_HEIGHT,
-                UVCCamera.DEFAULT_RECORD_MODE, UVCCamera.H264_PROFILE_CONSTRAINED_BASELINE,
+                UVCCamera.DEFAULT_RECORD_MODE, UVCCamera.H264_PROFILE_DEFAULT,
                 UVCCamera.H264_USAGE_1, UVCCamera.DEFAULT_BANDWIDTH);
     }
 
@@ -90,7 +90,7 @@ public class UVCCameraHandler extends AbstractUVCCameraHandler {
         return createHandler(parent, cameraView, encoderType, width, height, format,
                 UVCCamera.DEFAULT_BANDWIDTH,
                 UVCCamera.DEFAULT_RECORD_WIDTH, UVCCamera.DEFAULT_RECORD_HEIGHT,
-                UVCCamera.DEFAULT_RECORD_MODE, UVCCamera.H264_PROFILE_CONSTRAINED_BASELINE,
+                UVCCamera.DEFAULT_RECORD_MODE, UVCCamera.H264_PROFILE_DEFAULT,
 				UVCCamera.H264_USAGE_1, UVCCamera.DEFAULT_BANDWIDTH);
     }
 
