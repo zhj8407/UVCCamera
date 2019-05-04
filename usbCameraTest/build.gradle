@@ -24,14 +24,6 @@
 apply plugin: 'com.android.application'
 
 android {
-    signingConfigs {
-        config {
-            keyAlias 'debugkey'
-            keyPassword 'zhangjie'
-            storeFile file('/home/jiezhang/.android/keys/debug.keystore')
-            storePassword 'zhangjie'
-        }
-    }
     compileSdkVersion versionCompiler
     compileOptions {
         sourceCompatibility javaSourceCompatibility
@@ -48,9 +40,6 @@ android {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-project.txt'
-        }
-        debug {
-            signingConfig signingConfigs.config
         }
     }
     lintOptions {

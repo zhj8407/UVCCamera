@@ -77,3 +77,6 @@ libuvccamera/src/main/libs
 
 .vscode
 .vscode/**
+
+.settings
+**/.settings

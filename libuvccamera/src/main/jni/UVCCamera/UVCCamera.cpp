@@ -42,11 +42,42 @@
 #include <linux/time.h>
 #include <unistd.h>
 #include <string.h>
+#include <ctype.h>
+#include <errno.h>
+#include <assert.h>
+
+#include <sys/ioctl.h>
+#include <sys/types.h>
+
+#include "linux/videodev2.h"
 #include "UVCCamera.h"
 #include "Parameters.h"
 #include "libuvc_internal.h"
 
 #define	LOCAL_DEBUG 0
+
+/*
+ * set ioctl retries to 4
+ */
+#define IOCTL_RETRY 4
+
+int UVCCamera::xioctl(int fd, int IOCTL_X, void *arg)
+{
+    int ret = 0;
+    int tries = IOCTL_RETRY;
+
+    do
+    {
+        ret = ioctl(fd, IOCTL_X, arg);
+    }
+    while (ret && tries-- &&
+        ((errno == EINTR) || (errno == EAGAIN) || (errno == ETIMEDOUT)));
+
+    if (ret && (tries <= 0))
+        LOGE("V4L2_CORE: ioctl (%i) retried %i times - giving up: %s)\n", IOCTL_X, IOCTL_RETRY, strerror(errno));
+
+    return (ret);
+}
 
 //**********************************************************************
 //
@@ -57,6 +88,7 @@
 UVCCamera::UVCCamera()
     : mDeviceFd(-1),
       mCameraId("/dev/video0"),
+      list_stream_formats(nullptr),
       mFd(0),
       mUsbFs(NULL),
       mContext(NULL),
@@ -204,10 +236,36 @@ int UVCCamera::connect(int vid, int pid, int fd, int busnum, int devaddr, const 
 #else
     if (mDeviceFd < 0)
     {
-        mDeviceFd = ::open(mCameraId.c_str(), O_RDWR);
+        mDeviceFd = ::open(mCameraId.c_str(), O_RDWR | O_NONBLOCK);
         if (mDeviceFd < 0)
         {
             LOGE("%s: v4l2 device open %s failed\n", __FUNCTION__, mCameraId.c_str());
+            return UVC_ERROR_NO_DEVICE;
+        }
+
+        clearCameraParams();
+
+        struct v4l2_capability v4l2_cap;
+        if (xioctl(mDeviceFd, VIDIOC_QUERYCAP, &v4l2_cap) < 0)
+        {
+            LOGE("%s: v4l2 device (%s) VIDIOC_QUERYCAP error: %s\n",
+                __FUNCTION__, mCameraId.c_str(), strerror(errno));
+            ::close(mDeviceFd);
+            mDeviceFd = -1;
+            return UVC_ERROR_ACCESS;
+        }
+
+        LOGI("V4l2 Device Cap: v4l2_cap.card: %s\n", v4l2_cap.card);
+        LOGI("V4l2 Device Cap: v4l2_cap.driver: %s\n", v4l2_cap.driver);
+        LOGI("V4l2 Device Cap: v4l2_cap.bus_info: %s\n", v4l2_cap.bus_info);
+
+        std::string driverName((char *)(v4l2_cap.driver));
+        if (driverName != "uvcvideo")
+        {
+            LOGE("%s: v4l2 device (%s) is not a USB Video Device\n",
+                __FUNCTION__, mCameraId.c_str());
+            ::close(mDeviceFd);
+            mDeviceFd = -1;
             return UVC_ERROR_NO_DEVICE;
         }
     }
@@ -258,6 +316,10 @@ int UVCCamera::release()
         mUsbFs = NULL;
     }
 
+    if (list_stream_formats != nullptr) {
+        FreeFrameFormats();
+    }
+
     if (mDeviceFd >= 0) {
         close(mDeviceFd);
         mDeviceFd = -1;
@@ -290,6 +352,474 @@ int UVCCamera::setButtonCallback(JNIEnv *env, jobject button_callback_obj)
     RETURN(result, int);
 }
 
+static uint32_t decoder_supported_formats[] =
+    {
+        V4L2_PIX_FMT_YUYV,
+        V4L2_PIX_FMT_MJPEG,
+        V4L2_PIX_FMT_JPEG,
+        V4L2_PIX_FMT_H264,
+        V4L2_PIX_FMT_YVYU,
+        V4L2_PIX_FMT_UYVY,
+        V4L2_PIX_FMT_VYUY,
+        V4L2_PIX_FMT_YYUV,
+        V4L2_PIX_FMT_YUV444,
+        V4L2_PIX_FMT_YUV555,
+        V4L2_PIX_FMT_YUV565,
+        V4L2_PIX_FMT_YUV32,
+        V4L2_PIX_FMT_Y41P,
+        V4L2_PIX_FMT_GREY,
+        V4L2_PIX_FMT_Y10BPACK,
+        V4L2_PIX_FMT_Y16,
+#ifdef V4L2_PIX_FMT_Y16_BE
+        V4L2_PIX_FMT_Y16_BE,
+#endif
+        V4L2_PIX_FMT_YUV420,
+        V4L2_PIX_FMT_YUV422P,
+        V4L2_PIX_FMT_YVU420,
+        V4L2_PIX_FMT_NV12,
+        V4L2_PIX_FMT_NV21,
+        V4L2_PIX_FMT_NV16,
+        V4L2_PIX_FMT_NV61,
+        V4L2_PIX_FMT_NV24,
+        V4L2_PIX_FMT_NV42,
+        V4L2_PIX_FMT_SPCA501,
+        V4L2_PIX_FMT_SPCA505,
+        V4L2_PIX_FMT_SPCA508,
+        V4L2_PIX_FMT_SGBRG8,
+        V4L2_PIX_FMT_SGRBG8,
+        V4L2_PIX_FMT_SBGGR8,
+        V4L2_PIX_FMT_SRGGB8,
+        V4L2_PIX_FMT_RGB24,
+        V4L2_PIX_FMT_BGR24,
+        V4L2_PIX_FMT_RGB332,
+        V4L2_PIX_FMT_RGB565,
+        V4L2_PIX_FMT_RGB565X,
+        V4L2_PIX_FMT_RGB444,
+        V4L2_PIX_FMT_RGB555,
+        V4L2_PIX_FMT_RGB555X,
+        V4L2_PIX_FMT_BGR666,
+        V4L2_PIX_FMT_BGR32,
+        V4L2_PIX_FMT_RGB32,
+#ifdef V4L2_PIX_FMT_ARGB444
+        V4L2_PIX_FMT_ARGB444,
+        V4L2_PIX_FMT_XRGB444,
+#endif
+#ifdef V4L2_PIX_FMT_ARGB555
+        V4L2_PIX_FMT_ARGB555,
+        V4L2_PIX_FMT_XRGB555,
+#endif
+#ifdef V4L2_PIX_FMT_ARGB555X
+        V4L2_PIX_FMT_ARGB555X,
+        V4L2_PIX_FMT_XRGB555X,
+#endif
+#ifdef V4L2_PIX_FMT_ABGR32
+        V4L2_PIX_FMT_ABGR32,
+        V4L2_PIX_FMT_XBGR32,
+#endif
+#ifdef V4L2_PIX_FMT_ARGB32
+        V4L2_PIX_FMT_ARGB32,
+        V4L2_PIX_FMT_XRGB32,
+#endif
+#ifdef V4L2_PIX_FMT_H264_SIMULCAST
+        V4L2_PIX_FMT_H264_SIMULCAST,
+#endif
+        /*last one (zero terminated)*/
+        0};
+
+/* FIXME: doesn't support bigendian formats=> fourcc | (1 << 31)
+ * get pixelformat from fourcc
+ * args:
+ *    fourcc - fourcc code for format
+ *
+ * asserts:
+ *    none
+ *
+ * returns: v4l2 pixel format
+ */
+uint32_t v4l2core_fourcc_2_v4l2_pixelformat(const char *fourcc)
+{
+    int fmt = 0;
+    if (!fourcc || strlen(fourcc) != 4)
+        return fmt;
+    else
+        fmt = v4l2_fourcc(toupper(fourcc[0]), toupper(fourcc[1]), toupper(fourcc[2]), toupper(fourcc[3]));
+
+    return fmt;
+}
+
+/*
+ * check pixelformat against decoder support formats
+ * args:
+ *    pixelformat - v4l2 pixelformat
+ *
+ * asserts:
+ *    none
+ *
+ * returns: TRUE(1) if format is supported
+ *          FALSE(0) if not
+ */
+uint8_t can_decode_format(uint32_t pixelformat)
+{
+    int i = 0;
+    uint32_t sup_fmt = 0;
+
+    do
+    {
+        sup_fmt = decoder_supported_formats[i];
+
+        if (pixelformat == sup_fmt)
+            return 1;
+
+        i++;
+    } while (sup_fmt); /*last format is always 0*/
+
+    return 0;
+}
+
+int UVCCamera::EnumFrameIntervals(uint32_t pixfmt, uint32_t width, uint32_t height,
+                                int fmtind, int fsizeind)
+{
+    assert(mDeviceFd > 0);
+    assert(list_stream_formats != NULL);
+    assert(numb_formats >= fmtind);
+    assert(list_stream_formats->list_stream_cap != NULL);
+    assert(list_stream_formats[fmtind - 1].numb_res >= fsizeind);
+
+    int ret = 0;
+    struct v4l2_frmivalenum fival;
+    int list_fps = 0;
+    memset(&fival, 0, sizeof(fival));
+    fival.index = 0;
+    fival.pixel_format = pixfmt;
+    fival.width = width;
+    fival.height = height;
+
+    list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num = NULL;
+    list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom = NULL;
+
+        LOGI("\tTime interval between frame: ");
+    while ((ret = xioctl(mDeviceFd, VIDIOC_ENUM_FRAMEINTERVALS, &fival)) == 0)
+    {
+        fival.index++;
+        if (fival.type == V4L2_FRMIVAL_TYPE_DISCRETE)
+        {
+                LOGI("%u/%u, ", fival.discrete.numerator, fival.discrete.denominator);
+
+            list_fps++;
+            list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num = reinterpret_cast<int *>(realloc(
+                list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num,
+                sizeof(int) * list_fps));
+            if (list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num == NULL)
+            {
+                LOGE("V4L2_CORE: FATAL memory allocation failure (enum_frame_intervals): %s\n", strerror(errno));
+                return -1;
+            }
+            list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom = reinterpret_cast<int *>(realloc(
+                list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom,
+                sizeof(int) * list_fps));
+            if (list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom == NULL)
+            {
+                LOGE("V4L2_CORE: FATAL memory allocation failure (enum_frame_intervals): %s\n", strerror(errno));
+                return -1;
+            }
+
+            list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num[list_fps - 1] = fival.discrete.numerator;
+            list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom[list_fps - 1] = fival.discrete.denominator;
+        }
+        else if (fival.type == V4L2_FRMIVAL_TYPE_CONTINUOUS)
+        {
+            LOGI("{min { %u/%u } .. max { %u/%u } }, ",
+                    fival.stepwise.min.numerator, fival.stepwise.min.numerator,
+                    fival.stepwise.max.denominator, fival.stepwise.max.denominator);
+            break;
+        }
+        else if (fival.type == V4L2_FRMIVAL_TYPE_STEPWISE)
+        {
+            LOGI("{min { %u/%u } .. max { %u/%u } / "
+                    "stepsize { %u/%u } }, ",
+                    fival.stepwise.min.numerator, fival.stepwise.min.denominator,
+                    fival.stepwise.max.numerator, fival.stepwise.max.denominator,
+                    fival.stepwise.step.numerator, fival.stepwise.step.denominator);
+            break;
+        }
+    }
+
+    if (list_fps == 0)
+    {
+        list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].numb_frates = 1;
+        list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num = reinterpret_cast<int *>(realloc(
+            list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num,
+            sizeof(int)));
+        if (list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num == NULL)
+        {
+            LOGE("V4L2_CORE: FATAL memory allocation failure (enum_frame_intervals): %s\n", strerror(errno));
+            return -1;
+        }
+        list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom = reinterpret_cast<int *>(realloc(
+            list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom,
+            sizeof(int)));
+        if (list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom == NULL)
+        {
+            LOGE("V4L2_CORE: FATAL memory allocation failure (enum_frame_intervals): %s\n", strerror(errno));
+            return -1;
+        }
+
+        list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num[0] = 1;
+        list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom[0] = 1;
+    }
+    else
+        list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].numb_frates = list_fps;
+
+    LOGI("\n");
+    if (ret != 0 && errno != EINVAL)
+    {
+        LOGE("V4L2_CORE: (VIDIOC_ENUM_FRAMEINTERVALS) Error enumerating frame intervals\n");
+        return errno;
+    }
+    return 0;
+}
+
+int UVCCamera::EnumFrameSizes(uint32_t pixfmt, int fmtind)
+{
+    assert(mDeviceFd > 0);
+    assert(list_stream_formats != NULL);
+    assert(numb_formats >= fmtind);
+
+    int ret = 0;
+    int fsizeind = 0; /*index for supported sizes*/
+    list_stream_formats[fmtind - 1].list_stream_cap = NULL;
+    struct v4l2_frmsizeenum fsize;
+
+    memset(&fsize, 0, sizeof(fsize));
+    fsize.index = 0;
+    fsize.pixel_format = pixfmt;
+
+    while ((ret = xioctl(mDeviceFd, VIDIOC_ENUM_FRAMESIZES, &fsize)) == 0)
+    {
+        fsize.index++;
+        if (fsize.type == V4L2_FRMSIZE_TYPE_DISCRETE)
+        {
+                LOGI("{ discrete: width = %u, height = %u }\n",
+                       fsize.discrete.width, fsize.discrete.height);
+
+            fsizeind++;
+            list_stream_formats[fmtind - 1].list_stream_cap = reinterpret_cast<v4l2_stream_cap_t *>(realloc(
+                list_stream_formats[fmtind - 1].list_stream_cap,
+                fsizeind * sizeof(v4l2_stream_cap_t)));
+
+            assert(list_stream_formats[fmtind - 1].list_stream_cap != NULL);
+
+            list_stream_formats[fmtind - 1].numb_res = fsizeind;
+
+            list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].width = fsize.discrete.width;
+            list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].height = fsize.discrete.height;
+            list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].profile = fsize.reserved[0];
+
+            ret = EnumFrameIntervals(pixfmt,
+                                       fsize.discrete.width,
+                                       fsize.discrete.height,
+                                       fmtind,
+                                       fsizeind);
+
+            if (ret != 0)
+                LOGE("V4L2_CORE:  Unable to enumerate frame sizes %s\n", strerror(ret));
+        }
+        else if (fsize.type == V4L2_FRMSIZE_TYPE_CONTINUOUS || fsize.type == V4L2_FRMSIZE_TYPE_STEPWISE)
+        {
+            {
+                if (fsize.type == V4L2_FRMSIZE_TYPE_CONTINUOUS)
+                    LOGI("{ continuous: min { width = %u, height = %u } .. "
+                           "max { width = %u, height = %u } }\n",
+                           fsize.stepwise.min_width, fsize.stepwise.min_height,
+                           fsize.stepwise.max_width, fsize.stepwise.max_height);
+                else
+                    LOGI("{ stepwise: min { width = %u, height = %u } .. "
+                           "max { width = %u, height = %u } / "
+                           "stepsize { width = %u, height = %u } }\n",
+                           fsize.stepwise.min_width, fsize.stepwise.min_height,
+                           fsize.stepwise.max_width, fsize.stepwise.max_height,
+                           fsize.stepwise.step_width, fsize.stepwise.step_height);
+            }
+
+            /*add at least min and max values*/
+            fsizeind++; /*min*/
+
+            list_stream_formats[fmtind - 1].list_stream_cap = reinterpret_cast<v4l2_stream_cap_t *>(realloc(
+                list_stream_formats[fmtind - 1].list_stream_cap,
+                fsizeind * sizeof(v4l2_stream_cap_t)));
+
+            assert(list_stream_formats[fmtind - 1].list_stream_cap != NULL);
+
+            list_stream_formats[fmtind - 1].numb_res = fsizeind;
+
+            list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].width = fsize.stepwise.min_width;
+            list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].height = fsize.stepwise.min_height;
+
+            ret = EnumFrameIntervals(pixfmt,
+                                       fsize.stepwise.min_width,
+                                       fsize.stepwise.min_height,
+                                       fmtind,
+                                       fsizeind);
+
+            if (ret != 0)
+                LOGE("V4L2_CORE:  Unable to enumerate frame sizes %s\n", strerror(ret));
+
+            fsizeind++; /*max*/
+
+            list_stream_formats[fmtind - 1].list_stream_cap = reinterpret_cast<v4l2_stream_cap_t *>(realloc(
+                list_stream_formats[fmtind - 1].list_stream_cap,
+                fsizeind * sizeof(v4l2_stream_cap_t)));
+
+            assert(list_stream_formats[fmtind - 1].list_stream_cap != NULL);
+
+            list_stream_formats[fmtind - 1].numb_res = fsizeind;
+
+            list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].width = fsize.stepwise.max_width;
+            list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].height = fsize.stepwise.max_height;
+
+            ret = EnumFrameIntervals(pixfmt,
+                                       fsize.stepwise.max_width,
+                                       fsize.stepwise.max_height,
+                                       fmtind,
+                                       fsizeind);
+
+            if (ret != 0)
+                LOGE("V4L2_CORE:  Unable to enumerate frame sizes %s\n", strerror(ret));
+        }
+        else
+        {
+            LOGE("V4L2_CORE: fsize.type not supported: %d\n", fsize.type);
+            LOGE("    (Discrete: %d   Continuous: %d  Stepwise: %d)\n",
+                    V4L2_FRMSIZE_TYPE_DISCRETE,
+                    V4L2_FRMSIZE_TYPE_CONTINUOUS,
+                    V4L2_FRMSIZE_TYPE_STEPWISE);
+        }
+    }
+
+    if (ret != 0 && errno != EINVAL)
+    {
+        LOGE("V4L2_CORE: (VIDIOC_ENUM_FRAMESIZES) - Error enumerating frame sizes\n");
+        return errno;
+    }
+
+    return 0;
+}
+
+int UVCCamera::EnumerateFrameFormats()
+{
+    assert(mDeviceFd > 0);
+    assert(list_stream_formats == NULL);
+
+    int ret = 0;
+
+    int fmtind = 0;
+    int valid_formats = 0; /*number of valid formats found (with valid frame sizes)*/
+    struct v4l2_fmtdesc fmt;
+    memset(&fmt, 0, sizeof(fmt));
+    fmt.index = 0;
+    fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+    list_stream_formats = reinterpret_cast < v4l2_stream_formats_t *>(calloc(1, sizeof(v4l2_stream_formats_t)));
+    if (list_stream_formats == NULL)
+    {
+        LOGE("V4L2_CORE: FATAL memory allocation failure (enum_frame_formats): %s\n", strerror(errno));
+        return -1;
+    }
+    list_stream_formats[0].list_stream_cap = NULL;
+
+    while ((ret = xioctl(mDeviceFd, VIDIOC_ENUM_FMT, &fmt)) == 0)
+    {
+        uint8_t dec_support = ::can_decode_format(fmt.pixelformat);
+
+        uint32_t pix_format = fmt.pixelformat;
+
+        fmt.index++;
+
+#if 0
+        /* We can not choose the H.264 format in Simulcast sub videodev */
+        if (stream_id && pix_format == V4L2_PIX_FMT_H264)
+            continue;
+#endif
+
+        if ((fmt.pixelformat & (1 << 31)) != 0)
+        {
+            pix_format &= ~(1 << 31); //need to fix fourcc string
+            LOGI("{ pixelformat = '%c%c%c%c'(BE), description = '%s' }\n",
+                    pix_format & 0xFF, (pix_format >> 8) & 0xFF,
+                    (pix_format >> 16) & 0xFF, (pix_format >> 24) & 0xFF,
+                    fmt.description);
+        }
+        else
+            LOGI("{ pixelformat = '%c%c%c%c', description = '%s' }\n",
+                    fmt.pixelformat & 0xFF, (fmt.pixelformat >> 8) & 0xFF,
+                    (fmt.pixelformat >> 16) & 0xFF, (fmt.pixelformat >> 24) & 0xFF,
+                    fmt.description);
+
+        if (!dec_support)
+            LOGI("    - FORMAT NOT SUPPORTED BY DECODER -\n");
+
+        fmtind++;
+
+        list_stream_formats = reinterpret_cast< v4l2_stream_formats_t *>(realloc(
+                                                     list_stream_formats,
+                                                     fmtind * sizeof(v4l2_stream_formats_t)));
+
+        assert(list_stream_formats != NULL);
+
+        numb_formats = fmtind;
+
+        list_stream_formats[fmtind - 1].dec_support = dec_support;
+        list_stream_formats[fmtind - 1].format = fmt.pixelformat;
+        if ((fmt.pixelformat & (1 << 31)) != 0) //be format flag
+            pix_format &= ~(1 << 31);           //need to fix fourcc string
+        snprintf(list_stream_formats[fmtind - 1].fourcc, 5, "%c%c%c%c",
+                 pix_format & 0xFF, (pix_format >> 8) & 0xFF,
+                 (pix_format >> 16) & 0xFF, (pix_format >> 24) & 0xFF);
+        strncpy(list_stream_formats[fmtind - 1].description, (char *)fmt.description, 31);
+        //enumerate frame sizes
+        ret = EnumFrameSizes(fmt.pixelformat, fmtind);
+        if (ret != 0)
+            LOGE("v4L2_CORE: Unable to enumerate frame sizes :%s\n", strerror(ret));
+
+        if (dec_support && !ret)
+            valid_formats++; /*the format can be decoded and it has valid frame sizes*/
+    }
+
+    if (errno != EINVAL)
+        LOGE("v4L2_CORE: (VIDIOC_ENUM_FMT) - Error enumerating frame formats: %s\n", strerror(errno));
+
+    if (valid_formats > 0)
+        return 0;
+    else
+        return -1;
+}
+
+void UVCCamera::FreeFrameFormats()
+{
+    /*asserts*/
+    assert(list_stream_formats != NULL);
+
+    int i = 0;
+    int j = 0;
+    for (i = 0; i < numb_formats; i++)
+    {
+        if (list_stream_formats[i].list_stream_cap != NULL)
+        {
+            for (j = 0; j < list_stream_formats[i].numb_res; j++)
+            {
+                if (list_stream_formats[i].list_stream_cap[j].framerate_num != NULL)
+                    free(list_stream_formats[i].list_stream_cap[j].framerate_num);
+
+                if (list_stream_formats[i].list_stream_cap[j].framerate_denom != NULL)
+                    free(list_stream_formats[i].list_stream_cap[j].framerate_denom);
+            }
+            free(list_stream_formats[i].list_stream_cap);
+        }
+    }
+    free(list_stream_formats);
+    list_stream_formats = NULL;
+}
+
 char *UVCCamera::getSupportedSize()
 {
     ENTER();
@@ -298,6 +828,8 @@ char *UVCCamera::getSupportedSize()
         UVCDiags params;
         RETURN(params.getSupportedSize(mDeviceHandle), char *)
     }
+
+    EnumerateFrameFormats();
 
     RETURN(NULL, char *);
 }
