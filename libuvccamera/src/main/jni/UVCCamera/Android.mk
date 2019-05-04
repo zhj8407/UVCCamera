@@ -37,7 +37,8 @@ LOCAL_C_INCLUDES := \
 		$(LOCAL_PATH)/ \
 		$(LOCAL_PATH)/../ \
 		$(LOCAL_PATH)/../rapidjson/include \
-		$(LOCAL_PATH)/include
+		$(LOCAL_PATH)/include \
+		$(LOCAL_PATH)/v4l2_utils
 
 LOCAL_CFLAGS := $(LOCAL_C_INCLUDES:%=-I%)
 LOCAL_CFLAGS += -DANDROID_NDK
@@ -63,7 +64,9 @@ LOCAL_SRC_FILES := \
 		UVCButtonCallback.cpp \
 		UVCStatusCallback.cpp \
 		Parameters.cpp \
-		polycom_usb_UVCCamera.cpp
+		polycom_usb_UVCCamera.cpp \
+                v4l2_utils/v4l2_core.c \
+                v4l2_utils/v4l2_video_formats.c
 
 LOCAL_MODULE    := UVCCamera
 include $(BUILD_SHARED_LIBRARY)

@@ -38,6 +38,8 @@
 
 #include <string>
 
+#include "v4l2_core.h"
+
 #define	CTRL_SCANNING		0x000001	// D0:  Scanning Mode
 #define	CTRL_AE				0x000002	// D1:  Auto-Exposure Mode
 #define	CTRL_AE_PRIORITY	0x000004	// D2:  Auto-Exposure Priority
@@ -125,39 +127,11 @@ typedef uvc_error_t (*paramset_func_i8u8)(uvc_device_handle_t *devh, int8_t valu
 typedef uvc_error_t (*paramset_func_i8u8u8)(uvc_device_handle_t *devh, int8_t value1, uint8_t value2, uint8_t value3);
 typedef uvc_error_t (*paramset_func_i32i32)(uvc_device_handle_t *devh, int32_t value1, int32_t value2);
 
-/*
- * v4l2 stream capability data
- */
-typedef struct _v4l2_stream_cap_t
-{
-    int width;            //width
-    int height;           //height
-    int *framerate_num;   //list of numerator values - should be 1 in almost all cases
-    int *framerate_denom; //list of denominator values - gives fps
-    int numb_frates;      //number of frame rates (numerator and denominator lists size)
-    int profile;          //profile for H.264
-} v4l2_stream_cap_t;
-
-/*
- * v4l2 stream format data
- */
-typedef struct _v4l2_stream_format_t
-{
-    uint8_t dec_support;                //decoder support (1-supported; 0-not supported)
-    int format;                         //v4l2 pixel format
-    char fourcc[5];                     //corresponding fourcc (mode)
-    char description[32];               //format description
-    int numb_res;                       //available number of resolutions for format (v4l2_stream_cap_t list size)
-    v4l2_stream_cap_t *list_stream_cap; //list of stream capabilities for format
-} v4l2_stream_formats_t;
-
 class UVCCamera
 {
-    int mDeviceFd;
     std::string mCameraId;
 
-    v4l2_stream_formats_t *list_stream_formats; //list of available stream formats
-    int numb_formats;                           //list size
+    v4l2_dev_t *mV4l2Dev;
 
     char *mUsbFs;
     uvc_context_t *mContext;
@@ -237,13 +211,6 @@ class UVCCamera
                              paramget_func_i32 get_func, paramset_func_i32 set_func);
     int internalSetCtrlValue(control_value_t &values, uint32_t value,
                              paramget_func_u32 get_func, paramset_func_u32 set_func);
-    static int xioctl(int fd, int IOCTL_X, void *arg);
-
-    int EnumFrameIntervals(uint32_t pixfmt, uint32_t width, uint32_t height,
-                                      int fmtind, int fsizeind);
-    int EnumFrameSizes(uint32_t pixfmt, int fmtind);
-    int EnumerateFrameFormats();
-    void FreeFrameFormats();
 
 public : UVCCamera();
     ~UVCCamera();
