@@ -46,8 +46,8 @@
 #define MAX_FRAME 2
 #define FRAME_POOL_SZ MAX_FRAME + 1
 
-UVCRecord::UVCRecord(uvc_device_handle_t *devh)
-    : UVCStream(devh),
+UVCRecord::UVCRecord(uvc_device_handle_t *devh, v4l2_dev_t *v4l2Dev)
+    : UVCStream(devh, v4l2Dev),
       requestProfile(DEFAULT_RECORD_PROFILE),
       requestUsage(DEFAULT_RECORD_USAGE),
       recordBytes(DEFAULT_RECORD_WIDTH * DEFAULT_RECORD_HEIGHT * 3 / 4),

@@ -72,7 +72,7 @@ private:
     void do_capture_callback(JNIEnv *env, uvc_frame_t *frame);
     void callbackPixelFormatChanged();
 public:
-    UVCPreview(uvc_device_handle_t *devh);
+    UVCPreview(uvc_device_handle_t *devh, v4l2_dev_t *v4l2Dev);
     virtual ~UVCPreview();
 
     int setPreviewSize(int width, int height, int min_fps, int max_fps, int mode, float bandwidth = 1.0f);

@@ -72,7 +72,7 @@ private:
     void do_capture_callback(JNIEnv *env, uvc_frame_t *frame);
 
 public:
-    UVCRecord(uvc_device_handle_t *devh);
+    UVCRecord(uvc_device_handle_t *devh, v4l2_dev_t *v4l2Dev);
     virtual ~UVCRecord();
 
     int setRecordSize(int width, int height, int profile, int min_fps, int max_fps, int mode, float bandwidth = 1.0f);

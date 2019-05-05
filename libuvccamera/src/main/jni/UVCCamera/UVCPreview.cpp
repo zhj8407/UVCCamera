@@ -42,13 +42,15 @@
 #include "UVCPreview.h"
 #include "libuvc_internal.h"
 
+#include "v4l2_core.h"
+
 #define	LOCAL_DEBUG 0
 #define MAX_FRAME 2
 #define PREVIEW_PIXEL_BYTES 4	// RGBA/RGBX
 #define FRAME_POOL_SZ MAX_FRAME + 1
 
-UVCPreview::UVCPreview(uvc_device_handle_t *devh)
-    : UVCStream(devh),
+UVCPreview::UVCPreview(uvc_device_handle_t *devh, v4l2_dev_t *v4l2Dev)
+    : UVCStream(devh, v4l2Dev),
       mPreviewWindow(NULL),
       mCaptureWindow(NULL),
       previewBytes(DEFAULT_PREVIEW_WIDTH * DEFAULT_PREVIEW_HEIGHT * PREVIEW_PIXEL_BYTES),
@@ -104,10 +106,17 @@ int UVCPreview::setPreviewSize(int width, int height, int min_fps, int max_fps, 
         requestMode = mode;
         requestBandwidth = bandwidth;
 
+#if 0
         uvc_stream_ctrl_t ctrl;
         result = uvc_get_stream_ctrl_format_size_fps(mDeviceHandle, &ctrl,
                  !requestMode ? UVC_FRAME_FORMAT_YUYV : UVC_FRAME_FORMAT_MJPEG,
                  requestWidth, requestHeight, requestMinFps, requestMaxFps);
+#else
+        v4l2core_prepare_new_format(mV4l2Dev, !requestMode ? V4L2_PIX_FMT_YUYV : V4L2_PIX_FMT_MJPEG);
+        v4l2core_prepare_new_resolution(mV4l2Dev, requestWidth, requestHeight, 0, 0, 0, 0, 0, 0);
+        v4l2core_define_fps(mV4l2Dev, 30, 1);
+#endif
+
     }
 
     RETURN(result, int);
@@ -292,46 +301,37 @@ int UVCPreview::stopPreview()
 
 int UVCPreview::prepare_streaming(uvc_stream_ctrl_t *ctrl)
 {
-    uvc_error_t result;
+    int ret;
 
     ENTER();
-    result = uvc_get_stream_ctrl_format_size_fps(mDeviceHandle, ctrl,
-             !requestMode ? UVC_FRAME_FORMAT_YUYV : UVC_FRAME_FORMAT_MJPEG,
-             requestWidth, requestHeight, requestMinFps, requestMaxFps
-                                                );
 
-    if (LIKELY(!result)) {
-#if LOCAL_DEBUG
-        uvc_print_stream_ctrl(ctrl, stderr);
-#endif
-        uvc_frame_desc_t *frame_desc;
-        result = uvc_get_frame_desc(mDeviceHandle, ctrl, &frame_desc);
+    v4l2core_prepare_new_format(mV4l2Dev, !requestMode ? V4L2_PIX_FMT_YUYV : V4L2_PIX_FMT_MJPEG);
+    v4l2core_prepare_new_resolution(mV4l2Dev, requestWidth, requestHeight, 0, 0, 0, 0, 0, 0);
+    v4l2core_define_fps(mV4l2Dev, 1, 30);
 
-        if (LIKELY(!result)) {
-            frameWidth = frame_desc->wWidth;
-            frameHeight = frame_desc->wHeight;
-            LOGI("frameSize=(%d,%d)@%s", frameWidth, frameHeight, (!requestMode ? "YUYV" : "MJPEG"));
-            pthread_mutex_lock(&streaming_mutex);
+    ret = v4l2core_update_current_format(mV4l2Dev);
 
-            if (LIKELY(mPreviewWindow)) {
-                ANativeWindow_setBuffersGeometry(mPreviewWindow,
-                                                 frameWidth, frameHeight, previewFormat);
-            }
+    if (LIKELY(!ret)) {
+        frameWidth = requestWidth;
+        frameHeight = requestHeight;
+        LOGI("frameSize=(%d,%d)@%s", frameWidth, frameHeight, (!requestMode ? "YUYV" : "MJPEG"));
+        pthread_mutex_lock(&streaming_mutex);
 
-            pthread_mutex_unlock(&streaming_mutex);
-        } else {
-            frameWidth = requestWidth;
-            frameHeight = requestHeight;
+        if (LIKELY(mPreviewWindow)) {
+            ANativeWindow_setBuffersGeometry(mPreviewWindow,
+                                                frameWidth, frameHeight, previewFormat);
         }
+
+        pthread_mutex_unlock(&streaming_mutex);
 
         frameMode = requestMode;
         frameBytes = frameWidth * frameHeight * (!requestMode ? 2 : 4);
         previewBytes = frameWidth * frameHeight * PREVIEW_PIXEL_BYTES;
     } else {
-        LOGE("could not negotiate with camera:err=%d", result);
+        LOGE("could not negotiate with camera:err=%d", ret);
     }
 
-    RETURN(result, int);
+    RETURN(ret, int);
 }
 
 void UVCPreview::do_streaming(uvc_stream_ctrl_t *ctrl)
@@ -340,10 +340,14 @@ void UVCPreview::do_streaming(uvc_stream_ctrl_t *ctrl)
 
     uvc_frame_t *frame = NULL;
     uvc_frame_t *frame_mjpeg = NULL;
-    uvc_error_t result = uvc_start_streaming_bandwidth(
-                             mDeviceHandle, ctrl, uvc_streaming_frame_callback, (void *)this, requestBandwidth, 0);
+    uvc_error_t result = UVC_SUCCESS;
 
-    if (LIKELY(!result)) {
+    v4l2core_set_frame_callback(mV4l2Dev, uvc_streaming_frame_callback, (void *)this);
+
+    int ret = v4l2core_start_stream(mV4l2Dev);
+
+    if (LIKELY(!ret))
+    {
         clearStreamingFrame();
         pthread_create(&capture_thread, NULL, capture_thread_func, (void *)this);
 
@@ -385,7 +389,11 @@ void UVCPreview::do_streaming(uvc_stream_ctrl_t *ctrl)
 #if LOCAL_DEBUG
         LOGI("preview_thread_func:wait for all callbacks complete");
 #endif
+#if 0
         uvc_stop_streaming(mDeviceHandle, ctrl);
+#else
+        v4l2core_stop_stream(mV4l2Dev);
+#endif
 #if LOCAL_DEBUG
         LOGI("Streaming finished");
 #endif

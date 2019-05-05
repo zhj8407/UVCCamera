@@ -25,7 +25,7 @@
 #include "utilbase.h"
 
 /*verbosity (global scope)*/
-int verbosity = 1;
+int verbosity = 3;
 
 static uint8_t flag_fps_change = 0; /*set to 1 to request a fps change*/
 

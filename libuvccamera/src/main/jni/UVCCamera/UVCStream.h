@@ -31,6 +31,8 @@
 #include <android/native_window.h>
 #include "objectarray.h"
 
+#include "uvc_dev.h"
+
 #define DEFAULT_BANDWIDTH 1.0f
 
 typedef uvc_error_t (*convFunc_t)(uvc_frame_t *in, uvc_frame_t *out);
@@ -45,6 +47,8 @@ class UVCStream
 {
 protected:
     uvc_device_handle_t *mDeviceHandle;
+
+    v4l2_dev_t *mV4l2Dev;
 
     int requestWidth, requestHeight, requestMode;
     int requestMinFps, requestMaxFps;
@@ -107,7 +111,7 @@ protected:
     }
 
 public:
-    UVCStream(uvc_device_handle_t *devh);
+    UVCStream(uvc_device_handle_t *devh, v4l2_dev_t *v4l2Dev);
     virtual ~UVCStream();
 };
 

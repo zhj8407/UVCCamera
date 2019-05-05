@@ -46,8 +46,9 @@
 #define MAX_FRAME 2
 #define FRAME_POOL_SZ MAX_FRAME + 1
 
-UVCStream::UVCStream(uvc_device_handle_t *devh)
+UVCStream::UVCStream(uvc_device_handle_t *devh, v4l2_dev_t *v4l2Dev)
     : mDeviceHandle(devh),
+      mV4l2Dev(v4l2Dev),
       requestBandwidth(DEFAULT_BANDWIDTH),
       mIsRunning(false),
       mIsCapturing(false),

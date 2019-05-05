@@ -219,6 +219,9 @@ int UVCCamera::connect(int vid, int pid, int fd, int busnum, int devaddr, const 
             LOGE("%s: v4l2core_init_dev (%s) failed\n", __FUNCTION__, mCameraId.c_str());
             return UVC_ERROR_NO_DEVICE;
         }
+
+        mPreview = new UVCPreview(mDeviceHandle, mV4l2Dev);
+        mRecord = new UVCRecord(mDeviceHandle, mV4l2Dev);
     }
     else
     {
@@ -393,9 +396,17 @@ int UVCCamera::startPreview()
 
     int result = EXIT_FAILURE;
 
+#if 0
     if (LIKELY(mDeviceHandle && mPreview)) {
         return mPreview->startPreview();
     }
+#else
+    if (LIKELY(mV4l2Dev && mPreview))
+    {
+        return mPreview->startPreview();
+    }
+#endif
+
 
     RETURN(result, int);
 }
