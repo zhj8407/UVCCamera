@@ -27,9 +27,9 @@
 #include <linux/time.h>
 #include <unistd.h>
 
-#if 1	// set 1 if you don't need debug log
+#if 1 // set 1 if you don't need debug log
 #ifndef LOG_NDEBUG
-#define	LOG_NDEBUG		// w/o LOGV/LOGD/MARK
+#define LOG_NDEBUG // w/o LOGV/LOGD/MARK
 #endif
 #undef USE_LOGALL
 #else
@@ -42,7 +42,9 @@
 #include "UVCRecord.h"
 #include "libuvc_internal.h"
 
-#define	LOCAL_DEBUG 0
+#include "v4l2_core.h"
+
+#define LOCAL_DEBUG 0
 #define MAX_FRAME 2
 #define FRAME_POOL_SZ MAX_FRAME + 1
 
@@ -50,7 +52,7 @@ UVCRecord::UVCRecord(uvc_device_handle_t *devh, v4l2_dev_t *v4l2Dev)
     : UVCStream(devh, v4l2Dev),
       requestProfile(DEFAULT_RECORD_PROFILE),
       requestUsage(DEFAULT_RECORD_USAGE),
-      recordBytes(DEFAULT_RECORD_WIDTH * DEFAULT_RECORD_HEIGHT * 3 / 4),
+      recordBytes(DEFAULT_RECORD_WIDTH * DEFAULT_RECORD_HEIGHT * 3 / 8),
       recordFormat(WINDOW_FORMAT_RGBA_8888),
       stream_probed(false),
       stream_committed(false)
@@ -65,10 +67,8 @@ UVCRecord::UVCRecord(uvc_device_handle_t *devh, v4l2_dev_t *v4l2Dev)
     requestMode = DEFAULT_RECORD_MODE;
     frameWidth = DEFAULT_RECORD_WIDTH;
     frameHeight = DEFAULT_RECORD_HEIGHT;
-    frameBytes = DEFAULT_RECORD_WIDTH * DEFAULT_RECORD_HEIGHT * 2; // YUYV
+    frameBytes = DEFAULT_RECORD_WIDTH * DEFAULT_RECORD_HEIGHT * 3 / 8;
     frameMode = 0;
-
-    memset(&stream_ctrl, 0, sizeof(uvc_stream_ctrl_t));
 
     EXIT();
 }
@@ -87,7 +87,8 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int min_fps, in
 
     int result = 0;
 
-    if (mode == DEFAULT_RECORD_MODE) {
+    if (mode == H264_FORMAT_RECORD_MODE || mode == S264_FORMAT_RECORD_MODE)
+    {
         requestWidth = width;
         requestHeight = height;
         requestMinFps = min_fps;
@@ -97,12 +98,21 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int min_fps, in
         requestUsage = DEFAULT_RECORD_USAGE;
         requestBandwidth = bandwidth;
 
-        result = uvc_get_stream_ctrl_format_size_fps_profile_usage(mDeviceHandle, &stream_ctrl,
-                 UVC_FRAME_FORMAT_H_264,
-                 requestWidth, requestHeight,
-                 requestProfile, requestUsage,
-                 requestMinFps, requestMaxFps);
-    } else {
+        v4l2core_prepare_new_format(mV4l2Dev,
+                                    requestMode == H264_FORMAT_RECORD_MODE ? V4L2_PIX_FMT_H264 : V4L2_PIX_FMT_H264_SIMULCAST);
+        v4l2core_prepare_new_resolution(mV4l2Dev,
+                                        requestWidth,
+                                        requestHeight,
+                                        requestProfile,
+                                        requestUsage - 1,
+                                        0,
+                                        0,
+                                        0,
+                                        0);
+        v4l2core_define_fps(mV4l2Dev, 1, 30);
+    }
+    else
+    {
         result = -1;
     }
 
@@ -118,7 +128,8 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int usage, int 
 
     int result = 0;
 
-    if (mode == DEFAULT_RECORD_MODE) {
+    if (mode == H264_FORMAT_RECORD_MODE || mode == S264_FORMAT_RECORD_MODE)
+    {
         requestWidth = width;
         requestHeight = height;
         requestMinFps = min_fps;
@@ -128,12 +139,21 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int usage, int 
         requestUsage = usage;
         requestBandwidth = bandwidth;
 
-        result = uvc_get_stream_ctrl_format_size_fps_profile_usage(mDeviceHandle, &stream_ctrl,
-                 UVC_FRAME_FORMAT_H_264,
-                 requestWidth, requestHeight,
-                 requestProfile, requestUsage,
-                 requestMinFps, requestMaxFps);
-    } else {
+        v4l2core_prepare_new_format(mV4l2Dev,
+                                    requestMode == H264_FORMAT_RECORD_MODE ? V4L2_PIX_FMT_H264 : V4L2_PIX_FMT_H264_SIMULCAST);
+        v4l2core_prepare_new_resolution(mV4l2Dev,
+                                        requestWidth,
+                                        requestHeight,
+                                        requestProfile,
+                                        requestUsage - 1,
+                                        0,
+                                        0,
+                                        0,
+                                        0);
+        v4l2core_define_fps(mV4l2Dev, 1, 30);
+    }
+    else
+    {
         result = -1;
     }
 
@@ -149,7 +169,8 @@ int UVCRecord::commitRecordSize(int width, int height, int profile, int usage, i
 
     int result = 0;
 
-    if (mode == DEFAULT_RECORD_MODE) {
+    if (mode == H264_FORMAT_RECORD_MODE || mode == S264_FORMAT_RECORD_MODE)
+    {
         requestWidth = width;
         requestHeight = height;
         requestMinFps = min_fps;
@@ -159,12 +180,21 @@ int UVCRecord::commitRecordSize(int width, int height, int profile, int usage, i
         requestUsage = usage;
         requestBandwidth = bandwidth;
 
-        result = uvc_get_and_commit_stream_ctrl_format_size_fps_profile_usage(mDeviceHandle, &stream_ctrl,
-                 UVC_FRAME_FORMAT_H_264,
-                 requestWidth, requestHeight,
-                 requestProfile, requestUsage,
-                 requestMinFps, requestMaxFps);
-    } else {
+        v4l2core_prepare_new_format(mV4l2Dev,
+                                    requestMode == H264_FORMAT_RECORD_MODE ? V4L2_PIX_FMT_H264 : V4L2_PIX_FMT_H264_SIMULCAST);
+        v4l2core_prepare_new_resolution(mV4l2Dev,
+                                        requestWidth,
+                                        requestHeight,
+                                        requestProfile,
+                                        requestUsage - 1,
+                                        0,
+                                        0,
+                                        0,
+                                        0);
+        v4l2core_define_fps(mV4l2Dev, 1, 30);
+    }
+    else
+    {
         result = -1;
     }
 
@@ -206,63 +236,60 @@ int UVCRecord::stopRecord()
     RETURN(0, int);
 }
 
-int UVCRecord::prepare_streaming(uvc_stream_ctrl_t *ctrl)
+int UVCRecord::prepare_streaming()
 {
-    uvc_error_t result = UVC_SUCCESS;
+    int ret;
 
     ENTER();
 
-    if (stream_probed) {
-        memcpy(ctrl, &stream_ctrl, sizeof(uvc_stream_ctrl_t));
-    } else {
-        result = uvc_get_stream_ctrl_format_size_fps_profile_usage(mDeviceHandle, ctrl,
-                 UVC_FRAME_FORMAT_H_264,
-                 requestWidth, requestHeight,
-                 requestProfile, requestUsage,
-                 requestMinFps, requestMaxFps);
+    if (!stream_probed)
+    {
+        v4l2core_prepare_new_format(mV4l2Dev,
+                                    requestMode == H264_FORMAT_RECORD_MODE ? V4L2_PIX_FMT_H264 : V4L2_PIX_FMT_H264_SIMULCAST);
+        v4l2core_prepare_new_resolution(mV4l2Dev,
+                                        requestWidth,
+                                        requestHeight,
+                                        requestProfile,
+                                        requestUsage - 1,
+                                        0,
+                                        0,
+                                        0,
+                                        0);
+        v4l2core_define_fps(mV4l2Dev, 1, 30);
     }
 
-    if (LIKELY(!result)) {
-#if LOCAL_DEBUG
-        uvc_print_stream_ctrl(ctrl, stderr);
-#endif
-        uvc_frame_desc_t *frame_desc;
-        result = uvc_get_frame_desc(mDeviceHandle, ctrl, &frame_desc);
+    ret = v4l2core_update_current_format(mV4l2Dev);
 
-        if (LIKELY(!result)) {
-            frameWidth = frame_desc->wWidth;
-            frameHeight = frame_desc->wHeight;
-            LOGI("frameSize=(%d,%d)@%s", frameWidth, frameHeight, "H264");
-        } else {
-            frameWidth = requestWidth;
-            frameHeight = requestHeight;
-        }
+    if (LIKELY(!ret))
+    {
+        frameWidth = requestWidth;
+        frameHeight = requestHeight;
+        LOGI("frameSize=(%d,%d)@%s", frameWidth, frameHeight, requestMode == H264_FORMAT_RECORD_MODE ? "H264" : "S264");
 
         frameMode = requestMode;
-        frameBytes = frameWidth * frameHeight * 3 / 4;
-
-    } else {
-        LOGE("could not negotiate with camera:err=%d", result);
+        frameBytes = frameWidth * frameHeight * 3 / 8;
+    }
+    else
+    {
+        LOGE("could not negotiate with camera:err=%d", ret);
     }
 
-    RETURN(result, int);
+    RETURN(ret, int);
 }
 
-void UVCRecord::do_streaming(uvc_stream_ctrl_t *ctrl)
+void UVCRecord::do_streaming()
 {
     ENTER();
 
     uvc_frame_t *frame = NULL;
-    uvc_error_t result = uvc_start_streaming_bandwidth_committed(
-                             mDeviceHandle,
-                             ctrl,
-                             uvc_streaming_frame_callback,
-                             (void *)this,
-                             requestBandwidth,
-                             0,
-                             stream_committed ? 1 : 0);
+    uvc_error_t result = UVC_SUCCESS;
 
-    if (LIKELY(!result)) {
+    v4l2core_set_frame_callback(mV4l2Dev, uvc_streaming_frame_callback, (void *)this);
+
+    int ret = v4l2core_start_stream(mV4l2Dev);
+
+    if (LIKELY(!ret))
+    {
         clearStreamingFrame();
         pthread_create(&capture_thread, NULL, capture_thread_func, (void *)this);
 
@@ -271,24 +298,28 @@ void UVCRecord::do_streaming(uvc_stream_ctrl_t *ctrl)
 #endif
 
         // H264 mode
-        for (; LIKELY(isRunning()) ;) {
+        for (; LIKELY(isRunning());)
+        {
             frame = waitStreamingFrame();
 
-            if (LIKELY(frame)) {
+            if (LIKELY(frame))
+            {
                 addCaptureFrame(frame);
             }
         }
 
         pthread_cond_signal(&capture_sync);
 #if LOCAL_DEBUG
-        LOGI("record_thread_func:wait for all callbacks complete");
+        LOGI("record_thread_func:wait for all callbacks complete\n");
 #endif
-        uvc_stop_streaming(mDeviceHandle, ctrl);
+        v4l2core_stop_stream(mV4l2Dev);
 #if LOCAL_DEBUG
-        LOGI("Streaming finished");
+        LOGI("Streaming finished\n");
 #endif
-    } else {
-        uvc_perror(result, "failed start_streaming");
+    }
+    else
+    {
+        LOGE("Failed start_streaming: %d\n", ret);
     }
 
     EXIT();
@@ -304,13 +335,14 @@ void UVCRecord::do_capture(JNIEnv *env)
 
     clearCaptureFrame();
 
-    for (; isRunning() ;) {
+    for (; isRunning();)
+    {
         mIsCapturing = true;
 
         do_capture_idle_loop(env);
 
         pthread_cond_broadcast(&capture_sync);
-    }   // end of for (; isRunning() ;)
+    } // end of for (; isRunning() ;)
 
     EXIT();
 }
@@ -319,7 +351,8 @@ void UVCRecord::do_capture_idle_loop(JNIEnv *env)
 {
     ENTER();
 
-    for (; isRunning() && isCapturing() ;) {
+    for (; isRunning() && isCapturing();)
+    {
         do_capture_callback(env, waitCaptureFrame());
     }
 
@@ -333,17 +366,19 @@ void UVCRecord::do_capture_callback(JNIEnv *env, uvc_frame_t *frame)
 {
     ENTER();
 
-    if (LIKELY(frame)) {
+    if (LIKELY(frame))
+    {
         uvc_frame_t *callback_frame = frame;
 
-        if (mFrameCallbackObj) {
+        if (mFrameCallbackObj)
+        {
             jobject buf = env->NewDirectByteBuffer(callback_frame->data, callback_frame->actual_bytes);
             env->CallVoidMethod(mFrameCallbackObj, iframecallback_fields.onRecordFrame, buf);
             env->ExceptionClear();
             env->DeleteLocalRef(buf);
         }
 
-SKIP:
+    SKIP:
         recycle_frame(callback_frame);
     }
 

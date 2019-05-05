@@ -62,8 +62,8 @@ private:
     size_t callbackPixelBytes;
 //
     void clearDisplay();
-    virtual int prepare_streaming(uvc_stream_ctrl_t *ctrl);
-    virtual void do_streaming(uvc_stream_ctrl_t *ctrl);
+    virtual int prepare_streaming();
+    virtual void do_streaming();
     uvc_frame_t *draw_preview_one(uvc_frame_t *frame, ANativeWindow **window, convFunc_t func, int pixelBytes);
 //
     virtual void do_capture(JNIEnv *env);

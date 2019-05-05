@@ -38,7 +38,8 @@
 typedef uvc_error_t (*convFunc_t)(uvc_frame_t *in, uvc_frame_t *out);
 
 // for callback to Java object
-typedef struct {
+typedef struct
+{
     jmethodID onFrame;
     jmethodID onRecordFrame;
 } Fields_iframecallback;
@@ -56,7 +57,7 @@ protected:
     int frameWidth, frameHeight;
     int frameMode;
     size_t frameBytes;
-//
+    //
     volatile bool mIsRunning;
     pthread_t streaming_thread;
     pthread_mutex_t streaming_mutex;
@@ -64,20 +65,20 @@ protected:
     ObjectArray<uvc_frame_t *> streamingFrames;
 
     static void *streaming_thread_func(void *vptr_args);
-    virtual int prepare_streaming(uvc_stream_ctrl_t *ctrl) = 0;
-    virtual void do_streaming(uvc_stream_ctrl_t *ctrl) = 0;
+    virtual int prepare_streaming() = 0;
+    virtual void do_streaming() = 0;
 
     int startStreaming();
     int stopStreaming();
 
-// improve performance by reducing memory allocation
+    // improve performance by reducing memory allocation
     pthread_mutex_t pool_mutex;
     ObjectArray<uvc_frame_t *> mFramePool;
     uvc_frame_t *get_frame(size_t data_bytes);
     void recycle_frame(uvc_frame_t *frame);
     void init_pool(size_t data_bytes);
     void clear_pool();
-//
+    //
     static void uvc_streaming_frame_callback(uvc_frame_t *frame, void *vptr_args);
 
     void addStreamingFrame(uvc_frame_t *frame);
@@ -88,25 +89,27 @@ protected:
     pthread_t capture_thread;
     pthread_mutex_t capture_mutex;
     pthread_cond_t capture_sync;
-    uvc_frame_t *captureQueu;           // keep latest frame
+    uvc_frame_t *captureQueu; // keep latest frame
 
     static void *capture_thread_func(void *vptr_args);
-//
+    //
     void addCaptureFrame(uvc_frame_t *frame);
     uvc_frame_t *waitCaptureFrame();
     void clearCaptureFrame();
     virtual void do_capture(JNIEnv *env) = 0;
-//
+    //
     jobject mFrameCallbackObj;
     Fields_iframecallback iframecallback_fields;
     int setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int callback_idx,
-        const char *callback_name, const char *callback_sig);
+                         const char *callback_name, const char *callback_sig);
 
-    inline const bool isRunning() const {
+    inline const bool isRunning() const
+    {
         return mIsRunning;
     }
 
-    inline const bool isCapturing() const {
+    inline const bool isCapturing() const
+    {
         return mIsCapturing;
     }
 

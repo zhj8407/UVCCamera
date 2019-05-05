@@ -27,9 +27,9 @@
 #include <linux/time.h>
 #include <unistd.h>
 
-#if 1	// set 1 if you don't need debug log
+#if 1 // set 1 if you don't need debug log
 #ifndef LOG_NDEBUG
-#define	LOG_NDEBUG		// w/o LOGV/LOGD/MARK
+#define LOG_NDEBUG // w/o LOGV/LOGD/MARK
 #endif
 #undef USE_LOGALL
 #else
@@ -42,7 +42,7 @@
 #include "UVCStream.h"
 #include "libuvc_internal.h"
 
-#define	LOCAL_DEBUG 0
+#define LOCAL_DEBUG 0
 #define MAX_FRAME 2
 #define FRAME_POOL_SZ MAX_FRAME + 1
 
@@ -92,21 +92,24 @@ UVCStream::~UVCStream()
  * this function does not confirm the frame size
  * and you may need to confirm the size
  */
-uvc_frame_t* UVCStream::get_frame(size_t data_bytes)
+uvc_frame_t *UVCStream::get_frame(size_t data_bytes)
 {
     uvc_frame_t *frame = NULL;
     pthread_mutex_lock(&pool_mutex);
     {
-        if (!mFramePool.isEmpty()) {
+        if (!mFramePool.isEmpty())
+        {
             frame = mFramePool.last();
         }
     }
     pthread_mutex_unlock(&pool_mutex);
 
-    if UNLIKELY(!frame) {
-        LOGW("allocate new frame");
-        frame = uvc_allocate_frame(data_bytes);
-    }
+    if
+        UNLIKELY(!frame)
+        {
+            LOGW("allocate new frame");
+            frame = uvc_allocate_frame(data_bytes);
+        }
 
     return frame;
 }
@@ -115,18 +118,19 @@ void UVCStream::recycle_frame(uvc_frame_t *frame)
 {
     pthread_mutex_lock(&pool_mutex);
 
-    if (LIKELY(mFramePool.size() < FRAME_POOL_SZ)) {
+    if (LIKELY(mFramePool.size() < FRAME_POOL_SZ))
+    {
         mFramePool.put(frame);
         frame = NULL;
     }
 
     pthread_mutex_unlock(&pool_mutex);
 
-    if (UNLIKELY(frame)) {
+    if (UNLIKELY(frame))
+    {
         uvc_free_frame(frame);
     }
 }
-
 
 void UVCStream::init_pool(size_t data_bytes)
 {
@@ -135,7 +139,8 @@ void UVCStream::init_pool(size_t data_bytes)
     clear_pool();
     pthread_mutex_lock(&pool_mutex);
     {
-        for (int i = 0; i < FRAME_POOL_SZ; i++) {
+        for (int i = 0; i < FRAME_POOL_SZ; i++)
+        {
             mFramePool.put(uvc_allocate_frame(data_bytes));
         }
     }
@@ -152,7 +157,8 @@ void UVCStream::clear_pool()
     {
         const int n = mFramePool.size();
 
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; i++)
+        {
             uvc_free_frame(mFramePool[i]);
         }
 
@@ -167,7 +173,8 @@ void UVCStream::addStreamingFrame(uvc_frame_t *frame)
 
     pthread_mutex_lock(&streaming_mutex);
 
-    if (isRunning() && (streamingFrames.size() < MAX_FRAME)) {
+    if (isRunning() && (streamingFrames.size() < MAX_FRAME))
+    {
         streamingFrames.put(frame);
         frame = NULL;
         pthread_cond_signal(&streaming_sync);
@@ -175,7 +182,8 @@ void UVCStream::addStreamingFrame(uvc_frame_t *frame)
 
     pthread_mutex_unlock(&streaming_mutex);
 
-    if (frame) {
+    if (frame)
+    {
         recycle_frame(frame);
     }
 }
@@ -185,11 +193,13 @@ uvc_frame_t *UVCStream::waitStreamingFrame()
     uvc_frame_t *frame = NULL;
     pthread_mutex_lock(&streaming_mutex);
     {
-        if (!streamingFrames.size()) {
+        if (!streamingFrames.size())
+        {
             pthread_cond_wait(&streaming_sync, &streaming_mutex);
         }
 
-        if (LIKELY(isRunning() && streamingFrames.size() > 0)) {
+        if (LIKELY(isRunning() && streamingFrames.size() > 0))
+        {
             frame = streamingFrames.remove(0);
         }
     }
@@ -213,12 +223,13 @@ void UVCStream::uvc_streaming_frame_callback(uvc_frame_t *frame, void *vptr_args
 {
     UVCStream *stream = reinterpret_cast<UVCStream *>(vptr_args);
 
-    if UNLIKELY(!stream->isRunning() || !frame || !frame->frame_format || !frame->data || !frame->data_bytes) return;
+    if
+        UNLIKELY(!stream->isRunning() || !frame || !frame->frame_format || !frame->data || !frame->data_bytes)
+        return;
 
     if (UNLIKELY(
-                (frame->frame_format != UVC_FRAME_FORMAT_MJPEG && frame->frame_format != UVC_FRAME_FORMAT_H_264
-                    && (frame->actual_bytes < stream->frameBytes))
-                || (frame->width != stream->frameWidth) || (frame->height != stream->frameHeight))) {
+            (frame->frame_format != UVC_FRAME_FORMAT_MJPEG && frame->frame_format != UVC_FRAME_FORMAT_H_264 && (frame->actual_bytes < stream->frameBytes)) || (frame->width != stream->frameWidth) || (frame->height != stream->frameHeight)))
+    {
 
 #if LOCAL_DEBUG
         LOGD("broken frame!:format=%d,actual_bytes=%d/%d(%d,%d/%d,%d)",
@@ -228,10 +239,12 @@ void UVCStream::uvc_streaming_frame_callback(uvc_frame_t *frame, void *vptr_args
         return;
     }
 
-    if (LIKELY(stream->isRunning())) {
+    if (LIKELY(stream->isRunning()))
+    {
         uvc_frame_t *copy = stream->get_frame(frame->data_bytes);
 
-        if (UNLIKELY(!copy)) {
+        if (UNLIKELY(!copy))
+        {
 #if LOCAL_DEBUG
             LOGE("uvc_callback:unable to allocate duplicate frame!");
 #endif
@@ -240,7 +253,8 @@ void UVCStream::uvc_streaming_frame_callback(uvc_frame_t *frame, void *vptr_args
 
         uvc_error_t ret = uvc_duplicate_frame(frame, copy);
 
-        if (UNLIKELY(ret)) {
+        if (UNLIKELY(ret))
+        {
             stream->recycle_frame(copy);
             return;
         }
@@ -249,19 +263,20 @@ void UVCStream::uvc_streaming_frame_callback(uvc_frame_t *frame, void *vptr_args
     }
 }
 
-void* UVCStream::streaming_thread_func(void *vptr_args)
+void *UVCStream::streaming_thread_func(void *vptr_args)
 {
     int result;
 
     ENTER();
     UVCStream *streaming = reinterpret_cast<UVCStream *>(vptr_args);
 
-    if (LIKELY(streaming)) {
-        uvc_stream_ctrl_t ctrl;
-        result = streaming->prepare_streaming(&ctrl);
+    if (LIKELY(streaming))
+    {
+        result = streaming->prepare_streaming();
 
-        if (LIKELY(!result)) {
-            streaming->do_streaming(&ctrl);
+        if (LIKELY(!result))
+        {
+            streaming->do_streaming();
         }
     }
 
@@ -275,11 +290,13 @@ int UVCStream::startStreaming()
 
     int result = EXIT_FAILURE;
 
-    if (!isRunning()) {
+    if (!isRunning())
+    {
         mIsRunning = true;
         result = pthread_create(&streaming_thread, NULL, streaming_thread_func, (void *)this);
 
-        if (UNLIKELY(result != EXIT_SUCCESS)) {
+        if (UNLIKELY(result != EXIT_SUCCESS))
+        {
             LOGW("UVCCamera::could not create thread etc.");
             mIsRunning = false;
             pthread_mutex_lock(&streaming_mutex);
@@ -298,16 +315,19 @@ int UVCStream::stopStreaming()
     ENTER();
     bool b = isRunning();
 
-    if (LIKELY(b)) {
+    if (LIKELY(b))
+    {
         mIsRunning = false;
         pthread_cond_signal(&streaming_sync);
         pthread_cond_signal(&capture_sync);
 
-        if (pthread_join(capture_thread, NULL) != EXIT_SUCCESS) {
+        if (pthread_join(capture_thread, NULL) != EXIT_SUCCESS)
+        {
             LOGW("UVCPreview::terminate capture thread: pthread_join failed");
         }
 
-        if (pthread_join(streaming_thread, NULL) != EXIT_SUCCESS) {
+        if (pthread_join(streaming_thread, NULL) != EXIT_SUCCESS)
+        {
             LOGW("UVCPreview::terminate preview thread: pthread_join failed");
         }
     }
@@ -322,9 +342,11 @@ void UVCStream::addCaptureFrame(uvc_frame_t *frame)
 {
     pthread_mutex_lock(&capture_mutex);
 
-    if (LIKELY(isRunning())) {
+    if (LIKELY(isRunning()))
+    {
         // keep only latest one
-        if (captureQueu) {
+        if (captureQueu)
+        {
             recycle_frame(captureQueu);
         }
 
@@ -343,11 +365,13 @@ uvc_frame_t *UVCStream::waitCaptureFrame()
     uvc_frame_t *frame = NULL;
     pthread_mutex_lock(&capture_mutex);
     {
-        if (!captureQueu) {
+        if (!captureQueu)
+        {
             pthread_cond_wait(&capture_sync, &capture_mutex);
         }
 
-        if (LIKELY(isRunning() && captureQueu)) {
+        if (LIKELY(isRunning() && captureQueu))
+        {
             frame = captureQueu;
             captureQueu = NULL;
         }
@@ -384,12 +408,13 @@ void *UVCStream::capture_thread_func(void *vptr_args)
     ENTER();
     UVCStream *stream = reinterpret_cast<UVCStream *>(vptr_args);
 
-    if (LIKELY(stream)) {
+    if (LIKELY(stream))
+    {
         JavaVM *vm = getVM();
         JNIEnv *env;
         // attach to JavaVM
         vm->AttachCurrentThread(&env, NULL);
-        stream->do_capture(env);   // never return until finish previewing
+        stream->do_capture(env); // never return until finish previewing
         // detach from JavaVM
         vm->DetachCurrentThread();
         MARK("DetachCurrentThread");
@@ -400,56 +425,68 @@ void *UVCStream::capture_thread_func(void *vptr_args)
 }
 
 int UVCStream::setFrameCallback(JNIEnv *env, jobject frame_callback_obj,
-    int callback_idx, const char *callback_name, const char *callback_sig)
+                                int callback_idx, const char *callback_name, const char *callback_sig)
 {
 
     ENTER();
     pthread_mutex_lock(&capture_mutex);
     {
-        if (isRunning() && isCapturing()) {
+        if (isRunning() && isCapturing())
+        {
             mIsCapturing = false;
 
-            if (mFrameCallbackObj) {
+            if (mFrameCallbackObj)
+            {
                 pthread_cond_signal(&capture_sync);
-                pthread_cond_wait(&capture_sync, &capture_mutex);   // wait finishing capturing
+                pthread_cond_wait(&capture_sync, &capture_mutex); // wait finishing capturing
             }
         }
 
-        if (!env->IsSameObject(mFrameCallbackObj, frame_callback_obj))  {
+        if (!env->IsSameObject(mFrameCallbackObj, frame_callback_obj))
+        {
             jmethodID methodID = NULL;
 
-            if (mFrameCallbackObj) {
+            if (mFrameCallbackObj)
+            {
                 env->DeleteGlobalRef(mFrameCallbackObj);
             }
 
             mFrameCallbackObj = frame_callback_obj;
 
-            if (frame_callback_obj) {
+            if (frame_callback_obj)
+            {
                 // get method IDs of Java object for callback
                 jclass clazz = env->GetObjectClass(frame_callback_obj);
 
-                if (LIKELY(clazz)) {
-                    methodID = env->GetMethodID(clazz, callback_name,  callback_sig);
-                } else {
+                if (LIKELY(clazz))
+                {
+                    methodID = env->GetMethodID(clazz, callback_name, callback_sig);
+                }
+                else
+                {
                     LOGW("failed to get object class");
                 }
 
                 env->ExceptionClear();
 
-                if (!methodID) {
+                if (!methodID)
+                {
                     LOGE("Can't find IFrameCallback#%s", callback_name);
                     env->DeleteGlobalRef(frame_callback_obj);
                     mFrameCallbackObj = frame_callback_obj = NULL;
-                } else {
-                    switch (callback_idx) {
-                        case 0:
-                            iframecallback_fields.onFrame = methodID;
-                            break;
-                        case 1:
-                            iframecallback_fields.onRecordFrame = methodID;
-                            break;
-                        default:
-                            break;
+                }
+                else
+                {
+                    switch (callback_idx)
+                    {
+                    case 0:
+                        iframecallback_fields.onFrame = methodID;
+                        break;
+                    case 1:
+                        iframecallback_fields.onRecordFrame = methodID;
+                        break;
+                    default:
+                        break;
                     }
                 }
             }

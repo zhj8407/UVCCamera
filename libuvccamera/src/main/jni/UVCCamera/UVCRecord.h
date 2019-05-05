@@ -41,11 +41,14 @@
 #define H264_USAGE_1 1
 #define H264_USAGE_2 2
 
+#define H264_FORMAT_RECORD_MODE 2
+#define S264_FORMAT_RECORD_MODE 3
+
 #define DEFAULT_RECORD_WIDTH 1920
 #define DEFAULT_RECORD_HEIGHT 1080
 #define DEFAULT_RECORD_FPS_MIN 1
 #define DEFAULT_RECORD_FPS_MAX 30
-#define DEFAULT_RECORD_MODE 2
+#define DEFAULT_RECORD_MODE H264_FORMAT_RECORD_MODE
 #define DEFAULT_RECORD_PROFILE H264_PROFILE_CONSTRAINED_BASELINE
 #define DEFAULT_RECORD_USAGE H264_USAGE_1
 
@@ -59,13 +62,11 @@ private:
     int recordFormat;
     size_t recordBytes;
 
-    uvc_stream_ctrl_t stream_ctrl;
-
     bool stream_probed;
     bool stream_committed;
-//
-    virtual int prepare_streaming(uvc_stream_ctrl_t *ctrl);
-    virtual void do_streaming(uvc_stream_ctrl_t *ctrl);
+    //
+    virtual int prepare_streaming();
+    virtual void do_streaming();
 
     virtual void do_capture(JNIEnv *env);
     void do_capture_idle_loop(JNIEnv *env);
