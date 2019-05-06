@@ -549,12 +549,17 @@ abstract class AbstractUVCCameraHandler extends Handler {
             if (DEBUG) Log.v(TAG_THREAD, "handleStartPreview:");
             if ((mUVCCamera == null) || mIsPreviewing) return;
             try {
-                mUVCCamera.setPreviewSize(mPreviewWidth, mPreviewHeight, 1, 31, mPreviewMode,
+                mUVCCamera.setPreviewSize(mPreviewWidth, mPreviewHeight,
+                        UVCCamera.DEFAULT_PREVIEW_MIN_FPS,
+                        mUVCCamera.DEFAULT_PREVIEW_MAX_FPS,
+                        mPreviewMode,
                         mPreviewBandwidthFactor);
             } catch (final IllegalArgumentException e) {
                 try {
                     // fallback to YUV mode
-                    mUVCCamera.setPreviewSize(mPreviewWidth, mPreviewHeight, 1, 31,
+                    mUVCCamera.setPreviewSize(mPreviewWidth, mPreviewHeight,
+                            UVCCamera.DEFAULT_PREVIEW_MIN_FPS,
+                            UVCCamera.DEFAULT_PREVIEW_MAX_FPS,
                             UVCCamera.DEFAULT_PREVIEW_MODE, mPreviewBandwidthFactor);
                 } catch (final IllegalArgumentException e1) {
                     callOnError(e1);
@@ -697,7 +702,8 @@ abstract class AbstractUVCCameraHandler extends Handler {
             if ((mUVCCamera == null) || mIsRecording) return;
             try {
                 mUVCCamera.setRecordSize(mRecordWidth, mRecordHeight, mRecordProfile, mRecordUsage,
-                        1, 31,
+                        UVCCamera.DEFAULT_RECORD_MIN_FPS,
+                        UVCCamera.DEFAULT_RECORD_MAX_FPS,
                         mRecordMode, mRecordBandwidthFactor);
             } catch (final IllegalArgumentException e) {
                 Log.e(TAG_THREAD, "Failed to set the record size");

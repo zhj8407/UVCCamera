@@ -109,7 +109,7 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int min_fps, in
                                         0,
                                         0,
                                         0);
-        v4l2core_define_fps(mV4l2Dev, 1, 30);
+        v4l2core_define_fps(mV4l2Dev, requestMinFps, requestMaxFps);
     }
     else
     {
@@ -150,7 +150,7 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int usage, int 
                                         0,
                                         0,
                                         0);
-        v4l2core_define_fps(mV4l2Dev, 1, 30);
+        v4l2core_define_fps(mV4l2Dev, requestMinFps, requestMaxFps);
     }
     else
     {
@@ -191,7 +191,7 @@ int UVCRecord::commitRecordSize(int width, int height, int profile, int usage, i
                                         0,
                                         0,
                                         0);
-        v4l2core_define_fps(mV4l2Dev, 1, 30);
+        v4l2core_define_fps(mV4l2Dev, requestMinFps, requestMaxFps);
     }
     else
     {
@@ -255,7 +255,7 @@ int UVCRecord::prepare_streaming()
                                         0,
                                         0,
                                         0);
-        v4l2core_define_fps(mV4l2Dev, 1, 30);
+        v4l2core_define_fps(mV4l2Dev, requestMinFps, requestMaxFps);
     }
 
     ret = v4l2core_update_current_format(mV4l2Dev);

@@ -97,6 +97,10 @@
 #define EU_START_OR_STOP_LAYER  0x00001000  // D12: Start or Stop Layer/View.
 //TODO
 
+#define UVC_PREVIEW_DEVICE_ID   0
+#define UVC_RECORD_DEVICE_ID    1
+#define UVC_MAX_DEVICES_NUM     5
+
 typedef struct control_value {
     int res;	// unused
     int min;
@@ -129,9 +133,9 @@ typedef uvc_error_t (*paramset_func_i32i32)(uvc_device_handle_t *devh, int32_t v
 
 class UVCCamera
 {
-    std::string mCameraId;
+    std::string mCameraIds[UVC_MAX_DEVICES_NUM];
 
-    v4l2_dev_t *mV4l2Dev;
+    v4l2_dev_t *mV4l2Devices[UVC_MAX_DEVICES_NUM];
 
     char *mUsbFs;
     uvc_context_t *mContext;
