@@ -8,11 +8,6 @@
 #ifndef V4L2_CORE_H_
 #define V4L2_CORE_H_
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #include "uvc_dev.h"
 
 /*
@@ -111,16 +106,19 @@ static inline uint16_t generate_layout_structure(
 {
     uint16_t layout = 0;
 
-    if (ucConfig == 0) {
-        stream_0_layout = clamp(stream_0_layout, 0 , 1);
-        stream_1_layout = clamp(stream_1_layout, 0 , 1);
-        stream_2_layout = clamp(stream_2_layout, 0 , 1);
-        stream_3_layout = clamp(stream_3_layout, 0 , 1);
-    } else if (ucConfig == 1) {
-        stream_0_layout = clamp(stream_0_layout, 0 , 2);
-        stream_1_layout = clamp(stream_1_layout, 0 , 2);
-        stream_2_layout = clamp(stream_2_layout, 0 , 2);
-        stream_3_layout = clamp(stream_3_layout, 0 , 2);
+    if (ucConfig == 0)
+    {
+        stream_0_layout = clamp(stream_0_layout, 0, 1);
+        stream_1_layout = clamp(stream_1_layout, 0, 1);
+        stream_2_layout = clamp(stream_2_layout, 0, 1);
+        stream_3_layout = clamp(stream_3_layout, 0, 1);
+    }
+    else if (ucConfig == 1)
+    {
+        stream_0_layout = clamp(stream_0_layout, 0, 2);
+        stream_1_layout = clamp(stream_1_layout, 0, 2);
+        stream_2_layout = clamp(stream_2_layout, 0, 2);
+        stream_3_layout = clamp(stream_3_layout, 0, 2);
     }
 
     layout |= ((stream_0_layout & 0x07) |
@@ -132,20 +130,6 @@ static inline uint16_t generate_layout_structure(
 }
 
 /*
- * ioctl with a number of retries in the case of I/O failure
- * args:
- *   fd - device descriptor
- *   IOCTL_X - ioctl reference
- *   arg - pointer to ioctl data
- *
- * asserts:
- *   none
- *
- * returns - ioctl result
- */
-int xioctl(int fd, int IOCTL_X, void *arg);
-
-/*
  * Initiate video device handler with default values
  * args:
  *   device - device name (e.g: "/dev/video0")
@@ -155,7 +139,7 @@ int xioctl(int fd, int IOCTL_X, void *arg);
  *
  * returns: pointer to v4l2 device handler (or NULL on error)
  */
-v4l2_dev_t* v4l2core_init_dev(const char *device);
+v4l2_dev_t *v4l2core_init_dev(const char *device);
 
 /*
  * cleans video device data and allocations
@@ -265,20 +249,20 @@ int v4l2core_update_current_format(v4l2_dev_t *vd);
  */
 void v4l2core_define_fps(v4l2_dev_t *vd, int num, int denom);
 
-void v4l2core_set_frame_callback(v4l2_dev_t *vd, 
-        uvc_frame_callback_t *cb, void *user_ptr);
+void v4l2core_set_frame_callback(v4l2_dev_t *vd,
+                                 uvc_frame_callback_t *cb, void *user_ptr);
 
-    /*
- * clean v4l2 buffers
- * args:
- *    vd - pointer to v4l2 device handler
- *
- * asserts:
- *    vd is not null
- *
- * return: int
- */
-    int v4l2core_clean_buffers(v4l2_dev_t *vd);
+/*
+* clean v4l2 buffers
+* args:
+*    vd - pointer to v4l2 device handler
+*
+* asserts:
+*    vd is not null
+*
+* return: int
+*/
+int v4l2core_clean_buffers(v4l2_dev_t *vd);
 
 /*
  * gets the next video frame (must be released after processing)
@@ -332,9 +316,5 @@ int v4l2core_ctrl_set(v4l2_dev_t *vd, int ctrl_id, int value);
  * returns: error code (E_OK)
  */
 int v4l2core_ctrl_get(v4l2_dev_t *vd, int ctrl_id, int *value);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* V4L2_CORE_H_ */

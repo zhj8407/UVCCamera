@@ -164,17 +164,23 @@ int UVCCamera::connect(int vid, int pid, int fd, int busnum, int devaddr, const 
     uvc_error_t result = UVC_ERROR_BUSY;
 
 #if 0
-    if (!mDeviceHandle && fd) {
+
+    if (!mDeviceHandle && fd)
+    {
         if (mUsbFs)
+        {
             free(mUsbFs);
+        }
 
         mUsbFs = strdup(usbfs);
 
-        if (UNLIKELY(!mContext)) {
+        if (UNLIKELY(!mContext))
+        {
             result = uvc_init2(&mContext, NULL, mUsbFs);
 
-			//libusb_set_debug(mContext->usb_ctx, LIBUSB_LOG_LEVEL_DEBUG);
-            if (UNLIKELY(result < 0)) {
+            //libusb_set_debug(mContext->usb_ctx, LIBUSB_LOG_LEVEL_DEBUG);
+            if (UNLIKELY(result < 0))
+            {
                 LOGD("failed to init libuvc");
                 RETURN(result, int);
             }
@@ -184,11 +190,13 @@ int UVCCamera::connect(int vid, int pid, int fd, int busnum, int devaddr, const 
         fd = dup(fd);
         result = uvc_get_device_with_fd(mContext, &mDevice, vid, pid, NULL, fd, busnum, devaddr);
 
-        if (LIKELY(!result)) {
+        if (LIKELY(!result))
+        {
 
             result = uvc_open(mDevice, &mDeviceHandle);
 
-            if (LIKELY(!result)) {
+            if (LIKELY(!result))
+            {
 
 #if LOCAL_DEBUG
                 uvc_print_diag(mDeviceHandle, stderr);
@@ -198,7 +206,9 @@ int UVCCamera::connect(int vid, int pid, int fd, int busnum, int devaddr, const 
                 mButtonCallback = new UVCButtonCallback(mDeviceHandle);
                 mPreview = new UVCPreview(mDeviceHandle);
                 mRecord = new UVCRecord(mDeviceHandle);
-            } else {
+            }
+            else
+            {
 
                 LOGE("could not open camera:err=%d", result);
                 uvc_unref_device(mDevice);
@@ -206,13 +216,18 @@ int UVCCamera::connect(int vid, int pid, int fd, int busnum, int devaddr, const 
                 mDeviceHandle = NULL;
                 close(fd);
             }
-        } else {
+        }
+        else
+        {
             LOGE("could not find camera:err=%d", result);
             close(fd);
         }
-    } else {
+    }
+    else
+    {
         LOGW("camera is already opened. you should release first");
     }
+
 #else
 
     if (mV4l2Devices[UVC_PREVIEW_DEVICE_ID] == nullptr)
@@ -263,6 +278,8 @@ int UVCCamera::release()
     ENTER();
     stopPreview();
 
+#if 0
+
     // カメラのclose処理
     if (LIKELY(mDeviceHandle))
     {
@@ -284,6 +301,14 @@ int UVCCamera::release()
         uvc_unref_device(mDevice);
         mDevice = NULL;
     }
+
+#else
+    SAFE_DELETE(mStatusCallback);
+    SAFE_DELETE(mButtonCallback);
+    SAFE_DELETE(mPreview);
+    SAFE_DELETE(mRecord);
+#endif
+
 
     // カメラ機能フラグをクリア
     clearCameraParams();
@@ -521,11 +546,15 @@ int UVCCamera::getCtrlSupports(uint64_t *supports)
             }
         }
         else
+        {
             ret = UVC_SUCCESS;
+        }
     }
 
     if (supports)
+    {
         *supports = mCtrlSupports;
+    }
 
     RETURN(ret, int);
 }
@@ -554,11 +583,15 @@ int UVCCamera::getProcSupports(uint64_t *supports)
             }
         }
         else
+        {
             ret = UVC_SUCCESS;
+        }
     }
 
     if (supports)
+    {
         *supports = mPUSupports;
+    }
 
     RETURN(ret, int);
 }
@@ -586,11 +619,15 @@ int UVCCamera::getEncodeSupports(uint64_t *supports)
             }
         }
         else
+        {
             ret = UVC_SUCCESS;
+        }
     }
 
     if (supports)
+    {
         *supports = mEUSupports;
+    }
 
     RETURN(ret, int);
 }
@@ -618,11 +655,15 @@ int UVCCamera::getEncodeRunningSupports(uint64_t *runningSupports)
             }
         }
         else
+        {
             ret = UVC_SUCCESS;
+        }
     }
 
     if (runningSupports)
+    {
         *runningSupports = mEURuntimeSupports;
+    }
 
     RETURN(ret, int);
 }
@@ -1083,10 +1124,11 @@ int UVCCamera::internalSetCtrlValue(control_value_t &values, int8_t value,
     int ret = update_ctrl_values(mDeviceHandle, values, get_func);
 
     if (LIKELY(!ret))
-    { // 正常に最小・最大値を取得出来た時
+    {
+        // 正常に最小・最大値を取得出来た時
         value = value < values.min
-                    ? values.min
-                    : (value > values.max ? values.max : value);
+                ? values.min
+                : (value > values.max ? values.max : value);
         set_func(mDeviceHandle, value);
     }
 
@@ -1099,10 +1141,11 @@ int UVCCamera::internalSetCtrlValue(control_value_t &values, uint8_t value,
     int ret = update_ctrl_values(mDeviceHandle, values, get_func);
 
     if (LIKELY(!ret))
-    { // 正常に最小・最大値を取得出来た時
+    {
+        // 正常に最小・最大値を取得出来た時
         value = value < values.min
-                    ? values.min
-                    : (value > values.max ? values.max : value);
+                ? values.min
+                : (value > values.max ? values.max : value);
         set_func(mDeviceHandle, value);
     }
 
@@ -1115,17 +1158,18 @@ int UVCCamera::internalSetCtrlValue(control_value_t &values, uint8_t value1, uin
     int ret = update_ctrl_values(mDeviceHandle, values, get_func);
 
     if (LIKELY(!ret))
-    { // 正常に最小・最大値を取得出来た時
+    {
+        // 正常に最小・最大値を取得出来た時
         uint8_t v1min = (uint8_t)((values.min >> 8) & 0xff);
         uint8_t v2min = (uint8_t)(values.min & 0xff);
         uint8_t v1max = (uint8_t)((values.max >> 8) & 0xff);
         uint8_t v2max = (uint8_t)(values.max & 0xff);
         value1 = value1 < v1min
-                     ? v1min
-                     : (value1 > v1max ? v1max : value1);
+                 ? v1min
+                 : (value1 > v1max ? v1max : value1);
         value2 = value2 < v2min
-                     ? v2min
-                     : (value2 > v2max ? v2max : value2);
+                 ? v2min
+                 : (value2 > v2max ? v2max : value2);
         set_func(mDeviceHandle, value1, value2);
     }
 
@@ -1138,17 +1182,18 @@ int UVCCamera::internalSetCtrlValue(control_value_t &values, int8_t value1, uint
     int ret = update_ctrl_values(mDeviceHandle, values, get_func);
 
     if (LIKELY(!ret))
-    { // 正常に最小・最大値を取得出来た時
+    {
+        // 正常に最小・最大値を取得出来た時
         int8_t v1min = (int8_t)((values.min >> 8) & 0xff);
         uint8_t v2min = (uint8_t)(values.min & 0xff);
         int8_t v1max = (int8_t)((values.max >> 8) & 0xff);
         uint8_t v2max = (uint8_t)(values.max & 0xff);
         value1 = value1 < v1min
-                     ? v1min
-                     : (value1 > v1max ? v1max : value1);
+                 ? v1min
+                 : (value1 > v1max ? v1max : value1);
         value2 = value2 < v2min
-                     ? v2min
-                     : (value2 > v2max ? v2max : value2);
+                 ? v2min
+                 : (value2 > v2max ? v2max : value2);
         set_func(mDeviceHandle, value1, value2);
     }
 
@@ -1161,7 +1206,8 @@ int UVCCamera::internalSetCtrlValue(control_value_t &values, int8_t value1, uint
     int ret = update_ctrl_values(mDeviceHandle, values, get_func);
 
     if (LIKELY(!ret))
-    { // 正常に最小・最大値を取得出来た時
+    {
+        // 正常に最小・最大値を取得出来た時
         int8_t v1min = (int8_t)((values.min >> 16) & 0xff);
         uint8_t v2min = (uint8_t)((values.min >> 8) & 0xff);
         uint8_t v3min = (uint8_t)(values.min & 0xff);
@@ -1169,14 +1215,14 @@ int UVCCamera::internalSetCtrlValue(control_value_t &values, int8_t value1, uint
         uint8_t v2max = (uint8_t)((values.max >> 8) & 0xff);
         uint8_t v3max = (uint8_t)(values.max & 0xff);
         value1 = value1 < v1min
-                     ? v1min
-                     : (value1 > v1max ? v1max : value1);
+                 ? v1min
+                 : (value1 > v1max ? v1max : value1);
         value2 = value2 < v2min
-                     ? v2min
-                     : (value2 > v2max ? v2max : value2);
+                 ? v2min
+                 : (value2 > v2max ? v2max : value2);
         value3 = value3 < v3min
-                     ? v3min
-                     : (value3 > v3max ? v3max : value3);
+                 ? v3min
+                 : (value3 > v3max ? v3max : value3);
         set_func(mDeviceHandle, value1, value2, value3);
     }
 
@@ -1192,10 +1238,11 @@ int UVCCamera::internalSetCtrlValue(control_value_t &values, int16_t value,
     int ret = update_ctrl_values(mDeviceHandle, values, get_func);
 
     if (LIKELY(!ret))
-    { // 正常に最小・最大値を取得出来た時
+    {
+        // 正常に最小・最大値を取得出来た時
         value = value < values.min
-                    ? values.min
-                    : (value > values.max ? values.max : value);
+                ? values.min
+                : (value > values.max ? values.max : value);
         set_func(mDeviceHandle, value);
     }
 
@@ -1211,10 +1258,11 @@ int UVCCamera::internalSetCtrlValue(control_value_t &values, uint16_t value,
     int ret = update_ctrl_values(mDeviceHandle, values, get_func);
 
     if (LIKELY(!ret))
-    { // 正常に最小・最大値を取得出来た時
+    {
+        // 正常に最小・最大値を取得出来た時
         value = value < values.min
-                    ? values.min
-                    : (value > values.max ? values.max : value);
+                ? values.min
+                : (value > values.max ? values.max : value);
         set_func(mDeviceHandle, value);
     }
 
@@ -1230,10 +1278,11 @@ int UVCCamera::internalSetCtrlValue(control_value_t &values, int32_t value,
     int ret = update_ctrl_values(mDeviceHandle, values, get_func);
 
     if (LIKELY(!ret))
-    { // 正常に最小・最大値を取得出来た時
+    {
+        // 正常に最小・最大値を取得出来た時
         value = value < values.min
-                    ? values.min
-                    : (value > values.max ? values.max : value);
+                ? values.min
+                : (value > values.max ? values.max : value);
         set_func(mDeviceHandle, value);
     }
 
@@ -1249,10 +1298,11 @@ int UVCCamera::internalSetCtrlValue(control_value_t &values, uint32_t value,
     int ret = update_ctrl_values(mDeviceHandle, values, get_func);
 
     if (LIKELY(!ret))
-    { // 正常に最小・最大値を取得出来た時
+    {
+        // 正常に最小・最大値を取得出来た時
         value = value < values.min
-                    ? values.min
-                    : (value > values.max ? values.max : value);
+                ? values.min
+                : (value > values.max ? values.max : value);
         set_func(mDeviceHandle, value);
     }
 
@@ -1281,11 +1331,11 @@ int UVCCamera::setScanningMode(int mode)
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_SCANNING))
-        {
-            //		LOGI("ae:%d", mode);
-            r = uvc_set_scanning_mode(mDeviceHandle, mode /* & 0xff*/);
-        }
+    LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_SCANNING))
+    {
+        //      LOGI("ae:%d", mode);
+        r = uvc_set_scanning_mode(mDeviceHandle, mode /* & 0xff*/);
+    }
 
     RETURN(r, int);
 }
@@ -1298,17 +1348,17 @@ int UVCCamera::getScanningMode()
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_SCANNING))
-        {
-            uint8_t mode;
-            r = uvc_get_scanning_mode(mDeviceHandle, &mode, UVC_GET_CUR);
+    LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_SCANNING))
+    {
+        uint8_t mode;
+        r = uvc_get_scanning_mode(mDeviceHandle, &mode, UVC_GET_CUR);
 
-            //		LOGI("ae:%d", mode);
-            if (LIKELY(!r))
-            {
-                r = mode;
-            }
+        //      LOGI("ae:%d", mode);
+        if (LIKELY(!r))
+        {
+            r = mode;
         }
+    }
 
     RETURN(r, int);
 }
@@ -1335,11 +1385,11 @@ int UVCCamera::setExposureMode(int mode)
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE))
-        {
-            //		LOGI("ae:%d", mode);
-            r = uvc_set_ae_mode(mDeviceHandle, mode /* & 0xff*/);
-        }
+    LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE))
+    {
+        //      LOGI("ae:%d", mode);
+        r = uvc_set_ae_mode(mDeviceHandle, mode /* & 0xff*/);
+    }
 
     RETURN(r, int);
 }
@@ -1352,17 +1402,17 @@ int UVCCamera::getExposureMode()
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE))
-        {
-            uint8_t mode;
-            r = uvc_get_ae_mode(mDeviceHandle, &mode, UVC_GET_CUR);
+    LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE))
+    {
+        uint8_t mode;
+        r = uvc_get_ae_mode(mDeviceHandle, &mode, UVC_GET_CUR);
 
-            //		LOGI("ae:%d", mode);
-            if (LIKELY(!r))
-            {
-                r = mode;
-            }
+        //      LOGI("ae:%d", mode);
+        if (LIKELY(!r))
+        {
+            r = mode;
         }
+    }
 
     RETURN(r, int);
 }
@@ -1389,11 +1439,11 @@ int UVCCamera::setExposurePriority(int priority)
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE_PRIORITY))
-        {
-            //		LOGI("ae priority:%d", priority);
-            r = uvc_set_ae_priority(mDeviceHandle, priority /* & 0xff*/);
-        }
+    LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE_PRIORITY))
+    {
+        //      LOGI("ae priority:%d", priority);
+        r = uvc_set_ae_priority(mDeviceHandle, priority /* & 0xff*/);
+    }
 
     RETURN(r, int);
 }
@@ -1406,17 +1456,17 @@ int UVCCamera::getExposurePriority()
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE_PRIORITY))
-        {
-            uint8_t priority;
-            r = uvc_get_ae_priority(mDeviceHandle, &priority, UVC_GET_CUR);
+    LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE_PRIORITY))
+    {
+        uint8_t priority;
+        r = uvc_get_ae_priority(mDeviceHandle, &priority, UVC_GET_CUR);
 
-            //		LOGI("ae priority:%d", priority);
-            if (LIKELY(!r))
-            {
-                r = priority;
-            }
+        //      LOGI("ae priority:%d", priority);
+        if (LIKELY(!r))
+        {
+            r = priority;
         }
+    }
 
     RETURN(r, int);
 }
@@ -1443,11 +1493,11 @@ int UVCCamera::setExposure(int ae_abs)
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE_ABS))
-        {
-            //		LOGI("ae_abs:%d", ae_abs);
-            r = uvc_set_exposure_abs(mDeviceHandle, ae_abs /* & 0xff*/);
-        }
+    LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE_ABS))
+    {
+        //      LOGI("ae_abs:%d", ae_abs);
+        r = uvc_set_exposure_abs(mDeviceHandle, ae_abs /* & 0xff*/);
+    }
 
     RETURN(r, int);
 }
@@ -1460,17 +1510,17 @@ int UVCCamera::getExposure()
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE_ABS))
-        {
-            int ae_abs;
-            r = uvc_get_exposure_abs(mDeviceHandle, &ae_abs, UVC_GET_CUR);
+    LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE_ABS))
+    {
+        int ae_abs;
+        r = uvc_get_exposure_abs(mDeviceHandle, &ae_abs, UVC_GET_CUR);
 
-            //		LOGI("ae_abs:%d", ae_abs);
-            if (LIKELY(!r))
-            {
-                r = ae_abs;
-            }
+        //      LOGI("ae_abs:%d", ae_abs);
+        if (LIKELY(!r))
+        {
+            r = ae_abs;
         }
+    }
 
     RETURN(r, int);
 }
@@ -1497,11 +1547,11 @@ int UVCCamera::setExposureRel(int ae_rel)
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE_REL))
-        {
-            //		LOGI("ae_rel:%d", ae_rel);
-            r = uvc_set_exposure_rel(mDeviceHandle, ae_rel /* & 0xff*/);
-        }
+    LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE_REL))
+    {
+        //      LOGI("ae_rel:%d", ae_rel);
+        r = uvc_set_exposure_rel(mDeviceHandle, ae_rel /* & 0xff*/);
+    }
 
     RETURN(r, int);
 }
@@ -1514,17 +1564,17 @@ int UVCCamera::getExposureRel()
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE_REL))
-        {
-            int ae_rel;
-            r = uvc_get_exposure_rel(mDeviceHandle, &ae_rel, UVC_GET_CUR);
+    LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_AE_REL))
+    {
+        int ae_rel;
+        r = uvc_get_exposure_rel(mDeviceHandle, &ae_rel, UVC_GET_CUR);
 
-            //		LOGI("ae_rel:%d", ae_rel);
-            if (LIKELY(!r))
-            {
-                r = ae_rel;
-            }
+        //      LOGI("ae_rel:%d", ae_rel);
+        if (LIKELY(!r))
+        {
+            r = ae_rel;
         }
+    }
 
     RETURN(r, int);
 }
@@ -1552,10 +1602,10 @@ int UVCCamera::setAutoFocus(bool autoFocus)
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_FOCUS_AUTO))
-        {
-            r = uvc_set_focus_auto(mDeviceHandle, autoFocus);
-        }
+    LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_FOCUS_AUTO))
+    {
+        r = uvc_set_focus_auto(mDeviceHandle, autoFocus);
+    }
 
     RETURN(r, int);
 }
@@ -1567,14 +1617,16 @@ bool UVCCamera::getAutoFocus()
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_FOCUS_AUTO))
-        {
-            uint8_t autoFocus;
-            r = uvc_get_focus_auto(mDeviceHandle, &autoFocus, UVC_GET_CUR);
+    LIKELY((mDeviceHandle) && (mCtrlSupports & CTRL_FOCUS_AUTO))
+    {
+        uint8_t autoFocus;
+        r = uvc_get_focus_auto(mDeviceHandle, &autoFocus, UVC_GET_CUR);
 
-            if (LIKELY(!r))
-                r = autoFocus;
+        if (LIKELY(!r))
+        {
+            r = autoFocus;
         }
+    }
 
     RETURN(r, int);
 }
@@ -1618,12 +1670,15 @@ int UVCCamera::getFocus()
         int ret = update_ctrl_values(mDeviceHandle, mFocus, uvc_get_focus_abs);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             int16_t value;
             ret = uvc_get_focus_abs(mDeviceHandle, &value, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return value;
+            }
         }
     }
 
@@ -1669,13 +1724,16 @@ int UVCCamera::getFocusRel()
         int ret = update_ctrl_values(mDeviceHandle, mFocusRel, uvc_get_focus_abs);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             int8_t focus;
             uint8_t speed;
             ret = uvc_get_focus_rel(mDeviceHandle, &focus, &speed, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return (focus << 8) + speed;
+            }
         }
     }
 
@@ -1686,37 +1744,37 @@ int UVCCamera::getFocusRel()
 /*
     // フォーカス(シンプル)調整
     int UVCCamera::updateFocusSimpleLimit(int &min, int &max, int &def) {
-    	ENTER();
-    	int ret = UVC_ERROR_ACCESS;
-    	if (mCtrlSupports & CTRL_FOCUS_SIMPLE) {
-    		UPDATE_CTRL_VALUES(mFocusSimple, uvc_get_focus_simple_range);
-    	}
-    	RETURN(ret, int);
+        ENTER();
+        int ret = UVC_ERROR_ACCESS;
+        if (mCtrlSupports & CTRL_FOCUS_SIMPLE) {
+            UPDATE_CTRL_VALUES(mFocusSimple, uvc_get_focus_simple_range);
+        }
+        RETURN(ret, int);
     }
 
     // フォーカス(シンプル)を設定
     int UVCCamera::setFocusSimple(int focus) {
-    	ENTER();
-    	int ret = UVC_ERROR_ACCESS;
-    	if (mCtrlSupports & CTRL_FOCUS_SIMPLE) {
-    		ret = internalSetCtrlValue(mFocusSimple, focus, uvc_get_focus_simple_range, uvc_set_focus_simple_range);
-    	}
-    	RETURN(ret, int);
+        ENTER();
+        int ret = UVC_ERROR_ACCESS;
+        if (mCtrlSupports & CTRL_FOCUS_SIMPLE) {
+            ret = internalSetCtrlValue(mFocusSimple, focus, uvc_get_focus_simple_range, uvc_set_focus_simple_range);
+        }
+        RETURN(ret, int);
     }
 
     // フォーカス(シンプル)の現在値を取得
     int UVCCamera::getFocusSimple() {
-    	ENTER();
-    	if (mCtrlSupports & CTRL_FOCUS_SIMPLE) {
-    		int ret = update_ctrl_values(mDeviceHandle, mFocusSimple, uvc_get_focus_abs);
-    		if (LIKELY(!ret)) {	// 正常に最小・最大値を取得出来た時
-    			uint8_t value;
-    			ret = uvc_get_focus_simple_range(mDeviceHandle, &value, UVC_GET_CUR);
-    			if (LIKELY(!ret))
-    				return value;
-    		}
-    	}
-    	RETURN(0, int);
+        ENTER();
+        if (mCtrlSupports & CTRL_FOCUS_SIMPLE) {
+            int ret = update_ctrl_values(mDeviceHandle, mFocusSimple, uvc_get_focus_abs);
+            if (LIKELY(!ret)) { // 正常に最小・最大値を取得出来た時
+                uint8_t value;
+                ret = uvc_get_focus_simple_range(mDeviceHandle, &value, UVC_GET_CUR);
+                if (LIKELY(!ret))
+                    return value;
+            }
+        }
+        RETURN(0, int);
     }
     */
 
@@ -1759,12 +1817,15 @@ int UVCCamera::getIris()
         int ret = update_ctrl_values(mDeviceHandle, mIris, uvc_get_iris_abs);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint16_t value;
             ret = uvc_get_iris_abs(mDeviceHandle, &value, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return value;
+            }
         }
     }
 
@@ -1810,12 +1871,15 @@ int UVCCamera::getIrisRel()
         int ret = update_ctrl_values(mDeviceHandle, mIris, uvc_get_iris_rel);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint8_t iris_rel;
             ret = uvc_get_iris_rel(mDeviceHandle, &iris_rel, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return iris_rel;
+            }
         }
     }
 
@@ -1850,8 +1914,8 @@ int UVCCamera::setPan(int pan)
         if (LIKELY(!ret))
         {
             pan = pan < mPan.min
-                      ? mPan.min
-                      : (pan > mPan.max ? mPan.max : pan);
+                  ? mPan.min
+                  : (pan > mPan.max ? mPan.max : pan);
             int tilt = mTilt.current < 0 ? mTilt.def : mTilt.current;
             ret = uvc_set_pantilt_abs(mDeviceHandle, pan, tilt);
 
@@ -1876,7 +1940,8 @@ int UVCCamera::getPan()
         int ret = update_ctrl_values(mDeviceHandle, mPan, mTilt, uvc_get_pantilt_abs);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             int32_t pan, tilt;
             ret = uvc_get_pantilt_abs(mDeviceHandle, &pan, &tilt, UVC_GET_CUR);
 
@@ -1920,8 +1985,8 @@ int UVCCamera::setTilt(int tilt)
         if (LIKELY(!ret))
         {
             tilt = tilt < mTilt.min
-                       ? mTilt.min
-                       : (tilt > mTilt.max ? mTilt.max : tilt);
+                   ? mTilt.min
+                   : (tilt > mTilt.max ? mTilt.max : tilt);
             int pan = mPan.current < 0 ? mPan.def : mPan.current;
             ret = uvc_set_pantilt_abs(mDeviceHandle, pan, tilt);
 
@@ -1946,7 +2011,8 @@ int UVCCamera::getTilt()
         int ret = update_ctrl_values(mDeviceHandle, mPan, mTilt, uvc_get_pantilt_abs);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             int32_t pan, tilt;
             ret = uvc_get_pantilt_abs(mDeviceHandle, &pan, &tilt, UVC_GET_CUR);
 
@@ -2001,7 +2067,8 @@ int UVCCamera::getRoll()
         int ret = update_ctrl_values(mDeviceHandle, mRoll, uvc_get_roll_abs);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             int16_t roll;
             ret = uvc_get_roll_abs(mDeviceHandle, &roll, UVC_GET_CUR);
 
@@ -2121,12 +2188,15 @@ int UVCCamera::getPrivacy()
         int ret = update_ctrl_values(mDeviceHandle, mPrivacy, uvc_get_privacy);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint8_t privacy;
             ret = uvc_get_privacy(mDeviceHandle, &privacy, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return privacy;
+            }
         }
     }
 
@@ -2137,23 +2207,23 @@ int UVCCamera::getPrivacy()
 /*
     // DigitalWindow
     int UVCCamera::updateDigitalWindowLimit(...not defined...) {
-    	ENTER();
-    	// FIXME not implemented yet
-    	RETURN(UVC_ERROR_ACCESS, int);
+        ENTER();
+        // FIXME not implemented yet
+        RETURN(UVC_ERROR_ACCESS, int);
     }
 
     // DigitalWindowを設定
     int UVCCamera::setDigitalWindow(int top, int reft, int bottom, int right) {
-    	ENTER();
-    	// FIXME not implemented yet
-    	RETURN(UVC_ERROR_ACCESS, int);
+        ENTER();
+        // FIXME not implemented yet
+        RETURN(UVC_ERROR_ACCESS, int);
     }
 
     // DigitalWindowの現在値を取得
     int UVCCamera::getDigitalWindow(int &top, int &reft, int &bottom, int &right) {
-    	ENTER();
-    	// FIXME not implemented yet
-    	RETURN(UVC_ERROR_ACCESS, int);
+        ENTER();
+        // FIXME not implemented yet
+        RETURN(UVC_ERROR_ACCESS, int);
     }
     */
 
@@ -2161,23 +2231,23 @@ int UVCCamera::getPrivacy()
 /*
     // DigitalRoi
     int UVCCamera::updateDigitalRoiLimit(...not defined...) {
-    	ENTER();
-    	// FIXME not implemented yet
-    	RETURN(UVC_ERROR_ACCESS, int);
+        ENTER();
+        // FIXME not implemented yet
+        RETURN(UVC_ERROR_ACCESS, int);
     }
 
     // DigitalRoiを設定
     int UVCCamera::setDigitalRoi(int top, int reft, int bottom, int right) {
-    	ENTER();
-    	// FIXME not implemented yet
-    	RETURN(UVC_ERROR_ACCESS, int);
+        ENTER();
+        // FIXME not implemented yet
+        RETURN(UVC_ERROR_ACCESS, int);
     }
 
     // DigitalRoiの現在値を取得
     int UVCCamera::getDigitalRoi(int &top, int &reft, int &bottom, int &right) {
-    	ENTER();
-    	// FIXME not implemented yet
-    	RETURN(UVC_ERROR_ACCESS, int);
+        ENTER();
+        // FIXME not implemented yet
+        RETURN(UVC_ERROR_ACCESS, int);
     }
     */
 
@@ -2220,12 +2290,15 @@ int UVCCamera::getBacklightComp()
         int ret = update_ctrl_values(mDeviceHandle, mBacklightComp, uvc_get_backlight_compensation);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             int16_t value;
             ret = uvc_get_backlight_compensation(mDeviceHandle, &value, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return value;
+            }
         }
     }
 
@@ -2270,12 +2343,15 @@ int UVCCamera::getBrightness()
         int ret = update_ctrl_values(mDeviceHandle, mBrightness, uvc_get_brightness);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             int16_t value;
             ret = uvc_get_brightness(mDeviceHandle, &value, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return value;
+            }
         }
     }
 
@@ -2321,12 +2397,15 @@ int UVCCamera::getContrast()
         int ret = update_ctrl_values(mDeviceHandle, mContrast, uvc_get_contrast);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint16_t value;
             ret = uvc_get_contrast(mDeviceHandle, &value, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return value;
+            }
         }
     }
 
@@ -2356,10 +2435,10 @@ int UVCCamera::setAutoContrast(bool autoContrast)
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mPUSupports & PU_CONTRAST_AUTO))
-        {
-            r = uvc_set_contrast_auto(mDeviceHandle, autoContrast);
-        }
+    LIKELY((mDeviceHandle) && (mPUSupports & PU_CONTRAST_AUTO))
+    {
+        r = uvc_set_contrast_auto(mDeviceHandle, autoContrast);
+    }
 
     RETURN(r, int);
 }
@@ -2371,14 +2450,16 @@ bool UVCCamera::getAutoContrast()
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mPUSupports & PU_CONTRAST_AUTO))
-        {
-            uint8_t autoContrast;
-            r = uvc_get_contrast_auto(mDeviceHandle, &autoContrast, UVC_GET_CUR);
+    LIKELY((mDeviceHandle) && (mPUSupports & PU_CONTRAST_AUTO))
+    {
+        uint8_t autoContrast;
+        r = uvc_get_contrast_auto(mDeviceHandle, &autoContrast, UVC_GET_CUR);
 
-            if (LIKELY(!r))
-                r = autoContrast;
+        if (LIKELY(!r))
+        {
+            r = autoContrast;
         }
+    }
 
     RETURN(r, int);
 }
@@ -2422,12 +2503,15 @@ int UVCCamera::getSharpness()
         int ret = update_ctrl_values(mDeviceHandle, mSharpness, uvc_get_sharpness);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint16_t value;
             ret = uvc_get_sharpness(mDeviceHandle, &value, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return value;
+            }
         }
     }
 
@@ -2457,7 +2541,7 @@ int UVCCamera::setGain(int gain)
 
     if (mPUSupports & PU_GAIN)
     {
-        //		LOGI("gain:%d", gain);
+        //      LOGI("gain:%d", gain);
         ret = internalSetCtrlValue(mGain, gain, uvc_get_gain, uvc_set_gain);
     }
 
@@ -2474,13 +2558,16 @@ int UVCCamera::getGain()
         int ret = update_ctrl_values(mDeviceHandle, mGain, uvc_get_gain);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint16_t value;
             ret = uvc_get_gain(mDeviceHandle, &value, UVC_GET_CUR);
 
-            //			LOGI("gain:%d", value);
+            //          LOGI("gain:%d", value);
             if (LIKELY(!ret))
+            {
                 return value;
+            }
         }
     }
 
@@ -2509,10 +2596,10 @@ int UVCCamera::setAutoWhiteBlance(bool autoWhiteBlance)
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mPUSupports & PU_WB_TEMP_AUTO))
-        {
-            r = uvc_set_white_balance_temperature_auto(mDeviceHandle, autoWhiteBlance);
-        }
+    LIKELY((mDeviceHandle) && (mPUSupports & PU_WB_TEMP_AUTO))
+    {
+        r = uvc_set_white_balance_temperature_auto(mDeviceHandle, autoWhiteBlance);
+    }
 
     RETURN(r, int);
 }
@@ -2524,14 +2611,16 @@ bool UVCCamera::getAutoWhiteBlance()
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mPUSupports & PU_WB_TEMP_AUTO))
-        {
-            uint8_t autoWhiteBlance;
-            r = uvc_get_white_balance_temperature_auto(mDeviceHandle, &autoWhiteBlance, UVC_GET_CUR);
+    LIKELY((mDeviceHandle) && (mPUSupports & PU_WB_TEMP_AUTO))
+    {
+        uint8_t autoWhiteBlance;
+        r = uvc_get_white_balance_temperature_auto(mDeviceHandle, &autoWhiteBlance, UVC_GET_CUR);
 
-            if (LIKELY(!r))
-                r = autoWhiteBlance;
+        if (LIKELY(!r))
+        {
+            r = autoWhiteBlance;
         }
+    }
 
     RETURN(r, int);
 }
@@ -2558,10 +2647,10 @@ int UVCCamera::setAutoWhiteBlanceCompo(bool autoWhiteBlanceCompo)
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mPUSupports & PU_WB_COMPO_AUTO))
-        {
-            r = uvc_set_white_balance_component_auto(mDeviceHandle, autoWhiteBlanceCompo);
-        }
+    LIKELY((mDeviceHandle) && (mPUSupports & PU_WB_COMPO_AUTO))
+    {
+        r = uvc_set_white_balance_component_auto(mDeviceHandle, autoWhiteBlanceCompo);
+    }
 
     RETURN(r, int);
 }
@@ -2573,14 +2662,16 @@ bool UVCCamera::getAutoWhiteBlanceCompo()
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mPUSupports & PU_WB_COMPO_AUTO))
-        {
-            uint8_t autoWhiteBlanceCompo;
-            r = uvc_get_white_balance_component_auto(mDeviceHandle, &autoWhiteBlanceCompo, UVC_GET_CUR);
+    LIKELY((mDeviceHandle) && (mPUSupports & PU_WB_COMPO_AUTO))
+    {
+        uint8_t autoWhiteBlanceCompo;
+        r = uvc_get_white_balance_component_auto(mDeviceHandle, &autoWhiteBlanceCompo, UVC_GET_CUR);
 
-            if (LIKELY(!r))
-                r = autoWhiteBlanceCompo;
+        if (LIKELY(!r))
+        {
+            r = autoWhiteBlanceCompo;
         }
+    }
 
     RETURN(r, int);
 }
@@ -2625,12 +2716,15 @@ int UVCCamera::getWhiteBlance()
         int ret = update_ctrl_values(mDeviceHandle, mWhiteBlance, uvc_get_white_balance_temperature);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint16_t value;
             ret = uvc_get_white_balance_temperature(mDeviceHandle, &value, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return value;
+            }
         }
     }
 
@@ -2677,12 +2771,15 @@ int UVCCamera::getWhiteBlanceCompo()
         int ret = update_ctrl_values(mDeviceHandle, mWhiteBlanceCompo, uvc_get_white_balance_component);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint32_t white_blance_compo;
             ret = uvc_get_white_balance_component(mDeviceHandle, &white_blance_compo, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return white_blance_compo;
+            }
         }
     }
 
@@ -2712,7 +2809,7 @@ int UVCCamera::setGamma(int gamma)
 
     if (mPUSupports & PU_GAMMA)
     {
-        //		LOGI("gamma:%d", gamma);
+        //      LOGI("gamma:%d", gamma);
         ret = internalSetCtrlValue(mGamma, gamma, uvc_get_gamma, uvc_set_gamma);
     }
 
@@ -2729,13 +2826,16 @@ int UVCCamera::getGamma()
         int ret = update_ctrl_values(mDeviceHandle, mGamma, uvc_get_gamma);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint16_t value;
             ret = uvc_get_gamma(mDeviceHandle, &value, UVC_GET_CUR);
 
-            //			LOGI("gamma:%d", ret);
+            //          LOGI("gamma:%d", ret);
             if (LIKELY(!ret))
+            {
                 return value;
+            }
         }
     }
 
@@ -2781,12 +2881,15 @@ int UVCCamera::getSaturation()
         int ret = update_ctrl_values(mDeviceHandle, mSaturation, uvc_get_saturation);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint16_t value;
             ret = uvc_get_saturation(mDeviceHandle, &value, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return value;
+            }
         }
     }
 
@@ -2832,12 +2935,15 @@ int UVCCamera::getHue()
         int ret = update_ctrl_values(mDeviceHandle, mHue, uvc_get_hue);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             int16_t value;
             ret = uvc_get_hue(mDeviceHandle, &value, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return value;
+            }
         }
     }
 
@@ -2867,10 +2973,10 @@ int UVCCamera::setAutoHue(bool autoHue)
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mPUSupports & PU_HUE_AUTO))
-        {
-            r = uvc_set_hue_auto(mDeviceHandle, autoHue);
-        }
+    LIKELY((mDeviceHandle) && (mPUSupports & PU_HUE_AUTO))
+    {
+        r = uvc_set_hue_auto(mDeviceHandle, autoHue);
+    }
 
     RETURN(r, int);
 }
@@ -2882,14 +2988,16 @@ bool UVCCamera::getAutoHue()
     int r = UVC_ERROR_ACCESS;
 
     if
-        LIKELY((mDeviceHandle) && (mPUSupports & PU_HUE_AUTO))
-        {
-            uint8_t autoHue;
-            r = uvc_get_hue_auto(mDeviceHandle, &autoHue, UVC_GET_CUR);
+    LIKELY((mDeviceHandle) && (mPUSupports & PU_HUE_AUTO))
+    {
+        uint8_t autoHue;
+        r = uvc_get_hue_auto(mDeviceHandle, &autoHue, UVC_GET_CUR);
 
-            if (LIKELY(!r))
-                r = autoHue;
+        if (LIKELY(!r))
+        {
+            r = autoHue;
         }
+    }
 
     RETURN(r, int);
 }
@@ -2923,9 +3031,14 @@ int UVCCamera::setPowerlineFrequency(int frequency)
             ret = uvc_get_powerline_freqency(mDeviceHandle, &value, UVC_GET_DEF);
 
             if
-                LIKELY(ret)
-            frequency = value;
-            else RETURN(ret, int);
+            LIKELY(ret)
+            {
+                frequency = value;
+            }
+            else
+            {
+                RETURN(ret, int);
+            }
         }
 
         LOGD("frequency:%d", frequency);
@@ -2947,7 +3060,9 @@ int UVCCamera::getPowerlineFrequency()
         LOGD("frequency:%d", ret);
 
         if (LIKELY(!ret))
+        {
             return value;
+        }
     }
 
     RETURN(0, int);
@@ -2992,12 +3107,15 @@ int UVCCamera::getZoom()
         int ret = update_ctrl_values(mDeviceHandle, mZoom, uvc_get_zoom_abs);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint16_t value;
             ret = uvc_get_zoom_abs(mDeviceHandle, &value, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return value;
+            }
         }
     }
 
@@ -3045,14 +3163,17 @@ int UVCCamera::getZoomRel()
         int ret = update_ctrl_values(mDeviceHandle, mZoomRel, uvc_get_zoom_rel);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             int8_t zoom;
             uint8_t isdigital;
             uint8_t speed;
             ret = uvc_get_zoom_rel(mDeviceHandle, &zoom, &isdigital, &speed, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return (zoom << 16) + (isdigital << 8) + speed;
+            }
         }
     }
 
@@ -3082,7 +3203,7 @@ int UVCCamera::setDigitalMultiplier(int multiplier)
 
     if (mPUSupports & PU_DIGITAL_MULT)
     {
-        //		LOGI("multiplier:%d", multiplier);
+        //      LOGI("multiplier:%d", multiplier);
         ret = internalSetCtrlValue(mMultiplier, multiplier, uvc_get_digital_multiplier, uvc_set_digital_multiplier);
     }
 
@@ -3099,13 +3220,16 @@ int UVCCamera::getDigitalMultiplier()
         int ret = update_ctrl_values(mDeviceHandle, mMultiplier, uvc_get_digital_multiplier);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint16_t multiplier;
             ret = uvc_get_digital_multiplier(mDeviceHandle, &multiplier, UVC_GET_CUR);
 
-            //			LOGI("multiplier:%d", multiplier);
+            //          LOGI("multiplier:%d", multiplier);
             if (LIKELY(!ret))
+            {
                 return multiplier;
+            }
         }
     }
 
@@ -3135,7 +3259,7 @@ int UVCCamera::setDigitalMultiplierLimit(int multiplier_limit)
 
     if (mPUSupports & PU_DIGITAL_LIMIT)
     {
-        //		LOGI("multiplier limit:%d", multiplier_limit);
+        //      LOGI("multiplier limit:%d", multiplier_limit);
         ret = internalSetCtrlValue(mMultiplierLimit, multiplier_limit, uvc_get_digital_multiplier_limit, uvc_set_digital_multiplier_limit);
     }
 
@@ -3152,13 +3276,16 @@ int UVCCamera::getDigitalMultiplierLimit()
         int ret = update_ctrl_values(mDeviceHandle, mMultiplierLimit, uvc_get_digital_multiplier_limit);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint16_t multiplier_limit;
             ret = uvc_get_digital_multiplier_limit(mDeviceHandle, &multiplier_limit, UVC_GET_CUR);
 
-            //			LOGI("multiplier_limit:%d", multiplier_limit);
+            //          LOGI("multiplier_limit:%d", multiplier_limit);
             if (LIKELY(!ret))
+            {
                 return multiplier_limit;
+            }
         }
     }
 
@@ -3187,7 +3314,7 @@ int UVCCamera::setAnalogVideoStandard(int standard)
 
     if (mPUSupports & PU_AVIDEO_STD)
     {
-        //		LOGI("standard:%d", standard);
+        //      LOGI("standard:%d", standard);
         ret = internalSetCtrlValue(mAnalogVideoStandard, standard, uvc_get_analog_video_standard, uvc_set_analog_video_standard);
     }
 
@@ -3203,13 +3330,16 @@ int UVCCamera::getAnalogVideoStandard()
         int ret = update_ctrl_values(mDeviceHandle, mAnalogVideoStandard, uvc_get_analog_video_standard);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint8_t standard;
             ret = uvc_get_analog_video_standard(mDeviceHandle, &standard, UVC_GET_CUR);
 
-            //			LOGI("standard:%d", standard);
+            //          LOGI("standard:%d", standard);
             if (LIKELY(!ret))
+            {
                 return standard;
+            }
         }
     }
 
@@ -3238,7 +3368,7 @@ int UVCCamera::setAnalogVideoLockState(int state)
 
     if (mPUSupports & PU_AVIDEO_LOCK)
     {
-        //		LOGI("status:%d", status);
+        //      LOGI("status:%d", status);
         ret = internalSetCtrlValue(mAnalogVideoLockState, state, uvc_get_analog_video_lockstate, uvc_set_analog_video_lockstate);
     }
 
@@ -3254,13 +3384,16 @@ int UVCCamera::getAnalogVideoLockState()
         int ret = update_ctrl_values(mDeviceHandle, mAnalogVideoLockState, uvc_get_analog_video_lockstate);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint8_t status;
             ret = uvc_get_analog_video_lockstate(mDeviceHandle, &status, UVC_GET_CUR);
 
-            //			LOGI("status:%d", status);
+            //          LOGI("status:%d", status);
             if (LIKELY(!ret))
+            {
                 return status;
+            }
         }
     }
 
@@ -3304,12 +3437,15 @@ int UVCCamera::getAverageBitrate()
         int ret = update_ctrl_values(mDeviceHandle, mAverageBitrate, uvc_get_average_bit_rate);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint32_t bitrate;
             ret = uvc_get_average_bit_rate(mDeviceHandle, &bitrate, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return bitrate;
+            }
         }
     }
 
@@ -3353,12 +3489,15 @@ int UVCCamera::getSyncRefFrame()
         int ret = update_ctrl_values(mDeviceHandle, mSyncRefFrame, uvc_get_sync_ref_frame);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint32_t value;
             ret = uvc_get_sync_ref_frame(mDeviceHandle, &value, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return value;
+            }
         }
     }
 
@@ -3402,12 +3541,15 @@ int UVCCamera::getCPBSize()
         int ret = update_ctrl_values(mDeviceHandle, mCPBSize, uvc_get_cpb_size);
 
         if (LIKELY(!ret))
-        { // 正常に最小・最大値を取得出来た時
+        {
+            // 正常に最小・最大値を取得出来た時
             uint32_t value;
             ret = uvc_get_cpb_size(mDeviceHandle, &value, UVC_GET_CUR);
 
             if (LIKELY(!ret))
+            {
                 return value;
+            }
         }
     }
 
@@ -3437,7 +3579,9 @@ int UVCCamera::getSelectLayer()
         int ret = uvc_get_select_layer(mDeviceHandle, &value, UVC_GET_CUR);
 
         if (LIKELY(!ret))
+        {
             return (int)value;
+        }
     }
 
     RETURN(0, int);

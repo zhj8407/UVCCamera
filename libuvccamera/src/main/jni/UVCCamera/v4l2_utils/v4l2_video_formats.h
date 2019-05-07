@@ -8,11 +8,6 @@
 #ifndef V4L2_VIDEO_FORMATS_H_
 #define V4L2_VIDEO_FORMATS_H_
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #include "uvc_dev.h"
 
 /*
@@ -85,9 +80,5 @@ int get_format_resolution_index(v4l2_dev_t *vd, int format, int width,
  * returns: void
  */
 void free_frame_formats(v4l2_dev_t *vd);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* V4L2_VIDEO_FORMATS_H_ */

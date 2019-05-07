@@ -44,6 +44,7 @@ LOCAL_CFLAGS := $(LOCAL_C_INCLUDES:%=-I%)
 LOCAL_CFLAGS += -DANDROID_NDK
 LOCAL_CFLAGS += -DLOG_NDEBUG
 LOCAL_CFLAGS += -DACCESS_RAW_DESCRIPTORS
+LOCAL_CFLAGS += -D__STDC_FORMAT_MACROS
 LOCAL_CFLAGS += -O3 -fstrict-aliasing
 
 LOCAL_LDLIBS := -L$(SYSROOT)/usr/lib -ldl
@@ -65,8 +66,9 @@ LOCAL_SRC_FILES := \
 		UVCStatusCallback.cpp \
 		Parameters.cpp \
 		polycom_usb_UVCCamera.cpp \
-                v4l2_utils/v4l2_core.c \
-                v4l2_utils/v4l2_video_formats.c
+		v4l2_utils/v4l2_core.cpp \
+		v4l2_utils/v4l2_video_formats.cpp \
+		v4l2_utils/v4l2_controls.cpp
 
 LOCAL_MODULE    := UVCCamera
 include $(BUILD_SHARED_LIBRARY)
