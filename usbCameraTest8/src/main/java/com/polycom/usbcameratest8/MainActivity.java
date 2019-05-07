@@ -205,6 +205,14 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
                     // 設定が変更された時はシークバーの非表示までの時間を延長する
                     if (fromUser) {
                         runOnUiThread(mSettingHideTask, SETTINGS_HIDE_DELAY_MS);
+                        if (isActive() && checkSupportFlag(mSettingMode)) {
+                            switch (mSettingMode) {
+                                case UVCCamera.PU_BRIGHTNESS:
+                                case UVCCamera.PU_CONTRAST:
+                                    setValue(mSettingMode, seekBar.getProgress());
+                                    break;
+                            }
+                        }
                     }
                 }
 
@@ -217,14 +225,6 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
                     // シークバーにタッチして値を変更した時はonProgressChangedへ
                     // 行かないみたいなのでここでも非表示までの時間を延長する
                     runOnUiThread(mSettingHideTask, SETTINGS_HIDE_DELAY_MS);
-                    if (isActive() && checkSupportFlag(mSettingMode)) {
-                        switch (mSettingMode) {
-                            case UVCCamera.PU_BRIGHTNESS:
-                            case UVCCamera.PU_CONTRAST:
-                                setValue(mSettingMode, seekBar.getProgress());
-                                break;
-                        }
-                    }    // if (active)
                 }
             };
     private final ViewAnimationHelper.ViewAnimationListener
