@@ -289,13 +289,15 @@ static std::string name2var(const char *name)
                 s += '_';
             }
 
-            add_underscore = 0;
+            add_underscore = false;
             s += std::string(1, tolower(*name));
         }
         else if (s.length())
         {
             add_underscore = true;
         }
+
+        name++;
     }
 
     return s;
@@ -498,7 +500,9 @@ static v4l2_ctrl_t *add_control(v4l2_dev_t *vd, struct v4l2_queryctrl *queryctrl
         *current = *first;
     }
 
-    vd->map_device_controls[name2var(control->name)] = control;
+    vd->map_device_controls.insert(
+        std::pair<std::string, v4l2_ctrl_t *>(
+            name2var((char *)(queryctrl->name)), control));
 
     //subscribe control events
     v4l2_subscribe_control_events(vd, queryctrl->id);
@@ -1189,12 +1193,16 @@ v4l2_ctrl_t *get_control_by_name(v4l2_dev_t *vd, const std::string &name)
     /*asserts*/
     assert(vd != NULL);
 
-    if (vd->map_device_controls.find(name) == vd->map_device_controls.end())
+    auto it = vd->map_device_controls.find(name);
+
+    if (it != vd->map_device_controls.end())
+    {
+        return it->second;
+    }
+    else
     {
         return NULL;
     }
-
-    return vd->map_device_controls[name];
 }
 
 /*

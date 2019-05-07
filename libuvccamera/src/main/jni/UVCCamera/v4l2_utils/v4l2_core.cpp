@@ -436,7 +436,7 @@ v4l2_dev_t *v4l2core_init_dev(const char *device)
     assert(device != NULL);
 
     /*alloc the device data*/
-    v4l2_dev_t *vd = reinterpret_cast<v4l2_dev_t *>(calloc(1, sizeof(v4l2_dev_t)));
+    v4l2_dev_t *vd = new v4l2_dev_t();
 
     assert(vd != NULL);
 
@@ -558,7 +558,7 @@ static void clean_v4l2_dev(v4l2_dev_t *vd)
 
     vd->fd = 0;
 
-    free(vd);
+    delete vd;
 }
 
 /*
