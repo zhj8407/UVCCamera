@@ -49,8 +49,8 @@
 #define PREVIEW_PIXEL_BYTES 4 // RGBA/RGBX
 #define FRAME_POOL_SZ MAX_FRAME + 1
 
-UVCPreview::UVCPreview(uvc_device_handle_t *devh, v4l2_dev_t *v4l2Dev)
-    : UVCStream(devh, v4l2Dev),
+UVCPreview::UVCPreview(v4l2_dev_t *v4l2Dev)
+    : UVCStream(v4l2Dev),
       mPreviewWindow(NULL),
       mCaptureWindow(NULL),
       previewBytes(DEFAULT_PREVIEW_WIDTH * DEFAULT_PREVIEW_HEIGHT * PREVIEW_PIXEL_BYTES),

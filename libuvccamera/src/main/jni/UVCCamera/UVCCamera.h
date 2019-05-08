@@ -39,97 +39,11 @@
 #include <string>
 
 #include "v4l2_core.h"
-
-#define	CTRL_SCANNING		0x000001	// D0:  Scanning Mode
-#define	CTRL_AE				0x000002	// D1:  Auto-Exposure Mode
-#define	CTRL_AE_PRIORITY	0x000004	// D2:  Auto-Exposure Priority
-#define	CTRL_AE_ABS			0x000008	// D3:  Exposure Time (Absolute)
-#define	CTRL_AE_REL			0x000010	// D4:  Exposure Time (Relative)
-#define CTRL_FOCUS_ABS    	0x000020	// D5:  Focus (Absolute)
-#define CTRL_FOCUS_REL		0x000040	// D6:  Focus (Relative)
-#define CTRL_IRIS_ABS		0x000080	// D7:  Iris (Absolute)
-#define	CTRL_IRIS_REL		0x000100	// D8:  Iris (Relative)
-#define	CTRL_ZOOM_ABS		0x000200	// D9:  Zoom (Absolute)
-#define CTRL_ZOOM_REL		0x000400	// D10: Zoom (Relative)
-#define	CTRL_PANTILT_ABS	0x000800	// D11: PanTilt (Absolute)
-#define CTRL_PANTILT_REL	0x001000	// D12: PanTilt (Relative)
-#define CTRL_ROLL_ABS		0x002000	// D13: Roll (Absolute)
-#define CTRL_ROLL_REL		0x004000	// D14: Roll (Relative)
-//#define CTRL_D15			0x008000	// D15: Reserved
-//#define CTRL_D16			0x010000	// D16: Reserved
-#define CTRL_FOCUS_AUTO		0x020000	// D17: Focus, Auto
-#define CTRL_PRIVACY		0x040000	// D18: Privacy
-#define CTRL_FOCUS_SIMPLE	0x080000	// D19: Focus, Simple
-#define CTRL_WINDOW			0x100000	// D20: Window
-
-#define PU_BRIGHTNESS		0x000001	// D0: Brightness
-#define PU_CONTRAST			0x000002	// D1: Contrast
-#define PU_HUE				0x000004	// D2: Hue
-#define	PU_SATURATION		0x000008	// D3: Saturation
-#define PU_SHARPNESS		0x000010	// D4: Sharpness
-#define PU_GAMMA			0x000020	// D5: Gamma
-#define	PU_WB_TEMP			0x000040	// D6: White Balance Temperature
-#define	PU_WB_COMPO			0x000080	// D7: White Balance Component
-#define	PU_BACKLIGHT		0x000100	// D8: Backlight Compensation
-#define PU_GAIN				0x000200	// D9: Gain
-#define PU_POWER_LF			0x000400	// D10: Power Line Frequency
-#define PU_HUE_AUTO			0x000800	// D11: Hue, Auto
-#define PU_WB_TEMP_AUTO		0x001000	// D12: White Balance Temperature, Auto
-#define PU_WB_COMPO_AUTO	0x002000	// D13: White Balance Component, Auto
-#define PU_DIGITAL_MULT		0x004000	// D14: Digital Multiplier
-#define PU_DIGITAL_LIMIT	0x008000	// D15: Digital Multiplier Limit
-#define PU_AVIDEO_STD		0x010000	// D16: Analog Video Standard
-#define PU_AVIDEO_LOCK		0x020000	// D17: Analog Video Lock Status
-#define PU_CONTRAST_AUTO	0x040000	// D18: Contrast, Auto
-
-#define EU_SELECT_LAYER         0x00000001  // D0: Select Layer
-#define EU_PROFILE_TOOLSET      0x00000002  // D1: Profile and Toolset
-#define EU_VIDEO_RESOLUTION     0x00000004  // D2: Video Resolution
-#define EU_MIN_FRAME_INTERVAL   0x00000008  // D3: Minimum Frame Interval
-#define EU_SLICE_MODE           0x00000010  // D4: Slice Mode
-#define EU_RATE_CONTROL_MODE    0x00000020  // D5: Rate Control Mode
-#define EU_AVERAGE_BIT_RATE     0x00000040  // D6: Average Bit Rate
-#define EU_CPB_SIZE             0x00000080  // D7: CPB Size
-#define EU_PEAK_BIT_RATE        0x00000100  // D8: Peak Bit Rate
-#define EU_QUANTIZATION_PARAMS  0x00000200  // D9: Quantization Parameter
-#define EU_SYNC_REF_FRAME       0x00000400  // D10: Synchronization and Long Term Reference Frame
-#define EU_PRIORITY_ID          0x00000800  // D11: Priority ID
-#define EU_START_OR_STOP_LAYER  0x00001000  // D12: Start or Stop Layer/View.
-//TODO
+#include "v4l2_controls.h"
 
 #define UVC_PREVIEW_DEVICE_ID   0
 #define UVC_RECORD_DEVICE_ID    1
 #define UVC_MAX_DEVICES_NUM     5
-
-typedef struct control_value {
-    int res;	// unused
-    int min;
-    int max;
-    int def;
-    int current;
-} control_value_t;
-
-typedef uvc_error_t (*paramget_func_i8)(uvc_device_handle_t *devh, int8_t *value, enum uvc_req_code req_code);
-typedef uvc_error_t (*paramget_func_i16)(uvc_device_handle_t *devh, int16_t *value, enum uvc_req_code req_code);
-typedef uvc_error_t (*paramget_func_i32)(uvc_device_handle_t *devh, int32_t *value, enum uvc_req_code req_code);
-typedef uvc_error_t (*paramget_func_u8)(uvc_device_handle_t *devh, uint8_t *value, enum uvc_req_code req_code);
-typedef uvc_error_t (*paramget_func_u16)(uvc_device_handle_t *devh, uint16_t *value, enum uvc_req_code req_code);
-typedef uvc_error_t (*paramget_func_u32)(uvc_device_handle_t *devh, uint32_t *value, enum uvc_req_code req_code);
-typedef uvc_error_t (*paramget_func_u8u8)(uvc_device_handle_t *devh, uint8_t *value1, uint8_t *value2, enum uvc_req_code req_code);
-typedef uvc_error_t (*paramget_func_i8u8)(uvc_device_handle_t *devh, int8_t *value1, uint8_t *value2, enum uvc_req_code req_code);
-typedef uvc_error_t (*paramget_func_i8u8u8)(uvc_device_handle_t *devh, int8_t *value1, uint8_t *value2, uint8_t *value3, enum uvc_req_code req_code);
-typedef uvc_error_t (*paramget_func_i32i32)(uvc_device_handle_t *devh, int32_t *value1, int32_t *value2, enum uvc_req_code req_code);
-
-typedef uvc_error_t (*paramset_func_i8)(uvc_device_handle_t *devh, int8_t value);
-typedef uvc_error_t (*paramset_func_i16)(uvc_device_handle_t *devh, int16_t value);
-typedef uvc_error_t (*paramset_func_i32)(uvc_device_handle_t *devh, int32_t value);
-typedef uvc_error_t (*paramset_func_u8)(uvc_device_handle_t *devh, uint8_t value);
-typedef uvc_error_t (*paramset_func_u16)(uvc_device_handle_t *devh, uint16_t value);
-typedef uvc_error_t (*paramset_func_u32)(uvc_device_handle_t *devh, uint32_t value);
-typedef uvc_error_t (*paramset_func_u8u8)(uvc_device_handle_t *devh, uint8_t value1, uint8_t value2);
-typedef uvc_error_t (*paramset_func_i8u8)(uvc_device_handle_t *devh, int8_t value1, uint8_t value2);
-typedef uvc_error_t (*paramset_func_i8u8u8)(uvc_device_handle_t *devh, int8_t value1, uint8_t value2, uint8_t value3);
-typedef uvc_error_t (*paramset_func_i32i32)(uvc_device_handle_t *devh, int32_t value1, int32_t value2);
 
 class UVCCamera
 {
@@ -137,22 +51,83 @@ class UVCCamera
 
     v4l2_dev_t *mV4l2Devices[UVC_MAX_DEVICES_NUM];
 
-    char *mUsbFs;
-    uvc_context_t *mContext;
-    int mFd;
-    uvc_device_t *mDevice;
-    uvc_device_handle_t *mDeviceHandle;
     UVCStatusCallback *mStatusCallback;
     UVCButtonCallback *mButtonCallback;
-    // プレビュー用
+
     UVCPreview *mPreview;
     UVCRecord *mRecord;
+
     uint64_t mCtrlSupports;
     uint64_t mPUSupports;
     uint64_t mEUSupports;
     uint64_t mEURuntimeSupports;
 
-public : UVCCamera();
+private:
+    inline int updateUVCControlLimit(int id, int &min, int &max, int &def)
+    {
+        int ret = UVC_ERROR_IO;
+
+        if (mV4l2Devices[UVC_PREVIEW_DEVICE_ID] != NULL)
+        {
+            v4l2_dev_t *vd = mV4l2Devices[UVC_PREVIEW_DEVICE_ID];
+
+            v4l2_ctrl_t *control = get_control_by_id(vd, id);
+
+            if (control != NULL)
+            {
+                min = control->control.minimum;
+                max = control->control.maximum;
+                def = control->control.default_value;
+
+                ret = UVC_SUCCESS;
+            }
+        }
+
+        return ret;
+    }
+
+    inline int setUVCControlValue(int id, int value)
+    {
+        int ret = UVC_ERROR_IO;
+
+        if (mV4l2Devices[UVC_PREVIEW_DEVICE_ID] != NULL)
+        {
+            v4l2_dev_t *vd = mV4l2Devices[UVC_PREVIEW_DEVICE_ID];
+
+            v4l2_ctrl_t *control = get_control_by_id(vd, id);
+
+            if (control != NULL)
+            {
+                control->value = value;
+
+                ret = set_control_value_by_id(vd, id);
+            }
+        }
+
+        return ret;
+    }
+
+    inline int getUVCControlValue(int id)
+    {
+        int ret = UVC_ERROR_IO;
+
+        if (mV4l2Devices[UVC_PREVIEW_DEVICE_ID] != NULL)
+        {
+            v4l2_dev_t *vd = mV4l2Devices[UVC_PREVIEW_DEVICE_ID];
+
+            if (!get_control_value_by_id(vd, id))
+            {
+                v4l2_ctrl_t *control = get_control_by_id(vd, id);
+
+                ret = control->value;
+            }
+        }
+
+        return ret;
+    }
+
+public :
+    UVCCamera();
     ~UVCCamera();
 
     int connect(int vid, int pid, int fd, int busnum, int devaddr, const char *usbfs);
@@ -210,10 +185,6 @@ public : UVCCamera();
     int updateFocusRelLimit(int &min, int &max, int &def);
     int setFocusRel(int focus);
     int getFocusRel();
-
-    /*	int updateFocusSimpleLimit(int &min, int &max, int &def);
-    	int setFocusSimple(int focus);
-    	int getFocusSimple(); */
 
     int updateIrisLimit(int &min, int &max, int &def);
     int setIris(int iris);

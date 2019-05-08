@@ -47,8 +47,6 @@ typedef struct
 class UVCStream
 {
 protected:
-    uvc_device_handle_t *mDeviceHandle;
-
     v4l2_dev_t *mV4l2Dev;
 
     int requestWidth, requestHeight, requestMode;
@@ -114,7 +112,7 @@ protected:
     }
 
 public:
-    UVCStream(uvc_device_handle_t *devh, v4l2_dev_t *v4l2Dev);
+    UVCStream(v4l2_dev_t *v4l2Dev);
     virtual ~UVCStream();
 };
 

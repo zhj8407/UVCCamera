@@ -92,14 +92,16 @@ public class UVCCamera {
     public static final int CTRL_IRIS_REL = 0x00000100; // D8: Iris (Relative)
     public static final int CTRL_ZOOM_ABS = 0x00000200; // D9: Zoom (Absolute)
     public static final int CTRL_ZOOM_REL = 0x00000400; // D10: Zoom (Relative)
-    public static final int CTRL_PANTILT_ABS = 0x00000800; // D11: PanTilt (Absolute)
-    public static final int CTRL_PANTILT_REL = 0x00001000; // D12: PanTilt (Relative)
+    public static final int CTRL_PAN_ABS = 0x00000800; // D11: PanTilt (Absolute)
+    public static final int CTRL_PAN_REL = 0x00001000; // D12: PanTilt (Relative)
     public static final int CTRL_ROLL_ABS = 0x00002000; // D13: Roll (Absolute)
     public static final int CTRL_ROLL_REL = 0x00004000; // D14: Roll (Relative)
     public static final int CTRL_FOCUS_AUTO = 0x00020000; // D17: Focus, Auto
     public static final int CTRL_PRIVACY = 0x00040000; // D18: Privacy
     public static final int CTRL_FOCUS_SIMPLE = 0x00080000; // D19: Focus, Simple
     public static final int CTRL_WINDOW = 0x00100000; // D20: Window
+    public static final int CTRL_TILT_ABS = 0x00200000; // D21: Tilt (Virtual)
+    public static final int CTRL_TILT_REL = 0x00400000; // D22: Tilt (Virtual)
 
     public static final int PU_BRIGHTNESS = 0x80000001;    // D0: Brightness
     public static final int PU_CONTRAST = 0x80000002;    // D1: Contrast
@@ -1050,6 +1052,90 @@ public class UVCCamera {
     /**
      * this may not work well with some combination of camera and device
      *
+     * @param tilt [%]
+     */
+    public synchronized void setTilt(final int tilt) {
+        if (mNativePtr != 0) {
+            final float range = Math.abs(mTiltMax - mTiltMin);
+            if (range > 0) {
+                final int z = (int) (tilt / 100.f * range) + mTiltMin;
+                nativeSetTilt(mNativePtr, z);
+            }
+        }
+    }
+
+    /**
+     * @return tilt[%]
+     */
+    public synchronized int getTilt(final int tilt_abs) {
+        int result = 0;
+        if (mNativePtr != 0) {
+            nativeUpdateTiltLimit(mNativePtr);
+            final float range = Math.abs(mTiltMax - mTiltMin);
+            if (range > 0) {
+                result = (int) ((tilt_abs - mPanMin) * 100.f / range);
+            }
+        }
+        return result;
+    }
+    /**
+     * @return tilt[%]
+     */
+    public synchronized int getTilt() {
+        return getTilt(nativeGetTilt(mNativePtr));
+    }
+
+    public synchronized void resetTilt() {
+        if (mNativePtr != 0) {
+            nativeSetTilt(mNativePtr, mTiltDef);
+        }
+    }
+    /**
+     * this may not work well with some combination of camera and device
+     *
+     * @param pan [%]
+     */
+    public synchronized void setPan(final int pan) {
+        if (mNativePtr != 0) {
+            final float range = Math.abs(mPanMax - mPanMin);
+            if (range > 0) {
+                final int z = (int) (pan / 100.f * range) + mPanMin;
+                nativeSetPan(mNativePtr, z);
+            }
+        }
+    }
+
+    /**
+     * @return pan[%]
+     */
+    public synchronized int getPan(final int pan_abs) {
+        int result = 0;
+        if (mNativePtr != 0) {
+            nativeUpdatePanLimit(mNativePtr);
+            final float range = Math.abs(mPanMax - mPanMin);
+            if (range > 0) {
+                result = (int) ((pan_abs - mPanMin) * 100.f / range);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * @return pan[%]
+     */
+    public synchronized int getPan() {
+        return getPan(nativeGetPan(mNativePtr));
+    }
+
+    public synchronized void resetPan() {
+        if (mNativePtr != 0) {
+            nativeSetPan(mNativePtr, mPanDef);
+        }
+    }
+
+    /**
+     * this may not work well with some combination of camera and device
+     *
      * @param zoom [%]
      */
     public synchronized void setZoom(final int zoom) {
@@ -1182,6 +1268,8 @@ public class UVCCamera {
                     nativeUpdateSaturationLimit(mNativePtr);
                     nativeUpdateHueLimit(mNativePtr);
                     nativeUpdateZoomLimit(mNativePtr);
+                    nativeUpdatePanLimit(mNativePtr);
+                    nativeUpdateTiltLimit(mNativePtr);
                     nativeUpdateWhiteBlanceLimit(mNativePtr);
                     nativeUpdateFocusLimit(mNativePtr);
                 }

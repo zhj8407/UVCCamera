@@ -283,6 +283,12 @@ abstract class AbstractUVCCameraHandler extends Handler {
                 return camera.getAverageBitrate();
             } else if (flag == UVCCamera.EU_SYNC_REF_FRAME) {
                 return camera.getSyncRefFrame();
+            } else if (flag == UVCCamera.CTRL_ZOOM_ABS) {
+                return camera.getZoom();
+            } else if (flag == UVCCamera.CTRL_PAN_ABS) {
+                return camera.getPan();
+            } else if (flag == UVCCamera.CTRL_TILT_ABS) {
+                return camera.getTilt();
             }
         }
         throw new IllegalStateException();
@@ -305,6 +311,15 @@ abstract class AbstractUVCCameraHandler extends Handler {
             } else if (flag == UVCCamera.EU_SYNC_REF_FRAME) {
                 camera.setSyncRefFrame(value);
                 return camera.getSyncRefFrame();
+            } else if (flag == UVCCamera.CTRL_ZOOM_ABS) {
+                camera.setZoom(value);
+                return camera.getZoom();
+            } else if (flag == UVCCamera.CTRL_PAN_ABS) {
+                camera.setPan(value);
+                return camera.getPan();
+            } else if (flag == UVCCamera.CTRL_TILT_ABS) {
+                camera.setTilt(value);
+                return camera.getTilt();
             }
         }
         throw new IllegalStateException();
@@ -321,6 +336,15 @@ abstract class AbstractUVCCameraHandler extends Handler {
             } else if (flag == UVCCamera.PU_CONTRAST) {
                 camera.resetContrast();
                 return camera.getContrast();
+            } else if (flag == UVCCamera.CTRL_ZOOM_ABS) {
+                camera.resetZoom();
+                return camera.getZoom();
+            } else if (flag == UVCCamera.CTRL_PAN_ABS) {
+                camera.resetPan();
+                return camera.getPan();
+            } else if (flag == UVCCamera.CTRL_TILT_ABS) {
+                camera.resetTilt();
+                return camera.getTilt();
             }
         }
         throw new IllegalStateException();

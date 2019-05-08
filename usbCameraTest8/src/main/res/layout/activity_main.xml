@@ -95,6 +95,36 @@
             android:layout_toRightOf="@+id/brightness_button"
             android:text="contrast"/>
 
+        <Button
+            android:id="@+id/zoom_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="@dimen/horizontal_margin_half"
+            android:layout_marginTop="@dimen/vertical_margin"
+            android:layout_toRightOf="@+id/contrast_button"
+            android:text="zoom"/>
+
+        <Button
+            android:id="@+id/pan_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="@dimen/horizontal_margin_half"
+            android:layout_marginTop="@dimen/vertical_margin"
+            android:layout_toRightOf="@+id/zoom_button"
+            android:text="pan"/>
+
+        <Button
+            android:id="@+id/tilt_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
+            android:layout_marginLeft="@dimen/horizontal_margin_half"
+            android:layout_marginTop="@dimen/vertical_margin"
+            android:layout_toRightOf="@+id/pan_button"
+            android:text="tilt"/>
+
     </RelativeLayout>
 
     <RelativeLayout

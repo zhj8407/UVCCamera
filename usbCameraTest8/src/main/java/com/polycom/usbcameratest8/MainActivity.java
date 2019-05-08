@@ -120,6 +120,7 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
      */
     private ImageButton mCaptureButton;
     private View mBrightnessButton, mContrastButton;
+    private View mZoomButton, mPanButtion, mTiltButton;
     private View mResetButton;
     private View mToolsLayout, mValueLayout;
     private final Runnable mUpdateItemsOnUITask = new Runnable() {
@@ -128,12 +129,14 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
             if (isFinishing()) return;
             final int visible_active = isActive() ? View.VISIBLE : View.INVISIBLE;
             mToolsLayout.setVisibility(visible_active);
+            /*
             mBrightnessButton.setVisibility(
                     checkSupportFlag(UVCCamera.PU_BRIGHTNESS)
                             ? visible_active : View.INVISIBLE);
             mContrastButton.setVisibility(
                     checkSupportFlag(UVCCamera.PU_CONTRAST)
                             ? visible_active : View.INVISIBLE);
+            */
         }
     };
     private final CompoundButton.OnCheckedChangeListener mOnCheckedChangeListener
@@ -209,6 +212,9 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
                             switch (mSettingMode) {
                                 case UVCCamera.PU_BRIGHTNESS:
                                 case UVCCamera.PU_CONTRAST:
+                                case UVCCamera.CTRL_ZOOM_ABS:
+                                case UVCCamera.CTRL_PAN_ABS:
+                                case UVCCamera.CTRL_TILT_ABS:
                                     setValue(mSettingMode, seekBar.getProgress());
                                     break;
                             }
@@ -300,6 +306,15 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
                 case R.id.contrast_button:
                     showSettings(UVCCamera.PU_CONTRAST);
                     break;
+                case R.id.zoom_button:
+                    showSettings(UVCCamera.CTRL_ZOOM_ABS);
+                    break;
+                case R.id.pan_button:
+                    showSettings(UVCCamera.CTRL_PAN_ABS);
+                    break;
+                case R.id.tilt_button:
+                    showSettings(UVCCamera.CTRL_TILT_ABS);
+                    break;
                 case R.id.reset_button:
                     resetSettings();
                     break;
@@ -335,6 +350,12 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
         mBrightnessButton.setOnClickListener(mOnClickListener);
         mContrastButton = findViewById(R.id.contrast_button);
         mContrastButton.setOnClickListener(mOnClickListener);
+        mZoomButton = findViewById(R.id.zoom_button);
+        mZoomButton.setOnClickListener(mOnClickListener);
+        mPanButtion = findViewById(R.id.pan_button);
+        mPanButtion.setOnClickListener(mOnClickListener);
+        mTiltButton = findViewById(R.id.tilt_button);
+        mTiltButton.setOnClickListener(mOnClickListener);
         mResetButton = findViewById(R.id.reset_button);
         mResetButton.setOnClickListener(mOnClickListener);
         mSettingSeekbar = (SeekBar) findViewById(R.id.setting_seekbar);
@@ -471,6 +492,9 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
             switch (mode) {
                 case UVCCamera.PU_BRIGHTNESS:
                 case UVCCamera.PU_CONTRAST:
+                case UVCCamera.CTRL_ZOOM_ABS:
+                case UVCCamera.CTRL_PAN_ABS:
+                case UVCCamera.CTRL_TILT_ABS:
                     mSettingMode = mode;
                     mSettingSeekbar.setProgress(getValue(mode));
                     ViewAnimationHelper.fadeIn(mValueLayout, -1, 0, mViewAnimationListener);
@@ -484,6 +508,9 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
             switch (mSettingMode) {
                 case UVCCamera.PU_BRIGHTNESS:
                 case UVCCamera.PU_CONTRAST:
+                case UVCCamera.CTRL_ZOOM_ABS:
+                case UVCCamera.CTRL_PAN_ABS:
+                case UVCCamera.CTRL_TILT_ABS:
                     mSettingSeekbar.setProgress(resetValue(mSettingMode));
                     break;
             }
