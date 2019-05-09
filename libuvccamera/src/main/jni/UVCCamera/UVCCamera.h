@@ -57,11 +57,6 @@ class UVCCamera
     UVCPreview *mPreview;
     UVCRecord *mRecord;
 
-    uint64_t mCtrlSupports;
-    uint64_t mPUSupports;
-    uint64_t mEUSupports;
-    uint64_t mEURuntimeSupports;
-
 private:
     inline int updateUVCControlLimit(int id, int &min, int &max, int &def)
     {
@@ -149,10 +144,7 @@ public :
     int stopRecord();
     int setCaptureDisplay(ANativeWindow *capture_window);
 
-    int getCtrlSupports(uint64_t *supports);
-    int getProcSupports(uint64_t *supports);
-    int getEncodeSupports(uint64_t *supports);
-    int getEncodeRunningSupports(uint64_t *runningSupports);
+    bool getVideoControlSupported(const char *ctrlName, int deviceID);
 
     int updateScanningModeLimit(int &min, int &max, int &def);
     int setScanningMode(int mode);

@@ -119,26 +119,6 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
      * button for start/stop recording
      */
     private ImageButton mCaptureButton;
-    private View mBrightnessButton, mContrastButton;
-    private View mZoomButton, mPanButtion, mTiltButton;
-    private View mResetButton;
-    private View mToolsLayout, mValueLayout;
-    private final Runnable mUpdateItemsOnUITask = new Runnable() {
-        @Override
-        public void run() {
-            if (isFinishing()) return;
-            final int visible_active = isActive() ? View.VISIBLE : View.INVISIBLE;
-            mToolsLayout.setVisibility(visible_active);
-            /*
-            mBrightnessButton.setVisibility(
-                    checkSupportFlag(UVCCamera.PU_BRIGHTNESS)
-                            ? visible_active : View.INVISIBLE);
-            mContrastButton.setVisibility(
-                    checkSupportFlag(UVCCamera.PU_CONTRAST)
-                            ? visible_active : View.INVISIBLE);
-            */
-        }
-    };
     private final CompoundButton.OnCheckedChangeListener mOnCheckedChangeListener
             = new CompoundButton.OnCheckedChangeListener() {
         @Override
@@ -163,7 +143,7 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 
         @Override
         public void onConnect(final UsbDevice device, final UsbControlBlock ctrlBlock,
-                final boolean createNew) {
+                              final boolean createNew) {
             if (DEBUG) Log.v(TAG, "onConnect:");
             mCameraHandler.open(ctrlBlock);
             startPreview();
@@ -195,6 +175,35 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
             setCameraButton(false);
         }
     };
+    private View mBrightnessButton, mContrastButton;
+    private View mZoomButton, mPanButtion, mTiltButton;
+    private View mResetButton;
+    private View mToolsLayout, mValueLayout;
+    private final Runnable mUpdateItemsOnUITask = new Runnable() {
+        @Override
+        public void run() {
+            if (isFinishing()) return;
+            final int visible_active = isActive() ? View.VISIBLE : View.INVISIBLE;
+            mToolsLayout.setVisibility(visible_active);
+
+            mBrightnessButton.setVisibility(
+                    checkSupportFlag(UVCCamera.PU_BRIGHTNESS_NAME)
+                            ? visible_active : View.INVISIBLE);
+            mContrastButton.setVisibility(
+                    checkSupportFlag(UVCCamera.PU_CONTRAST_NAME)
+                            ? visible_active : View.INVISIBLE);
+            mZoomButton.setVisibility(
+                    checkSupportFlag(UVCCamera.CTRL_ZOOM_ABS_NAME)
+                            ? visible_active : View.INVISIBLE);
+            mPanButtion.setVisibility(
+                    checkSupportFlag(UVCCamera.CTRL_PAN_ABS_NAME)
+                            ? visible_active : View.INVISIBLE);
+            mTiltButton.setVisibility(
+                    checkSupportFlag(UVCCamera.CTRL_TILT_ABS_NAME)
+                            ? visible_active : View.INVISIBLE);
+
+        }
+    };
     private SeekBar mSettingSeekbar;
     private int mSettingMode = -1;
     /**
@@ -204,18 +213,31 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
             new SeekBar.OnSeekBarChangeListener() {
                 @Override
                 public void onProgressChanged(final SeekBar seekBar, final int progress,
-                        final boolean fromUser) {
+                                              final boolean fromUser) {
                     // 設定が変更された時はシークバーの非表示までの時間を延長する
                     if (fromUser) {
                         runOnUiThread(mSettingHideTask, SETTINGS_HIDE_DELAY_MS);
-                        if (isActive() && checkSupportFlag(mSettingMode)) {
+                        if (isActive()) {
                             switch (mSettingMode) {
                                 case UVCCamera.PU_BRIGHTNESS:
+                                    if (checkSupportFlag(UVCCamera.PU_BRIGHTNESS_NAME))
+                                        setValue(mSettingMode, seekBar.getProgress());
+                                    break;
                                 case UVCCamera.PU_CONTRAST:
+                                    if (checkSupportFlag(UVCCamera.PU_CONTRAST_NAME))
+                                        setValue(mSettingMode, seekBar.getProgress());
+                                    break;
                                 case UVCCamera.CTRL_ZOOM_ABS:
+                                    if (checkSupportFlag(UVCCamera.CTRL_ZOOM_ABS_NAME))
+                                        setValue(mSettingMode, seekBar.getProgress());
+                                    break;
                                 case UVCCamera.CTRL_PAN_ABS:
+                                    if (checkSupportFlag(UVCCamera.CTRL_PAN_ABS_NAME))
+                                        setValue(mSettingMode, seekBar.getProgress());
+                                    break;
                                 case UVCCamera.CTRL_TILT_ABS:
-                                    setValue(mSettingMode, seekBar.getProgress());
+                                    if (checkSupportFlag(UVCCamera.CTRL_TILT_ABS_NAME))
+                                        setValue(mSettingMode, seekBar.getProgress());
                                     break;
                             }
                         }
@@ -237,13 +259,13 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
             mViewAnimationListener = new ViewAnimationHelper.ViewAnimationListener() {
         @Override
         public void onAnimationStart(@NonNull final Animator animator, @NonNull final View target,
-                final int animationType) {
+                                     final int animationType) {
 //			if (DEBUG) Log.v(TAG, "onAnimationStart:");
         }
 
         @Override
         public void onAnimationEnd(@NonNull final Animator animator, @NonNull final View target,
-                final int animationType) {
+                                   final int animationType) {
             final int id = target.getId();
             switch (animationType) {
                 case ViewAnimationHelper.ANIMATION_FADE_IN:
@@ -266,8 +288,14 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 
         @Override
         public void onAnimationCancel(@NonNull final Animator animator, @NonNull final View target,
-                final int animationType) {
+                                      final int animationType) {
 //			if (DEBUG) Log.v(TAG, "onAnimationStart:");
+        }
+    };
+    protected final Runnable mSettingHideTask = new Runnable() {
+        @Override
+        public void run() {
+            hideSetting(true);
         }
     };
     /**
@@ -319,12 +347,6 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
                     resetSettings();
                     break;
             }
-        }
-    };
-    protected final Runnable mSettingHideTask = new Runnable() {
-        @Override
-        public void run() {
-            hideSetting(true);
         }
     };
 
@@ -462,8 +484,8 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
         return mCameraHandler != null && mCameraHandler.isOpened();
     }
 
-    private boolean checkSupportFlag(final int flag) {
-        return mCameraHandler != null && mCameraHandler.checkSupportFlag(flag);
+    private boolean checkSupportFlag(final String ctrlName) {
+        return mCameraHandler != null && mCameraHandler.checkSupportFlag(ctrlName);
     }
 
     private int getValue(final int flag) {
@@ -479,7 +501,7 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
     }
 
     private void updateItems() {
-        runOnUiThread(mUpdateItemsOnUITask, 100);
+        runOnUiThread(mUpdateItemsOnUITask, 400);
     }
 
     /**

@@ -81,11 +81,62 @@ public class UVCCamera {
     public static final int H264_USAGE_2 = 2;
 
     // --------------------------------------------------------------------------------
+    public static final String CTRL_SCANNING_NAME = "scan";
+    public static final String CTRL_AE_NAME = "exposure_auto";
+    public static final String CTRL_AE_PRIORITY_NAME = "exposure_auto_priority";
+    public static final String CTRL_AE_ABS_NAME = "exposure_absolute";
+    public static final String CTRL_AE_REL_NAME = "exposure_relative";
+    public static final String CTRL_FOCUS_ABS_NAME = "focus_absolute";
+    public static final String CTRL_FOCUS_REL_NAME = "focus_relative";
+    public static final String CTRL_ZOOM_ABS_NAME = "zoom_absolute";
+    public static final String CTRL_PAN_ABS_NAME = "pan_absolute";
+    public static final String CTRL_TILT_ABS_NAME = "tilt_absolute";
+    public static final String CTRL_FOCUS_AUTO_NAME = "focus_auto";
+    public static final String CTRL_PRIVACY_NAME = "privacy";
+
+    public static final String PU_BRIGHTNESS_NAME = "brightness";
+    public static final String PU_CONTRAST_NAME = "contrast";
+    public static final String PU_HUE_NAME = "hue";
+    public static final String PU_SATURATION_NAME = "saturation";
+    public static final String PU_SHARPNESS_NAME = "sharpness";
+    public static final String PU_GAMMA_NAME = "gamma";
+    public static final String PU_WB_TEMP_NAME = "white_balance_temperature";
+    public static final String PU_WB_COMPO_NAME = "white_balance_component";
+    public static final String PU_BACKLIGHT_NAME = "backlight_compensation";
+    public static final String PU_GAIN_NAME = "gain";
+    public static final String PU_POWER_LF_NAME = "power_line_frequency";
+    public static final String PU_HUE_AUTO_NAME = "hue_auto";
+    public static final String PU_WB_TEMP_AUTO_NAME = "white_balance_temperature_auto";
+    public static final String PU_WB_COMPO_AUTO_NAME = "white_balance_component_auto";
+    public static final String PU_DIGITAL_MULT_NAME = "digital_multiplier";
+    public static final String PU_DIGITAL_LIMIT_NAME = "digital_multiplier_limit";
+    public static final String PU_AVIDEO_STD_NAME = "analog_video_standard";
+    public static final String PU_AVIDEO_LOCK_NAME = "analog_video_lock_status";
+    public static final String PU_CONTRAST_AUTO_NAME = "contrast_auto";
+
+    public static final String EU_SELECT_LAYER_NAME = "encoder_select_layer";
+    public static final String EU_PROFILE_TOOLSET_NAME = "encoder_h_264_profile"; // Profile
+    public static final String EU_H_264_SETTINGS_NAME = "encoder_h_264_toolset"; // Toolset
+    public static final String EU_H_264_SLICE_MODE_NAME = "encoder_h_264_slice_mode"; // Slice Mode
+    public static final String EU_RATE_CONTROL_MODE_NAME = "encoder_rate_control_mode"; // Rate Control Mode
+    public static final String EU_VIDEO_RESOLUTION_NAME = "encoder_video_resolution"; // Video Resolution
+    public static final String EU_MIN_FRAME_INTERVAL_NAME = "encoder_minimum_frame_interval"; // Min Frame Interval
+    public static final String EU_AVERAGE_BITRATE_NAME = "encoder_average_bitrate"; // Average Bitrate
+    public static final String EU_CPB_SIZE_NAME = "encoder_cpb_size"; // CPB Size
+    public static final String EU_PEAK_BITRATE_NAME = "encoder_peak_bitrate"; // Peak Bitrate
+    public static final String EU_QP_PARAM_I_NAME = "encoder_qp_param_i_frames"; // QP I Frame
+    public static final String EU_QP_PARAM_P_NAME = "encoder_qp_param_p_frames"; // QP P Frame
+    public static final String EU_QP_PARAM_B_NAME = "encoder_qp_param_b_g_frames"; // QP B Frame
+    public static final String EU_SYNC_FRAME_TYPE_NAME = "encoder_sync_frame_type"; // Sync Frame Type
+    public static final String EU_SYNC_FRAME_INTERVAL_NAME = "encoder_sync_frame_type"; // Sync Frame Type
+    public static final String EU_H_264_LEVEL_IDC_LIMIT_NAME = "encoder_h_264_level_idc_limit"; // H264 Level IDC Limit
+    public static final String EU_TEMPORAL_LAYER_ENABLE_NAME = "encoder_temporal_layer_enable"; // Temporal Layer Enable
+
     public static final int CTRL_SCANNING = 0x00000001; // D0: Scanning Mode
     public static final int CTRL_AE = 0x00000002; // D1: Auto-Exposure Mode
     public static final int CTRL_AE_PRIORITY = 0x00000004; // D2: Auto-Exposure Priority
     public static final int CTRL_AE_ABS = 0x00000008; // D3: Exposure Time (Absolute)
-    public static final int CTRL_AR_REL = 0x00000010; // D4: Exposure Time (Relative)
+    public static final int CTRL_AE_REL = 0x00000010; // D4: Exposure Time (Relative)
     public static final int CTRL_FOCUS_ABS = 0x00000020; // D5: Focus (Absolute)
     public static final int CTRL_FOCUS_REL = 0x00000040; // D6: Focus (Relative)
     public static final int CTRL_IRIS_ABS = 0x00000080; // D7: Iris (Absolute)
@@ -162,10 +213,6 @@ public class UVCCamera {
     }
 
     private UsbControlBlock mCtrlBlock;
-    protected long mControlSupports;
-    protected long mProcSupports;
-    protected long mEncSupports;
-    protected long mEncRunningSupports;
     protected int mCurrentFrameFormat = FRAME_FORMAT_MJPEG;
     protected int mCurrentWidth = DEFAULT_PREVIEW_WIDTH, mCurrentHeight = DEFAULT_PREVIEW_HEIGHT;
     protected float mCurrentBandwidthFactor = DEFAULT_BANDWIDTH;
@@ -290,7 +337,6 @@ public class UVCCamera {
             mCtrlBlock.close();
             mCtrlBlock = null;
         }
-        mControlSupports = mProcSupports = 0;
         mCurrentFrameFormat = -1;
         mCurrentBandwidthFactor = 0;
         mSupportedSize = null;
@@ -620,13 +666,16 @@ public class UVCCamera {
 
     // wrong result may return when you call this just after camera open.
     // it is better to wait several hundreads millseconds.
-    public boolean checkSupportFlag(final long flag) {
-        updateCameraParams();
-        if ((flag & 0x80000000) == 0x80000000) {
-            return ((mProcSupports & flag) == (flag & 0x7ffffffF));
-        } else {
-            return (mControlSupports & flag) == flag;
+    public boolean checkSupportFlag(final String controlName) {
+        return checkSupportFlag(controlName, 0);
+    }
+
+    public boolean checkSupportFlag(final String controlName, final int deviceID) {
+        if (mNativePtr != 0) {
+            return nativeIsVideoControlSupported(mNativePtr, controlName, deviceID);
         }
+
+        return false;
     }
 
     //================================================================================
@@ -1244,68 +1293,45 @@ public class UVCCamera {
     // ================================================================================
     public synchronized void updateCameraParams() {
         if (mNativePtr != 0) {
-            if ((mControlSupports == 0) || (mProcSupports == 0)) {
-                // サポートしている機能フラグを取得
-                if (mControlSupports == 0) {
-                    mControlSupports = nativeGetCtrlSupports(mNativePtr);
-                }
-                if (mProcSupports == 0) {
-                    mProcSupports = nativeGetProcSupports(mNativePtr);
-                }
-                if (mEncSupports == 0) {
-                    mEncSupports = nativeGetEncSupports(mNativePtr);
-                }
-                if (mEncRunningSupports == 0) {
-                    mEncRunningSupports = nativeGetEncRunningSupports(mNativePtr);
-                }
-                // 設定値を取得
-                if ((mControlSupports != 0) && (mProcSupports != 0)) {
-                    nativeUpdateBrightnessLimit(mNativePtr);
-                    nativeUpdateContrastLimit(mNativePtr);
-                    nativeUpdateSharpnessLimit(mNativePtr);
-                    nativeUpdateGainLimit(mNativePtr);
-                    nativeUpdateGammaLimit(mNativePtr);
-                    nativeUpdateSaturationLimit(mNativePtr);
-                    nativeUpdateHueLimit(mNativePtr);
-                    nativeUpdateZoomLimit(mNativePtr);
-                    nativeUpdatePanLimit(mNativePtr);
-                    nativeUpdateTiltLimit(mNativePtr);
-                    nativeUpdateWhiteBlanceLimit(mNativePtr);
-                    nativeUpdateFocusLimit(mNativePtr);
-                }
-                if (mEncSupports != 0) {
-                    nativeUpdateAverageBitrateLimit(mNativePtr);
-                    nativeUpdateSyncRefFrameLimit(mNativePtr);
-                    nativeUpdateCPBSizeLimit(mNativePtr);
-                }
-                if (DEBUG) {
-                    dumpControls(mControlSupports);
-                    dumpProc(mProcSupports);
-                    Log.v(TAG, String.format("Brightness:min=%d,max=%d,def=%d", mBrightnessMin,
-                            mBrightnessMax, mBrightnessDef));
-                    Log.v(TAG, String.format("Contrast:min=%d,max=%d,def=%d", mContrastMin,
-                            mContrastMax, mContrastDef));
-                    Log.v(TAG, String.format("Sharpness:min=%d,max=%d,def=%d", mSharpnessMin,
-                            mSharpnessMax, mSharpnessDef));
-                    Log.v(TAG, String.format("Gain:min=%d,max=%d,def=%d", mGainMin, mGainMax,
-                            mGainDef));
-                    Log.v(TAG, String.format("Gamma:min=%d,max=%d,def=%d", mGammaMin, mGammaMax,
-                            mGammaDef));
-                    Log.v(TAG, String.format("Saturation:min=%d,max=%d,def=%d", mSaturationMin,
-                            mSaturationMax, mSaturationDef));
-                    Log.v(TAG,
-                            String.format("Hue:min=%d,max=%d,def=%d", mHueMin, mHueMax, mHueDef));
-                    Log.v(TAG, String.format("Zoom:min=%d,max=%d,def=%d", mZoomMin, mZoomMax,
-                            mZoomDef));
-                    Log.v(TAG, String.format("WhiteBlance:min=%d,max=%d,def=%d", mWhiteBlanceMin,
-                            mWhiteBlanceMax, mWhiteBlanceDef));
-                    Log.v(TAG, String.format("Focus:min=%d,max=%d,def=%d", mFocusMin, mFocusMax,
-                            mFocusDef));
-                }
+            nativeUpdateBrightnessLimit(mNativePtr);
+            nativeUpdateContrastLimit(mNativePtr);
+            nativeUpdateSharpnessLimit(mNativePtr);
+            nativeUpdateGainLimit(mNativePtr);
+            nativeUpdateGammaLimit(mNativePtr);
+            nativeUpdateSaturationLimit(mNativePtr);
+            nativeUpdateHueLimit(mNativePtr);
+            nativeUpdateZoomLimit(mNativePtr);
+            nativeUpdatePanLimit(mNativePtr);
+            nativeUpdateTiltLimit(mNativePtr);
+            nativeUpdateWhiteBlanceLimit(mNativePtr);
+            nativeUpdateFocusLimit(mNativePtr);
+
+            nativeUpdateAverageBitrateLimit(mNativePtr);
+            nativeUpdateSyncRefFrameLimit(mNativePtr);
+            nativeUpdateCPBSizeLimit(mNativePtr);
+
+            if (DEBUG) {
+                Log.v(TAG, String.format("Brightness:min=%d,max=%d,def=%d", mBrightnessMin,
+                        mBrightnessMax, mBrightnessDef));
+                Log.v(TAG, String.format("Contrast:min=%d,max=%d,def=%d", mContrastMin,
+                        mContrastMax, mContrastDef));
+                Log.v(TAG, String.format("Sharpness:min=%d,max=%d,def=%d", mSharpnessMin,
+                        mSharpnessMax, mSharpnessDef));
+                Log.v(TAG, String.format("Gain:min=%d,max=%d,def=%d", mGainMin, mGainMax,
+                        mGainDef));
+                Log.v(TAG, String.format("Gamma:min=%d,max=%d,def=%d", mGammaMin, mGammaMax,
+                        mGammaDef));
+                Log.v(TAG, String.format("Saturation:min=%d,max=%d,def=%d", mSaturationMin,
+                        mSaturationMax, mSaturationDef));
+                Log.v(TAG,
+                        String.format("Hue:min=%d,max=%d,def=%d", mHueMin, mHueMax, mHueDef));
+                Log.v(TAG, String.format("Zoom:min=%d,max=%d,def=%d", mZoomMin, mZoomMax,
+                        mZoomDef));
+                Log.v(TAG, String.format("WhiteBlance:min=%d,max=%d,def=%d", mWhiteBlanceMin,
+                        mWhiteBlanceMax, mWhiteBlanceDef));
+                Log.v(TAG, String.format("Focus:min=%d,max=%d,def=%d", mFocusMin, mFocusMax,
+                        mFocusDef));
             }
-        } else {
-            mControlSupports = mProcSupports = 0;
-            mEncSupports = mEncRunningSupports = 0;
         }
     }
 
@@ -1466,13 +1492,8 @@ public class UVCCamera {
     private static final native int nativeSetCaptureDisplay(final long id_camera,
             final Surface surface);
 
-    private static final native long nativeGetCtrlSupports(final long id_camera);
-
-    private static final native long nativeGetProcSupports(final long id_camera);
-
-    private static final native long nativeGetEncSupports(final long id_camera);
-
-    private static final native long nativeGetEncRunningSupports(final long id_camera);
+    private static final native boolean nativeIsVideoControlSupported(final long id_camera,
+            final String control_name, final int device_id);
 
     private final native int nativeUpdateScanningModeLimit(final long id_camera);
 

@@ -263,11 +263,10 @@ abstract class AbstractUVCCameraHandler extends Handler {
         sendMessage(obtainMessage(MSG_MEDIA_UPDATE, path));
     }
 
-    public boolean checkSupportFlag(final long flag) {
+    public boolean checkSupportFlag(final String ctrlName) {
         checkReleased();
         final CameraThread thread = mWeakThread.get();
-        return thread != null && thread.mUVCCamera != null && thread.mUVCCamera.checkSupportFlag(
-                flag);
+        return thread != null && thread.mUVCCamera != null && thread.mUVCCamera.checkSupportFlag(ctrlName);
     }
 
     public int getValue(final int flag) {

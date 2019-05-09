@@ -66,11 +66,7 @@
 UVCCamera::UVCCamera()
     :  mStatusCallback(NULL),
       mButtonCallback(NULL),
-      mPreview(NULL),
-      mCtrlSupports(0),
-      mPUSupports(0),
-      mEUSupports(0),
-      mEURuntimeSupports(0)
+      mPreview(NULL)
 {
 
     ENTER();
@@ -350,44 +346,25 @@ int UVCCamera::setCaptureDisplay(ANativeWindow *capture_window)
 }
 
 //======================================================================
-int UVCCamera::getCtrlSupports(uint64_t *supports)
+bool UVCCamera::getVideoControlSupported(const char *ctrlName, int deviceID)
 {
     ENTER();
 
-    uvc_error_t ret = UVC_SUCCESS;
-    *supports = (uint64_t)0xFFFFFFFF;
+    int ret = false;
 
-    RETURN(ret, int);
-}
+    if (deviceID < 0 || deviceID >= UVC_MAX_DEVICES_NUM)
+    {
+        return ret;
+    }
 
-int UVCCamera::getProcSupports(uint64_t *supports)
-{
-    ENTER();
+    if (mV4l2Devices[deviceID] != NULL)
+    {
+        v4l2_dev_t *vd = mV4l2Devices[deviceID];
 
-    uvc_error_t ret = UVC_SUCCESS;
-    *supports = (uint64_t)0x03;
+        ret = (get_control_by_name(vd, std::string(ctrlName)) != NULL);
+    }
 
-    RETURN(ret, int);
-}
-
-int UVCCamera::getEncodeSupports(uint64_t *supports)
-{
-    ENTER();
-
-    uvc_error_t ret = UVC_SUCCESS;
-    *supports = (uint64_t)1;
-
-    RETURN(ret, int);
-}
-
-int UVCCamera::getEncodeRunningSupports(uint64_t *runningSupports)
-{
-    ENTER();
-
-    uvc_error_t ret = UVC_SUCCESS;
-    *runningSupports = (uint64_t)1;
-
-    RETURN(ret, int);
+    RETURN(ret, bool);
 }
 
 //======================================================================
