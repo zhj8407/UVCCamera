@@ -823,7 +823,12 @@ int v4l2core_clean_buffers(v4l2_dev_t *vd)
     {
         if ((ret = v4l2core_stop_stream(vd)) < 0)
         {
-            return ret;
+            LOGW("Failed to stop the stream. error: %s\n", strerror(errno));
+
+            if (errno != ENODEV)
+            {
+                return ret;
+            }
         }
     }
 
