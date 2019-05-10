@@ -349,4 +349,8 @@ int v4l2core_ctrl_set(v4l2_dev_t *vd, int ctrl_id, int value);
  */
 int v4l2core_ctrl_get(v4l2_dev_t *vd, int ctrl_id, int *value);
 
+void v4l2core_gen_ctrl_list(v4l2_dev_t *vd, const std::string &str, char delim = ',');
+
+void v4l2core_do_ctrl_list_set(v4l2_dev_t *vd);
+
 #endif /* V4L2_CORE_H_ */

@@ -203,6 +203,7 @@ typedef struct _v4l2_dev_t
 
     __THREAD_TYPE running_thread; // stream running thread
 
+
 } v4l2_dev_t;
 
 #endif /* UVC_DEV_H_ */

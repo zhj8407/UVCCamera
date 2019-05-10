@@ -277,6 +277,11 @@ int UVCRecord::prepare_streaming()
 
         frameMode = requestMode;
         frameBytes = frameWidth * frameHeight * 3 / 8;
+
+        v4l2core_gen_ctrl_list(mV4l2Dev,
+                               std::string("encoder_select_layer=0x0000,encoder_h_264_profile_toolset=0x4D00,encoder_select_layer=0x0000,encoder_average_bitrate=4096000"));
+
+        v4l2core_do_ctrl_list_set(mV4l2Dev);
     }
     else
     {

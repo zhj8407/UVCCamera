@@ -65,8 +65,8 @@
  */
 UVCCamera::UVCCamera()
     :  mStatusCallback(NULL),
-      mButtonCallback(NULL),
-      mPreview(NULL)
+       mButtonCallback(NULL),
+       mPreview(NULL)
 {
 
     ENTER();
@@ -187,11 +187,13 @@ char *UVCCamera::getSupportedSize()
     ENTER();
 
 #if 0
+
     if (mDeviceHandle)
     {
         UVCDiags params;
         RETURN(params.getSupportedSize(mDeviceHandle), char *)
     }
+
 #endif
 
     RETURN(NULL, char *);
@@ -1390,7 +1392,9 @@ int UVCCamera::getAnalogVideoLockState()
 int UVCCamera::updateAverageBitrateLimit(int &min, int &max, int &def)
 {
     ENTER();
-    int ret = UVC_ERROR_IO;
+
+    int ret = updateUVCControlLimit(V4L2_CID_ENCODER_AVERAGE_BITRATE,
+                                    min, max, def, UVC_RECORD_DEVICE_ID);
 
     RETURN(ret, int);
 }
@@ -1398,7 +1402,9 @@ int UVCCamera::updateAverageBitrateLimit(int &min, int &max, int &def)
 int UVCCamera::setAverageBitrate(int bitrate)
 {
     ENTER();
-    int ret = UVC_ERROR_IO;
+
+    int ret = setUVCControlValue(V4L2_CID_ENCODER_AVERAGE_BITRATE,
+                                 bitrate, UVC_RECORD_DEVICE_ID);
 
     RETURN(ret, int);
 }
@@ -1407,7 +1413,10 @@ int UVCCamera::getAverageBitrate()
 {
     ENTER();
 
-    RETURN(0, int);
+    int ret = getUVCControlValue(V4L2_CID_ENCODER_AVERAGE_BITRATE,
+                                 UVC_RECORD_DEVICE_ID);
+
+    RETURN(ret, int);
 }
 
 //======================================================================
@@ -1415,7 +1424,9 @@ int UVCCamera::getAverageBitrate()
 int UVCCamera::updateSyncRefFrameLimit(int &min, int &max, int &def)
 {
     ENTER();
-    int ret = UVC_ERROR_IO;
+
+    int ret = updateUVCControlLimit(V4L2_CID_ENCODER_VP8_SYNC_FRAME_TYPE,
+                                    min, max, def, UVC_RECORD_DEVICE_ID);
 
     RETURN(ret, int);
 }
@@ -1423,7 +1434,9 @@ int UVCCamera::updateSyncRefFrameLimit(int &min, int &max, int &def)
 int UVCCamera::setSyncRefFrame(int value)
 {
     ENTER();
-    int ret = UVC_ERROR_IO;
+
+    int ret = setUVCControlValue(V4L2_CID_ENCODER_VP8_SYNC_FRAME_TYPE,
+                                 value, UVC_RECORD_DEVICE_ID);
 
     RETURN(ret, int);
 }
@@ -1432,7 +1445,10 @@ int UVCCamera::getSyncRefFrame()
 {
     ENTER();
 
-    RETURN(0, int);
+    int ret = getUVCControlValue(V4L2_CID_ENCODER_VP8_SYNC_FRAME_TYPE,
+                                 UVC_RECORD_DEVICE_ID);
+
+    RETURN(ret, int);
 }
 
 //======================================================================
@@ -1440,7 +1456,9 @@ int UVCCamera::getSyncRefFrame()
 int UVCCamera::updateCPBSizeLimit(int &min, int &max, int &def)
 {
     ENTER();
-    int ret = UVC_ERROR_IO;
+
+    int ret = updateUVCControlLimit(V4L2_CID_ENCODER_CPB_SIZE,
+                                    min, max, def, UVC_RECORD_DEVICE_ID);
 
     RETURN(ret, int);
 }
@@ -1448,7 +1466,9 @@ int UVCCamera::updateCPBSizeLimit(int &min, int &max, int &def)
 int UVCCamera::setCPBSize(int value)
 {
     ENTER();
-    int ret = UVC_ERROR_IO;
+
+    int ret = setUVCControlValue(V4L2_CID_ENCODER_CPB_SIZE,
+                                 value, UVC_RECORD_DEVICE_ID);
 
     RETURN(ret, int);
 }
@@ -1457,7 +1477,10 @@ int UVCCamera::getCPBSize()
 {
     ENTER();
 
-    RETURN(0, int);
+    int ret = getUVCControlValue(V4L2_CID_ENCODER_CPB_SIZE,
+                                 UVC_RECORD_DEVICE_ID);
+
+    RETURN(ret, int);
 }
 
 int UVCCamera::setSelectLayer(int value)

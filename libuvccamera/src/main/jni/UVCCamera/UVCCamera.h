@@ -58,13 +58,13 @@ class UVCCamera
     UVCRecord *mRecord;
 
 private:
-    inline int updateUVCControlLimit(int id, int &min, int &max, int &def)
+    inline int updateUVCControlLimit(int id, int &min, int &max, int &def, int deviceID = UVC_PREVIEW_DEVICE_ID)
     {
         int ret = UVC_ERROR_IO;
 
-        if (mV4l2Devices[UVC_PREVIEW_DEVICE_ID] != NULL)
+        if (mV4l2Devices[deviceID] != NULL)
         {
-            v4l2_dev_t *vd = mV4l2Devices[UVC_PREVIEW_DEVICE_ID];
+            v4l2_dev_t *vd = mV4l2Devices[deviceID];
 
             v4l2_ctrl_t *control = get_control_by_id(vd, id);
 
@@ -81,13 +81,13 @@ private:
         return ret;
     }
 
-    inline int setUVCControlValue(int id, int value)
+    inline int setUVCControlValue(int id, int value, int deviceID = UVC_PREVIEW_DEVICE_ID)
     {
         int ret = UVC_ERROR_IO;
 
-        if (mV4l2Devices[UVC_PREVIEW_DEVICE_ID] != NULL)
+        if (mV4l2Devices[deviceID] != NULL)
         {
-            v4l2_dev_t *vd = mV4l2Devices[UVC_PREVIEW_DEVICE_ID];
+            v4l2_dev_t *vd = mV4l2Devices[deviceID];
 
             v4l2_ctrl_t *control = get_control_by_id(vd, id);
 
@@ -102,13 +102,13 @@ private:
         return ret;
     }
 
-    inline int getUVCControlValue(int id)
+    inline int getUVCControlValue(int id, int deviceID = UVC_PREVIEW_DEVICE_ID)
     {
         int ret = UVC_ERROR_IO;
 
-        if (mV4l2Devices[UVC_PREVIEW_DEVICE_ID] != NULL)
+        if (mV4l2Devices[deviceID] != NULL)
         {
-            v4l2_dev_t *vd = mV4l2Devices[UVC_PREVIEW_DEVICE_ID];
+            v4l2_dev_t *vd = mV4l2Devices[deviceID];
 
             if (!get_control_value_by_id(vd, id))
             {

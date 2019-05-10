@@ -18,6 +18,12 @@
 #include <errno.h>
 #include <assert.h>
 
+#include <string>
+#include <sstream>
+#include <algorithm>
+#include <iterator>
+#include <vector>
+
 #include "uvc_dev.h"
 #include "v4l2_controls.h"
 #include "v4l2_core.h"
@@ -1721,4 +1727,165 @@ int v4l2core_ctrl_get(v4l2_dev_t *vd, int ctrl_id, int *value)
     *value = ctrl.value;
 
     return ret;
+}
+
+static std::string &ltrim(std::string &str, const std::string &chars = "\t\n\v\f\r ")
+{
+    str.erase(0, str.find_first_not_of(chars));
+    return str;
+}
+
+static std::string &rtrim(std::string &str, const std::string &chars = "\t\n\v\f\r ")
+{
+    str.erase(str.find_last_not_of(chars) + 1);
+    return str;
+}
+
+static std::string &trim(std::string &str, const std::string &chars = "\t\n\v\f\r ")
+{
+    return ltrim(rtrim(str, chars), chars);
+}
+
+void v4l2core_gen_ctrl_list(v4l2_dev_t *vd, const std::string &str, char delim)
+{
+    assert(vd != nullptr);
+
+    std::stringstream ss(str);
+    std::string token;
+
+    while (std::getline(ss, token, delim))
+    {
+        trim(token);
+        size_t sepr = token.find_first_of('=');
+
+        if (sepr != std::string::npos)
+        {
+            const auto &set_ctrl_pair =
+                std::pair<std::string, std::string>(token.substr(0, sepr), token.substr(sepr + 1));
+            vd->controls_set_list.push_back(set_ctrl_pair);
+        }
+    }
+}
+
+typedef std::map<unsigned, std::vector<struct v4l2_ext_control> > class2ctrls_map;
+
+#define V4L2_CTRL_ID_MASK         (0x0fffffff)
+#define V4L2_CTRL_ID2CLASS(id)    ((id) & 0x0fff0000UL)
+#define V4L2_CTRL_ID2WHICH(id)    ((id) & 0x0fff0000UL)
+#define V4L2_CTRL_DRIVER_PRIV(id) (((id) & 0xffff) >= 0x1000)
+#define V4L2_CTRL_MAX_DIMS    (4)
+#define V4L2_CTRL_WHICH_CUR_VAL   0
+#define V4L2_CTRL_WHICH_DEF_VAL   0x0f000000
+
+void v4l2core_do_ctrl_list_set(v4l2_dev_t *vd)
+{
+    assert(vd != nullptr);
+
+    if (vd->controls_set_list.empty())
+    {
+        return;
+    }
+
+    struct v4l2_ext_controls ctrls;
+
+    class2ctrls_map class2ctrls;
+
+    bool use_ext_ctrls = false;
+
+    memset(&ctrls, 0, sizeof(ctrls));
+
+    for (auto &iter : vd->controls_set_list)
+    {
+        struct v4l2_ext_control ctrl;
+        v4l2_ctrl_t *vc = get_control_by_name(vd, iter.first);
+
+        if (vc == nullptr)
+        {
+            continue;
+        }
+
+        struct v4l2_queryctrl &qc = vc->control;
+
+        memset(&ctrl, 0, sizeof(ctrl));
+
+        ctrl.id = qc.id;
+
+        ctrl.value = strtol(iter.second.c_str(), NULL, 0);
+
+        if (qc.type == V4L2_CTRL_TYPE_INTEGER64)
+        {
+            use_ext_ctrls = true;
+        }
+
+        if (V4L2_CTRL_DRIVER_PRIV(ctrl.id))
+        {
+            use_ext_ctrls = true;
+        }
+
+        class2ctrls[V4L2_CTRL_ID2WHICH(ctrl.id)].push_back(ctrl);
+    }
+
+    for (class2ctrls_map::iterator iter = class2ctrls.begin();
+            iter != class2ctrls.end(); ++iter)
+    {
+        if (!use_ext_ctrls &&
+                (iter->first == V4L2_CTRL_CLASS_USER ||
+                 iter->first == V4L2_CID_PRIVATE_BASE))
+        {
+            for (unsigned i = 0; i < iter->second.size(); i++)
+            {
+                struct v4l2_control ctrl;
+
+                ctrl.id = iter->second[i].id;
+                ctrl.value = iter->second[i].value;
+
+                if (xioctl(vd->fd, VIDIOC_S_CTRL, &ctrl))
+                {
+                    LOGE("V4L2_CORE: (VIDIOC_S_CTRL) 0x%08x - 0x%x: %s(%d)\n",
+                            ctrl.id,
+                            ctrl.value,
+                            strerror(errno),
+                            errno);
+                }
+            }
+
+            continue;
+        }
+
+        for (auto &ctrl : iter->second)
+        {
+            static __u32 temporal_id = 0;
+
+            if (ctrl.id == V4L2_CID_ENCODER_SELECT_LAYER)
+            {
+                temporal_id = ((ctrl.value >> 7) & 0x0F);
+                continue;
+            }
+
+            memset(&ctrls, 0x00, sizeof(ctrls));
+
+            ctrls.which = iter->first;
+            ctrls.ctrl_class = V4L2_CTRL_ID2CLASS(ctrl.id);
+            ctrls.count = 1;
+
+            ctrls.controls = &ctrl;
+            ctrls.reserved[0] = temporal_id;
+
+            if (xioctl(vd->fd, VIDIOC_S_EXT_CTRLS, &ctrls))
+            {
+                if (ctrls.error_idx >= ctrls.count)
+                {
+                    LOGE("Error setting controls: %s\n", strerror(errno));
+                }
+                else
+                {
+                    LOGE("V4L2_CORE: (VIDIOC_S_CTRL) 0x%08x - 0x%x: %s(%d)\n",
+                            iter->second[ctrls.error_idx].id,
+                            iter->second[ctrls.error_idx].value,
+                            strerror(errno),
+                            errno);
+                }
+            }
+        }
+    }
 }
