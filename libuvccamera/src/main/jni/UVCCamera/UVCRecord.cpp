@@ -35,7 +35,7 @@
 #else
 #define USE_LOGALL
 #undef LOG_NDEBUG
-//	#undef NDEBUG
+//  #undef NDEBUG
 #endif
 
 #include "utilbase.h"
@@ -99,7 +99,7 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int min_fps, in
         requestBandwidth = bandwidth;
 
         v4l2core_prepare_new_format(mV4l2Dev,
-                                    requestMode == H264_FORMAT_RECORD_MODE ? V4L2_PIX_FMT_H264 : V4L2_PIX_FMT_H264_SIMULCAST);
+                                    pixel_formats[requestMode]);
         v4l2core_prepare_new_resolution(mV4l2Dev,
                                         requestWidth,
                                         requestHeight,
@@ -117,7 +117,9 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int min_fps, in
     }
 
     if (!result)
+    {
         stream_probed = true;
+    }
 
     RETURN(result, int);
 }
@@ -140,7 +142,7 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int usage, int 
         requestBandwidth = bandwidth;
 
         v4l2core_prepare_new_format(mV4l2Dev,
-                                    requestMode == H264_FORMAT_RECORD_MODE ? V4L2_PIX_FMT_H264 : V4L2_PIX_FMT_H264_SIMULCAST);
+                                    pixel_formats[requestMode]);
         v4l2core_prepare_new_resolution(mV4l2Dev,
                                         requestWidth,
                                         requestHeight,
@@ -158,7 +160,9 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int usage, int 
     }
 
     if (!result)
+    {
         stream_probed = true;
+    }
 
     RETURN(result, int);
 }
@@ -181,7 +185,7 @@ int UVCRecord::commitRecordSize(int width, int height, int profile, int usage, i
         requestBandwidth = bandwidth;
 
         v4l2core_prepare_new_format(mV4l2Dev,
-                                    requestMode == H264_FORMAT_RECORD_MODE ? V4L2_PIX_FMT_H264 : V4L2_PIX_FMT_H264_SIMULCAST);
+                                    pixel_formats[requestMode]);
         v4l2core_prepare_new_resolution(mV4l2Dev,
                                         requestWidth,
                                         requestHeight,
@@ -199,7 +203,9 @@ int UVCRecord::commitRecordSize(int width, int height, int profile, int usage, i
     }
 
     if (!result)
+    {
         stream_probed = stream_committed = true;
+    }
 
     RETURN(result, int);
 }
@@ -245,7 +251,7 @@ int UVCRecord::prepare_streaming()
     if (!stream_probed)
     {
         v4l2core_prepare_new_format(mV4l2Dev,
-                                    requestMode == H264_FORMAT_RECORD_MODE ? V4L2_PIX_FMT_H264 : V4L2_PIX_FMT_H264_SIMULCAST);
+                                    pixel_formats[requestMode]);
         v4l2core_prepare_new_resolution(mV4l2Dev,
                                         requestWidth,
                                         requestHeight,
@@ -264,7 +270,10 @@ int UVCRecord::prepare_streaming()
     {
         frameWidth = requestWidth;
         frameHeight = requestHeight;
-        LOGI("frameSize=(%d,%d)@%s", frameWidth, frameHeight, requestMode == H264_FORMAT_RECORD_MODE ? "H264" : "S264");
+        char fcc_name[5];
+        LOGI("frameSize=(%d,%d)@%s",
+             frameWidth, frameHeight,
+             v4l2_fourcc_to_string(fcc_name, pixel_formats[requestMode]));
 
         frameMode = requestMode;
         frameBytes = frameWidth * frameHeight * 3 / 8;
@@ -379,7 +388,7 @@ void UVCRecord::do_capture_callback(JNIEnv *env, uvc_frame_t *frame)
             env->DeleteLocalRef(buf);
         }
 
-    SKIP:
+SKIP:
         recycle_frame(callback_frame);
     }
 

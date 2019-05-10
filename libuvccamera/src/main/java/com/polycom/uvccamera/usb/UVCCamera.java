@@ -44,25 +44,13 @@ public class UVCCamera {
     private static final String TAG = UVCCamera.class.getSimpleName();
     private static final String DEFAULT_USBFS = "/dev/bus/usb";
 
-    public static final int DEFAULT_PREVIEW_WIDTH = 640;
-    public static final int DEFAULT_PREVIEW_HEIGHT = 480;
-    public static final int DEFAULT_PREVIEW_MODE = 0;
-    public static final int DEFAULT_PREVIEW_MIN_FPS = 1;
-    public static final int DEFAULT_PREVIEW_MAX_FPS = 30;
-
-    public static final int DEFAULT_RECORD_WIDTH = 1920;
-    public static final int DEFAULT_RECORD_HEIGHT = 1080;
-    public static final int DEFAULT_RECORD_MODE = 2;    // H.264 mode
-    public static final int DEFAULT_RECORD_PROFILE = 0; // Baseline profile
-    public static final int DEFAULT_RECORD_MIN_FPS = 1;
-    public static final int DEFAULT_RECORD_MAX_FPS = 30;
-
-    public static final float DEFAULT_BANDWIDTH = 1.0f;
-
     public static final int FRAME_FORMAT_YUYV = 0;
     public static final int FRAME_FORMAT_MJPEG = 1;
-    public static final int FRAME_FORMAT_H_264 = 2;
-    public static final int FRAME_FORMAT_S_264 = 3;
+    public static final int FRAME_FORMAT_NV12 = 2;
+    public static final int FRAME_FORMAT_H_264 = 3;
+    public static final int FRAME_FORMAT_S_264 = 4;
+
+    public static final float DEFAULT_BANDWIDTH = 1.0f;
 
     public static final int PIXEL_FORMAT_RAW = 0;
     public static final int PIXEL_FORMAT_YUV = 1;
@@ -79,6 +67,19 @@ public class UVCCamera {
 
     public static final int H264_USAGE_1 = 1;
     public static final int H264_USAGE_2 = 2;
+
+    public static final int DEFAULT_PREVIEW_WIDTH = 640;
+    public static final int DEFAULT_PREVIEW_HEIGHT = 480;
+    public static final int DEFAULT_PREVIEW_MODE = FRAME_FORMAT_YUYV;
+    public static final int DEFAULT_PREVIEW_MIN_FPS = 1;
+    public static final int DEFAULT_PREVIEW_MAX_FPS = 30;
+
+    public static final int DEFAULT_RECORD_WIDTH = 1920;
+    public static final int DEFAULT_RECORD_HEIGHT = 1080;
+    public static final int DEFAULT_RECORD_MODE = FRAME_FORMAT_H_264;    // H.264 mode
+    public static final int DEFAULT_RECORD_PROFILE = H264_PROFILE_DEFAULT; // Constrained High profile
+    public static final int DEFAULT_RECORD_MIN_FPS = 1;
+    public static final int DEFAULT_RECORD_MAX_FPS = 30;
 
     // --------------------------------------------------------------------------------
     public static final String CTRL_SCANNING_NAME = "scan";

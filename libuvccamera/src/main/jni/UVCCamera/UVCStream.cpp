@@ -35,7 +35,7 @@
 #else
 #define USE_LOGALL
 #undef LOG_NDEBUG
-//	#undef NDEBUG
+//  #undef NDEBUG
 #endif
 
 #include "utilbase.h"
@@ -47,7 +47,7 @@
 #define FRAME_POOL_SZ MAX_FRAME + 1
 
 UVCStream::UVCStream(v4l2_dev_t *v4l2Dev)
-      : mV4l2Dev(v4l2Dev),
+    : mV4l2Dev(v4l2Dev),
       requestBandwidth(DEFAULT_BANDWIDTH),
       mIsRunning(false),
       mIsCapturing(false),
@@ -103,12 +103,11 @@ uvc_frame_t *UVCStream::get_frame(size_t data_bytes)
     }
     pthread_mutex_unlock(&pool_mutex);
 
-    if
-        UNLIKELY(!frame)
-        {
-            LOGW("allocate new frame");
-            frame = uvc_allocate_frame(data_bytes);
-        }
+    if (UNLIKELY(!frame))
+    {
+        LOGW("allocate new frame");
+        frame = uvc_allocate_frame(data_bytes);
+    }
 
     return frame;
 }
@@ -211,7 +210,9 @@ void UVCStream::clearStreamingFrame()
     pthread_mutex_lock(&streaming_mutex);
     {
         for (int i = 0; i < streamingFrames.size(); i++)
+        {
             recycle_frame(streamingFrames[i]);
+        }
 
         streamingFrames.clear();
     }
@@ -222,12 +223,21 @@ void UVCStream::uvc_streaming_frame_callback(uvc_frame_t *frame, void *vptr_args
 {
     UVCStream *stream = reinterpret_cast<UVCStream *>(vptr_args);
 
-    if
-        UNLIKELY(!stream->isRunning() || !frame || !frame->frame_format || !frame->data || !frame->data_bytes)
+    if (UNLIKELY(!stream->isRunning() ||
+                 !frame ||
+                 !frame->frame_format ||
+                 !frame->data ||
+                 !frame->data_bytes))
+    {
         return;
+    }
 
     if (UNLIKELY(
-            (frame->frame_format != UVC_FRAME_FORMAT_MJPEG && frame->frame_format != UVC_FRAME_FORMAT_H_264 && (frame->actual_bytes < stream->frameBytes)) || (frame->width != stream->frameWidth) || (frame->height != stream->frameHeight)))
+                (frame->frame_format != UVC_FRAME_FORMAT_MJPEG &&
+                 frame->frame_format != UVC_FRAME_FORMAT_H_264 &&
+                 (frame->actual_bytes < stream->frameBytes)) ||
+                (frame->width != stream->frameWidth) ||
+                (frame->height != stream->frameHeight)))
     {
 
 #if LOCAL_DEBUG
@@ -387,7 +397,9 @@ void UVCStream::clearCaptureFrame()
     pthread_mutex_lock(&capture_mutex);
     {
         if (captureQueu)
+        {
             recycle_frame(captureQueu);
+        }
 
         captureQueu = NULL;
     }
@@ -478,14 +490,16 @@ int UVCStream::setFrameCallback(JNIEnv *env, jobject frame_callback_obj,
                 {
                     switch (callback_idx)
                     {
-                    case 0:
-                        iframecallback_fields.onFrame = methodID;
-                        break;
-                    case 1:
-                        iframecallback_fields.onRecordFrame = methodID;
-                        break;
-                    default:
-                        break;
+                        case 0:
+                            iframecallback_fields.onFrame = methodID;
+                            break;
+
+                        case 1:
+                            iframecallback_fields.onRecordFrame = methodID;
+                            break;
+
+                        default:
+                            break;
                     }
                 }
             }

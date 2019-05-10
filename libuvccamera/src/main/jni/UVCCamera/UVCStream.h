@@ -44,6 +44,15 @@ typedef struct
     jmethodID onRecordFrame;
 } Fields_iframecallback;
 
+const int pixel_formats[] =
+{
+    V4L2_PIX_FMT_YUYV,
+    V4L2_PIX_FMT_MJPEG,
+    V4L2_PIX_FMT_NV12,
+    V4L2_PIX_FMT_H264,
+    V4L2_PIX_FMT_H264_SIMULCAST
+};
+
 class UVCStream
 {
 protected:

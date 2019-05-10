@@ -149,6 +149,18 @@ static inline int get_layers_from_layout_structure(
     return ((layout_structure >> (3 * stream_id)) & 0x07);
 }
 
+static inline const char *v4l2_fourcc_to_string(char *fcc_str,
+        int fourcc)
+{
+    fcc_str[0] = (char) (fourcc & 0xFF);
+    fcc_str[1] = (char) ((fourcc & 0xFF00) >> 8);
+    fcc_str[2] = (char) ((fourcc & 0xFF0000) >> 16);
+    fcc_str[3] = (char) ((fourcc & 0xFF000000) >> 24);
+    fcc_str[4] = '\0';
+
+    return fcc_str;
+}
+
 /*
  * Initiate video device handler with default values
  * args:

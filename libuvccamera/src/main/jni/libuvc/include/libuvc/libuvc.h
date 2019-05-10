@@ -94,6 +94,8 @@ enum uvc_frame_format {
      */
     UVC_FRAME_FORMAT_YUYV,
     UVC_FRAME_FORMAT_UYVY,
+    UVC_FRAME_FORMAT_I420,
+    UVC_FRAME_FORMAT_NV12,
     /** 16-bits RGB */
     UVC_FRAME_FORMAT_RGB565,	// RGB565
     /** 24-bit RGB */

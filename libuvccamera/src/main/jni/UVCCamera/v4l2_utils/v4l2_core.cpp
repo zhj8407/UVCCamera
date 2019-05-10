@@ -780,6 +780,8 @@ int v4l2core_stop_stream(v4l2_dev_t *vd)
         LOGI("V4L2_CORE: (VIDIOC_STREAMOFF) stream stop done!!!\n");
     }
 
+    vd->running_thread = 0;
+
     return ret;
 }
 
@@ -1344,6 +1346,10 @@ static int process_input_buffer(v4l2_dev_t *vd)
 
         case V4L2_PIX_FMT_MJPEG:
             uvc_frame->frame_format = UVC_FRAME_FORMAT_MJPEG;
+            break;
+
+        case V4L2_PIX_FMT_NV12:
+            uvc_frame->frame_format = UVC_FRAME_FORMAT_NV12;
             break;
 
         case V4L2_PIX_FMT_H264:
