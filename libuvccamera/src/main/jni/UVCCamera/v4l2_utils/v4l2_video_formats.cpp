@@ -775,6 +775,8 @@ int get_format_resolution_index(v4l2_dev_t *vd, int format, int width,
     }
 
     int i = 0;
+    int found_idx = -1;
+    int resolution_matched_idx = -1;
 
     for (i = 0; i < vd->list_stream_formats[format].numb_res; i++)
     {
@@ -782,19 +784,38 @@ int get_format_resolution_index(v4l2_dev_t *vd, int format, int width,
                 && height
                 == vd->list_stream_formats[format].list_stream_cap[i].height)
         {
+            resolution_matched_idx = i;
+
             if (profile == 0)
             {
+                /* Non H264 or H264_Simulcast formats. */
                 return (i);
             }
             else if (profile
                      == vd->list_stream_formats[format].list_stream_cap[i].profile)
             {
+                /* Find the matched profile. */
                 return (i);
+            }
+            else if ((profile & 0xFF00)
+                     == (((vd->list_stream_formats[format].list_stream_cap[i].profile)) & 0xFF00))
+            {
+                /* Found the partially matched profile.
+                 * We will continue.
+                 */
+                found_idx = i;
+                continue;
             }
         }
     }
 
-    return (-1);
+    if (found_idx < 0 && resolution_matched_idx >= 0)
+    {
+        LOGI("Not found a fully or partially matched profile.\n");
+        found_idx = resolution_matched_idx;
+    }
+
+    return (found_idx);
 }
 
 /*

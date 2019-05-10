@@ -410,6 +410,7 @@ void UVCPreview::do_streaming()
         LOGI("preview_thread_func:wait for all callbacks complete");
 #endif
         v4l2core_stop_stream(mV4l2Dev);
+        v4l2core_clean_buffers(mV4l2Dev);
 #if LOCAL_DEBUG
         LOGI("Streaming finished");
 #endif

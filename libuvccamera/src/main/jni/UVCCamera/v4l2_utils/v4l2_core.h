@@ -97,6 +97,14 @@
 #define V4L2_CID_ENCODER_END                    (V4L2_CID_CAMERA_CLASS_BASE+63)
 #endif
 
+#define V4L2_ENC_RATECONTROL_MODE_RESERVED      0
+#define V4L2_ENC_RATECONTROL_MODE_VBR           1
+#define V4L2_ENC_RATECONTROL_MODE_CBR           2
+#define V4L2_ENC_RATECONTROL_MODE_CONST_QP      3
+#define V4L2_ENC_RATECONTROL_MODE_GVBR          4
+#define V4L2_ENC_RATECONTROL_MODE_VBRN          5
+#define V4L2_ENC_RATECONTROL_MODE_GVBRN         6
+
 static inline uint16_t generate_layout_structure(
     int ucConfig,
     uint16_t stream_0_layout,
@@ -115,10 +123,10 @@ static inline uint16_t generate_layout_structure(
     }
     else if (ucConfig == 1)
     {
-        stream_0_layout = clamp(stream_0_layout, 0, 2);
-        stream_1_layout = clamp(stream_1_layout, 0, 2);
-        stream_2_layout = clamp(stream_2_layout, 0, 2);
-        stream_3_layout = clamp(stream_3_layout, 0, 2);
+        stream_0_layout = clamp(stream_0_layout, 0, 3);
+        stream_1_layout = clamp(stream_1_layout, 0, 3);
+        stream_2_layout = clamp(stream_2_layout, 0, 3);
+        stream_3_layout = clamp(stream_3_layout, 0, 3);
     }
 
     layout |= ((stream_0_layout & 0x07) |
@@ -127,6 +135,18 @@ static inline uint16_t generate_layout_structure(
                ((stream_3_layout & 0x07) << 9));
 
     return layout;
+}
+
+static inline int get_layers_from_layout_structure(
+    int stream_id,
+    uint16_t layout_structure)
+{
+    if (stream_id > 3)
+    {
+        return -1;
+    }
+
+    return ((layout_structure >> (3 * stream_id)) & 0x07);
 }
 
 /*

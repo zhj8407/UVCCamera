@@ -28,28 +28,6 @@
 /*verbosity (global scope)*/
 int verbosity = 3;
 
-static uint8_t flag_fps_change = 0; /*set to 1 to request a fps change*/
-
-/*requested format data*/
-static int my_pixelformat = 0;
-static int my_width = 0;
-static int my_height = 0;
-static int my_profile = 0;
-static int my_ucconfig = 0;
-static int my_levelidc = 0;
-static int my_slicemode = 0;
-static int my_slicevalue = 0;
-static int my_rate_control_mode = 0;
-static int my_iframe_interval = 0;
-static int my_profile_toolset = 0;
-static int my_cpb_capacity = 1000;
-static int my_layer_0_avr_br = 0;
-static int my_layer_1_avr_br = 0;
-static int my_stream_0_layout = 0;
-static int my_stream_1_layout = 0;
-static int my_stream_2_layout = 0;
-static int my_stream_3_layout = 0;
-
 static int set_v4l2_framerate(v4l2_dev_t *vd);
 static void clean_v4l2_dev(v4l2_dev_t *vd);
 
@@ -457,6 +435,7 @@ v4l2_dev_t *v4l2core_init_dev(const char *device)
     /*set some defaults*/
     vd->fps_num = 1;
     vd->fps_denom = 30;
+    vd->curr_rate_control_mode = V4L2_ENC_RATECONTROL_MODE_VBR;
 
     /*open device*/
     if ((vd->fd = open(vd->videodevice, O_RDWR | O_NONBLOCK, 0)) < 0)
@@ -587,7 +566,7 @@ void v4l2core_prepare_new_format_index(v4l2_dev_t *vd, int format_index)
         format_index = 0;
     }
 
-    my_pixelformat = vd->list_stream_formats[format_index].format;
+    vd->curr_pixelformat = vd->list_stream_formats[format_index].format;
 }
 
 /*
@@ -613,7 +592,7 @@ void v4l2core_prepare_new_format(v4l2_dev_t *vd, int new_format)
         format_index = 0;
     }
 
-    my_pixelformat = vd->list_stream_formats[format_index].format;
+    vd->curr_pixelformat = vd->list_stream_formats[format_index].format;
 }
 
 /*
@@ -636,15 +615,15 @@ void v4l2core_prepare_new_resolution(v4l2_dev_t *vd, int new_width,
     /*asserts*/
     assert(vd != NULL);
 
-#if 1
-    int format_index = get_frame_format_index(vd, my_pixelformat);
+    int format_index = get_frame_format_index(vd, vd->curr_pixelformat);
 
     if (format_index < 0)
     {
         format_index = 0;
     }
 
-    if (my_pixelformat != V4L2_PIX_FMT_H264)
+    if (vd->curr_pixelformat != V4L2_PIX_FMT_H264 &&
+            vd->curr_pixelformat != V4L2_PIX_FMT_H264_SIMULCAST)
     {
         new_profile = 0;
     }
@@ -652,27 +631,28 @@ void v4l2core_prepare_new_resolution(v4l2_dev_t *vd, int new_width,
     int resolution_index = get_format_resolution_index(vd, format_index,
                            new_width, new_height, new_profile);
 
+    if (verbosity > 2)
+    {
+        LOGI("Found resolution index: %d\n", resolution_index);
+    }
+
     if (resolution_index < 0)
     {
         resolution_index = 0;
     }
 
-    my_width =
+    vd->curr_width =
         vd->list_stream_formats[format_index].list_stream_cap[resolution_index].width;
-    my_height =
+    vd->curr_height =
         vd->list_stream_formats[format_index].list_stream_cap[resolution_index].height;
-    my_profile =
+    vd->curr_profile =
         vd->list_stream_formats[format_index].list_stream_cap[resolution_index].profile;
-#else
-    my_width = new_width;
-    my_height = new_height;
-    my_profile = new_profile;
-#endif
-    my_ucconfig = new_ucconfig;
-    my_stream_0_layout = new_stream_0_layout;
-    my_stream_1_layout = new_stream_1_layout;
-    my_stream_2_layout = new_stream_2_layout;
-    my_stream_3_layout = new_stream_3_layout;
+
+    vd->curr_ucconfig = new_ucconfig;
+    vd->stream_0_layout = new_stream_0_layout;
+    vd->stream_1_layout = new_stream_1_layout;
+    vd->stream_2_layout = new_stream_2_layout;
+    vd->stream_3_layout = new_stream_3_layout;
 }
 
 /*
@@ -795,6 +775,11 @@ int v4l2core_stop_stream(v4l2_dev_t *vd)
         __THREAD_JOIN(vd->running_thread);
     }
 
+    if (verbosity > 2)
+    {
+        LOGI("V4L2_CORE: (VIDIOC_STREAMOFF) stream stop done!!!\n");
+    }
+
     return ret;
 }
 
@@ -821,15 +806,10 @@ int v4l2core_clean_buffers(v4l2_dev_t *vd)
 
     if (vd->streaming == STRM_OK)
     {
-        if ((ret = v4l2core_stop_stream(vd)) < 0)
-        {
-            LOGW("Failed to stop the stream. error: %s\n", strerror(errno));
-
-            if (errno != ENODEV)
-            {
-                return ret;
-            }
-        }
+        /* Ignore the return value. We must unmap
+         * the buffers anyway.
+         */
+        v4l2core_stop_stream(vd);
     }
 
     // unmap queue buffers
@@ -929,7 +909,7 @@ void v4l2core_request_framerate_update(v4l2_dev_t *vd)
      */
     if (vd->streaming == STRM_OK)
     {
-        flag_fps_change = 1;
+        vd->flag_fps_change = 1;
     }
     else
     {
@@ -1073,8 +1053,13 @@ static int set_v4l2_framerate(v4l2_dev_t *vd)
  * returns: error code ( E_OK)
  */
 static int try_video_stream_format(v4l2_dev_t *vd, int width, int height,
-                                   int pixelformat, int profile, int ucconfig, int stream_0_layout,
-                                   int stream_1_layout, int stream_2_layout, int stream_3_layout)
+                                   int pixelformat, int profile,
+                                   int ucconfig,
+                                   int rate_control_mode,
+                                   int stream_0_layout,
+                                   int stream_1_layout,
+                                   int stream_2_layout,
+                                   int stream_3_layout)
 {
     /*assertions*/
     assert(vd != NULL);
@@ -1099,7 +1084,9 @@ static int try_video_stream_format(v4l2_dev_t *vd, int width, int height,
 
     /* make sure we set a valid format*/
     if (verbosity > 0)
-        LOGI("V4L2_CORE: checking format: %c%c%c%c\n",
+        LOGI("V4L2_CORE: checking format: %dX%d@%c%c%c%c\n",
+             vd->format.fmt.pix.width,
+             vd->format.fmt.pix.height,
              (vd->format.fmt.pix.pixelformat) & 0xFF,
              ((vd->format.fmt.pix.pixelformat) >> 8) & 0xFF,
              ((vd->format.fmt.pix.pixelformat) >> 16) & 0xFF,
@@ -1112,13 +1099,15 @@ static int try_video_stream_format(v4l2_dev_t *vd, int width, int height,
 
     if (vd->requested_fmt == V4L2_PIX_FMT_H264)
     {
-        vd->format.fmt.pix.priv |= ((profile & 0xFFFF) << 16 | ((ucconfig + 1) & 0xFF));
+        vd->format.fmt.pix.priv |= ((profile & 0xFFFF) << 16 |
+                                    (rate_control_mode) << 8 |
+                                    (stream_0_layout & 0x0F) << 4 |
+                                    ((ucconfig + 1) & 0xFF));
 
         if (verbosity > 0)
         {
-            LOGI(
-                "V4L2_CORE: request H264 stream. Profile: 0x%04x, UCConfig: %d\n",
-                profile, ucconfig);
+            LOGI("V4L2_CORE: request H264 stream. Profile: 0x%04x, UCConfig: %d\n",
+                 profile, ucconfig);
             LOGI("V4L2_CORE: private data is 0x%08x\n",
                  vd->format.fmt.pix.priv);
         }
@@ -1136,7 +1125,7 @@ static int try_video_stream_format(v4l2_dev_t *vd, int width, int height,
                 stream_3_layout, layout);
         }
 
-        vd->format.fmt.pix.priv |= (layout << 16 | ((ucconfig + 1) & 0xFF));
+        vd->format.fmt.pix.priv |= (layout << 16 | (rate_control_mode) << 8 | ((ucconfig + 1) & 0xFF));
     }
 
     ret = xioctl(vd->fd, VIDIOC_S_FMT, &vd->format);
@@ -1155,6 +1144,35 @@ static int try_video_stream_format(v4l2_dev_t *vd, int width, int height,
     {
         LOGE("V4L2_CORE: Requested resolution unavailable: got width %d height %d\n",
              vd->format.fmt.pix.width, vd->format.fmt.pix.height);
+    }
+
+    if (vd->requested_fmt == V4L2_PIX_FMT_H264_SIMULCAST)
+    {
+        uint8_t real_ucconfig = (vd->format.fmt.pix.priv & 0x0F) - 1;
+        uint16_t layouts = vd->format.fmt.pix.priv >> 16;
+        uint8_t layout0 = get_layers_from_layout_structure(0, layouts);
+        uint8_t layout1 = get_layers_from_layout_structure(1, layouts);
+        uint8_t layout2 = get_layers_from_layout_structure(2, layouts);
+        uint8_t layout3 = get_layers_from_layout_structure(3, layouts);
+
+        if (verbosity > 0)
+            LOGI("V4L2_Core: get S264 stream layout: %d:%d:%d:%d (UCConfig: %d)\n",
+                 layout0,
+                 layout1,
+                 layout2,
+                 layout3,
+                 real_ucconfig);
+
+    }
+    else if (vd->requested_fmt == V4L2_PIX_FMT_H264)
+    {
+        uint8_t real_ucconfig = (vd->format.fmt.pix.priv & 0x0F) - 1;
+        uint8_t layout = ((vd->format.fmt.pix.priv >> 4) & 0x0F);
+
+        if (verbosity > 0)
+            LOGI("V4L2_Core: get H264 stream layout: %d (UCConfig: %d)\n",
+                 layout,
+                 real_ucconfig);
     }
 
     switch (vd->cap_meth)
@@ -1278,27 +1296,10 @@ int v4l2core_update_current_format(v4l2_dev_t *vd)
     /*asserts*/
     assert(vd != NULL);
 
-    return try_video_stream_format(vd, my_width, my_height, my_pixelformat,
-                                   my_profile, my_ucconfig, my_stream_0_layout, my_stream_1_layout,
-                                   my_stream_2_layout, my_stream_3_layout);
-}
-
-int v4l2core_update_h264_settings(int level_idc, int slice_mode,
-                                  int slice_value, int rate_control_mode, int iframe_interval,
-                                  int profile_toolset, int cpb_capcity, int avr_br_layer_0,
-                                  int avr_br_layer_1)
-{
-    my_levelidc = level_idc;
-    my_slicemode = slice_mode;
-    my_slicevalue = slice_value;
-    my_rate_control_mode = rate_control_mode;
-    my_iframe_interval = iframe_interval;
-    my_profile_toolset = profile_toolset;
-    my_cpb_capacity = cpb_capcity;
-    my_layer_0_avr_br = avr_br_layer_0;
-    my_layer_1_avr_br = avr_br_layer_1;
-
-    return 0;
+    return try_video_stream_format(vd, vd->curr_width, vd->curr_height, vd->curr_pixelformat,
+                                   vd->curr_profile, vd->curr_ucconfig, vd->curr_rate_control_mode,
+                                   vd->stream_0_layout, vd->stream_1_layout,
+                                   vd->stream_2_layout, vd->stream_3_layout);
 }
 
 static void *_v4l2_frame_ready_caller(void *arg)
@@ -1406,7 +1407,7 @@ static int check_frame_available(v4l2_dev_t *vd)
     }
 
     /*a fps change was requested while streaming*/
-    if (flag_fps_change > 0)
+    if (vd->flag_fps_change > 0)
     {
         if (verbosity > 2)
         {
@@ -1414,7 +1415,7 @@ static int check_frame_available(v4l2_dev_t *vd)
         }
 
         set_v4l2_framerate(vd);
-        flag_fps_change = 0;
+        vd->flag_fps_change = 0;
     }
 
     FD_ZERO(&rdset);

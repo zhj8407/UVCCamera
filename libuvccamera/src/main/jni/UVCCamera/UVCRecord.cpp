@@ -313,6 +313,7 @@ void UVCRecord::do_streaming()
         LOGI("record_thread_func:wait for all callbacks complete\n");
 #endif
         v4l2core_stop_stream(mV4l2Dev);
+        v4l2core_clean_buffers(mV4l2Dev);
 #if LOCAL_DEBUG
         LOGI("Streaming finished\n");
 #endif

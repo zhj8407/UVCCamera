@@ -162,8 +162,22 @@ typedef struct _v4l2_dev_t
 
     int requested_fmt; // requested fomat
 
+    int curr_pixelformat;
+    int curr_width;
+    int curr_height;
+    int curr_profile;
+    int curr_ucconfig;
+    int curr_rate_control_mode;
+
+    int stream_0_layout;
+    int stream_1_layout;
+    int stream_2_layout;
+    int stream_3_layout;
+
     int fps_num;   // fps numerator
     int fps_denom; // fps denominator
+
+    uint8_t flag_fps_change; // set to 1 to request a fps change
 
     uint8_t streaming;               // flag device stream : STRM_STOP ; STRM_REQ_STOP; STRM_OK
     uint64_t frame_index;            // captured frame index from 0 to max(uint64_t)
