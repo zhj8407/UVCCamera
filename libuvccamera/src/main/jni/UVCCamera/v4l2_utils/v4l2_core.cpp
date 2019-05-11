@@ -32,7 +32,7 @@
 #include "utilbase.h"
 
 /*verbosity (global scope)*/
-int verbosity = 3;
+int verbosity = 0;
 
 static int set_v4l2_framerate(v4l2_dev_t *vd);
 static void clean_v4l2_dev(v4l2_dev_t *vd);

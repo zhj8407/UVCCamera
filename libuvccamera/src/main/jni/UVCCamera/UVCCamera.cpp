@@ -39,6 +39,8 @@
 //
 //**********************************************************************
 #include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
 #include <linux/time.h>
 #include <unistd.h>
 #include <string.h>
@@ -48,6 +50,11 @@
 
 #include <sys/ioctl.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <limits.h>
+#include <string.h>
+#include <fcntl.h>
+#include <dirent.h>
 
 #include "UVCCamera.h"
 #include "Parameters.h"
@@ -70,8 +77,6 @@ UVCCamera::UVCCamera()
 {
 
     ENTER();
-    mCameraIds[UVC_PREVIEW_DEVICE_ID] = "/dev/video0";
-    mCameraIds[UVC_RECORD_DEVICE_ID] = "/dev/video1";
 
     memset(mV4l2Devices, 0x00, UVC_MAX_DEVICES_NUM * sizeof(v4l2_dev_t *));
 
@@ -85,51 +90,221 @@ UVCCamera::~UVCCamera()
     EXIT();
 }
 
+int readFromFile(const char *filename, const char *format, ...)
+{
+    va_list args;
+    int fd = 0;
+    char buf[PATH_MAX];
+    int len;
+
+    fd = open(filename, O_RDONLY);
+
+    if (fd < 0)
+    {
+        LOGE("Can not open the file: %s, error: %s(%d)\n",
+             filename, strerror(errno), errno);
+        return -1;
+    }
+
+    len = read(fd, buf, sizeof(buf));
+
+    if (len <= 0)
+    {
+        LOGE("Can not read data from file: %s, error: %s(%d)\n",
+             filename, strerror(errno), errno);
+        close(fd);
+        return -1;
+    }
+
+    va_start(args, format);
+    len = vsscanf(buf, format, args);
+    va_end(args);
+
+    if (len <= 0)
+    {
+        LOGE("Can not parse the value from %s\n", filename);
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+    return len;
+}
+
+#define LINUX_V4L2_CLASS_SYSFS  "/sys/class/video4linux"
+
+void UVCCamera::getAvailableV4l2Devices(int vendorId,
+                                        int productId,
+                                        const std::string &serial,
+                                        int busNum)
+{
+    struct dirent *de;
+    DIR *dir;
+    char name[PATH_MAX];
+    char linkname[PATH_MAX];
+    int ret;
+
+    dir = opendir(LINUX_V4L2_CLASS_SYSFS);
+
+    if (dir == NULL)
+    {
+        return;
+    }
+
+    rewinddir(dir);
+
+    while ((de = readdir(dir)) != NULL)
+    {
+        if (strcmp(de->d_name, ".") == 0 ||
+                strcmp(de->d_name, "..") == 0)
+        {
+            continue;
+        }
+
+        /* We only care about the videoX device. */
+        if (strncmp(de->d_name, "video", 5) != 0)
+        {
+            continue;
+        }
+
+        snprintf(name, sizeof(name), "%s/%s",
+                 LINUX_V4L2_CLASS_SYSFS,
+                 de->d_name);
+
+        ret = readlink(name, linkname, PATH_MAX);
+
+        if (ret < 0 || ret >= PATH_MAX)
+        {
+            continue;
+        }
+
+        std::string linkNameStr(linkname);
+
+        /* Confirm the usb[busnum] is in the path */
+        snprintf(name, sizeof(name), "usb%d", busNum);
+
+        size_t keywordIndex = linkNameStr.find(name);
+
+        if (keywordIndex == std::string::npos)
+        {
+            continue;
+        }
+
+        keywordIndex = linkNameStr.find("/video4linux");
+
+        if (keywordIndex == std::string::npos)
+        {
+            continue;
+        }
+
+        linkNameStr = linkNameStr.substr(0, keywordIndex);
+
+        keywordIndex = linkNameStr.find_last_of("/");
+
+        if (keywordIndex == std::string::npos)
+        {
+            continue;
+        }
+
+        std::string usbBusPath = linkNameStr.substr(0, keywordIndex);
+
+        int vid, pid;
+        char serialBuf[PATH_MAX];
+
+        snprintf(name, sizeof(name), "%s/%s/idVendor",
+                 LINUX_V4L2_CLASS_SYSFS,
+                 usbBusPath.c_str());
+        ret = readFromFile(name, "%x\n", &vid);
+
+        if (ret <= 0 || vid != vendorId)
+        {
+            continue;
+        }
+
+        snprintf(name, sizeof(name), "%s/%s/idProduct",
+                 LINUX_V4L2_CLASS_SYSFS,
+                 usbBusPath.c_str());
+        ret = readFromFile(name, "%x\n", &pid);
+
+        if (ret <= 0 || pid != productId)
+        {
+            continue;
+        }
+
+        snprintf(name, sizeof(name), "%s/%s/serial",
+                 LINUX_V4L2_CLASS_SYSFS,
+                 usbBusPath.c_str());
+        ret = readFromFile(name, "%s\n", serialBuf);
+
+        if (ret <= 0 || strcmp(serialBuf, serial.c_str()) != 0)
+        {
+            continue;
+        }
+
+        snprintf(name, sizeof(name), "/dev/%s", de->d_name);
+
+        mCameraIds.push_back(name);
+    }
+
+    closedir(dir);
+}
 
 //======================================================================
 
-int UVCCamera::connect(int vid, int pid, int fd, int busnum, int devaddr, const char *usbfs)
+int UVCCamera::connect(int vid, int pid, int busnum, const char *serialNum)
 {
     ENTER();
     uvc_error_t result = UVC_ERROR_BUSY;
 
-    if (mV4l2Devices[UVC_PREVIEW_DEVICE_ID] == nullptr)
-    {
-        mV4l2Devices[UVC_PREVIEW_DEVICE_ID] = v4l2core_init_dev(mCameraIds[UVC_PREVIEW_DEVICE_ID].c_str());
+    /* Reset the cameras. */
+    mCameraIds.clear();
 
+    getAvailableV4l2Devices(vid, pid, std::string(serialNum), busnum);
+
+    if (mCameraIds.size() >= 2)
+    {
         if (mV4l2Devices[UVC_PREVIEW_DEVICE_ID] == nullptr)
         {
-            LOGE("%s: v4l2core_init_dev (%s) failed\n", __FUNCTION__, mCameraIds[UVC_PREVIEW_DEVICE_ID].c_str());
-            return UVC_ERROR_NO_DEVICE;
+            mV4l2Devices[UVC_PREVIEW_DEVICE_ID] = v4l2core_init_dev(mCameraIds[UVC_PREVIEW_DEVICE_ID].c_str());
+
+            if (mV4l2Devices[UVC_PREVIEW_DEVICE_ID] == nullptr)
+            {
+                LOGE("%s: v4l2core_init_dev (%s) failed\n", __FUNCTION__, mCameraIds[UVC_PREVIEW_DEVICE_ID].c_str());
+                return UVC_ERROR_NO_DEVICE;
+            }
+
+            mPreview = new UVCPreview(mV4l2Devices[UVC_PREVIEW_DEVICE_ID]);
         }
-
-        mPreview = new UVCPreview(mV4l2Devices[UVC_PREVIEW_DEVICE_ID]);
-    }
-    else
-    {
-        LOGW("%s: v4l2core_init_dev (%s) camera is already opened. you should release firstly.\n",
-             __FUNCTION__, mCameraIds[UVC_PREVIEW_DEVICE_ID].c_str());
-    }
-
-    if (mV4l2Devices[UVC_RECORD_DEVICE_ID] == nullptr)
-    {
-        mV4l2Devices[UVC_RECORD_DEVICE_ID] = v4l2core_init_dev(mCameraIds[UVC_RECORD_DEVICE_ID].c_str());
+        else
+        {
+            LOGW("%s: v4l2core_init_dev (%s) camera is already opened. you should release firstly.\n",
+                 __FUNCTION__, mCameraIds[UVC_PREVIEW_DEVICE_ID].c_str());
+        }
 
         if (mV4l2Devices[UVC_RECORD_DEVICE_ID] == nullptr)
         {
-            LOGE("%s: v4l2core_init_dev (%s) failed\n", __FUNCTION__, mCameraIds[UVC_RECORD_DEVICE_ID].c_str());
-            return UVC_ERROR_NO_DEVICE;
+            mV4l2Devices[UVC_RECORD_DEVICE_ID] = v4l2core_init_dev(mCameraIds[UVC_RECORD_DEVICE_ID].c_str());
+
+            if (mV4l2Devices[UVC_RECORD_DEVICE_ID] == nullptr)
+            {
+                LOGE("%s: v4l2core_init_dev (%s) failed\n", __FUNCTION__, mCameraIds[UVC_RECORD_DEVICE_ID].c_str());
+                return UVC_ERROR_NO_DEVICE;
+            }
+
+            mRecord = new UVCRecord(mV4l2Devices[UVC_RECORD_DEVICE_ID]);
+        }
+        else
+        {
+            LOGW("%s: v4l2core_init_dev (%s) camera is already opened. you should release firstly.\n",
+                 __FUNCTION__, mCameraIds[UVC_RECORD_DEVICE_ID].c_str());
         }
 
-        mRecord = new UVCRecord(mV4l2Devices[UVC_RECORD_DEVICE_ID]);
+        result = UVC_SUCCESS;
     }
     else
     {
-        LOGW("%s: v4l2core_init_dev (%s) camera is already opened. you should release firstly.\n",
-             __FUNCTION__, mCameraIds[UVC_RECORD_DEVICE_ID].c_str());
+        result = UVC_ERROR_NO_DEVICE;
     }
-
-    result = UVC_SUCCESS;
 
     RETURN(result, int);
 }

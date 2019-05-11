@@ -166,22 +166,22 @@ static void nativeDestroy(JNIEnv *env, jobject thiz,
 // カメラへ接続
 static jint nativeConnect(JNIEnv *env, jobject thiz,
                           ID_TYPE id_camera,
-                          jint vid, jint pid, jint fd,
-                          jint busNum, jint devAddr, jstring usbfs_str)
+                          jint vid, jint pid,
+                          jint busNum, jstring usbserial)
 {
 
     ENTER();
     int result = JNI_ERR;
     UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
-    const char *c_usbfs = env->GetStringUTFChars(usbfs_str, JNI_FALSE);
 
-    if (LIKELY(camera && (fd > 0)))
+    const char *c_usbserial = env->GetStringUTFChars(usbserial, JNI_FALSE);
+
+    if (LIKELY(camera))
     {
-        //      libusb_set_debug(NULL, LIBUSB_LOG_LEVEL_DEBUG);
-        result = camera->connect(vid, pid, fd, busNum, devAddr, c_usbfs);
+        result = camera->connect(vid, pid, busNum, c_usbserial);
     }
 
-    env->ReleaseStringUTFChars(usbfs_str, c_usbfs);
+    env->ReleaseStringUTFChars(usbserial, c_usbserial);
     RETURN(result, jint);
 }
 
@@ -417,8 +417,7 @@ static jboolean nativeIsVideoControlSupported(JNIEnv *env, jobject thiz,
 
     if (LIKELY(camera))
     {
-        jboolean isCopy;
-        const char *ctrl_name_str = env->GetStringUTFChars(ctrl_name, &isCopy);
+        const char *ctrl_name_str = env->GetStringUTFChars(ctrl_name, JNI_FALSE);
 
         if (LIKELY(ctrl_name_str))
         {
@@ -442,8 +441,7 @@ static jint nativeSetVideoControlSetList(JNIEnv *env, jobject thiz,
 
     if (LIKELY(camera))
     {
-        jboolean isCopy;
-        const char *ctrl_sets_str = env->GetStringUTFChars(ctrl_sets, &isCopy);
+        const char *ctrl_sets_str = env->GetStringUTFChars(ctrl_sets, JNI_FALSE);
 
         if (LIKELY(ctrl_sets_str))
         {
@@ -2903,7 +2901,7 @@ static JNINativeMethod methods[] =
     {"nativeCreate", "()J", (void *)nativeCreate},
     {"nativeDestroy", "(J)V", (void *)nativeDestroy},
     //
-    {"nativeConnect", "(JIIIIILjava/lang/String;)I", (void *)nativeConnect},
+    {"nativeConnect", "(JIIILjava/lang/String;)I", (void *)nativeConnect},
     {"nativeRelease", "(J)I", (void *)nativeRelease},
 
     {"nativeSetStatusCallback", "(JLcom/polycom/uvccamera/usb/IStatusCallback;)I", (void *)nativeSetStatusCallback},

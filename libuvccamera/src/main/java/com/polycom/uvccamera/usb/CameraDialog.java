@@ -239,10 +239,11 @@ public class CameraDialog extends DialogFragment {
             if (convertView instanceof CheckedTextView) {
                 final UsbDevice device = getItem(position);
                 ((CheckedTextView) convertView).setText(
-                        String.format("UVC Camera:(%04x:%04x:%s - %s)",
+                        String.format("%s:(%04x:%04x:%s - %s)",
+                                device.getProductName(),
                                 device.getVendorId(), device.getProductId(),
                                 device.getDeviceName(),
-                                device.getProductName()));
+                                device.getSerialNumber()));
             }
             return convertView;
         }

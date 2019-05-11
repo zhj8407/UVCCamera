@@ -287,11 +287,10 @@ public class UVCCamera {
         try {
             mCtrlBlock = ctrlBlock.clone();
             result = nativeConnect(mNativePtr,
-                    mCtrlBlock.getVenderId(), mCtrlBlock.getProductId(),
-                    mCtrlBlock.getFileDescriptor(),
+                    mCtrlBlock.getVenderId(),
+                    mCtrlBlock.getProductId(),
                     mCtrlBlock.getBusNum(),
-                    mCtrlBlock.getDevNum(),
-                    getUSBFSName(mCtrlBlock));
+                    mCtrlBlock.getSerial());
         } catch (final Exception e) {
             Log.w(TAG, e);
             result = -1;
@@ -1415,7 +1414,7 @@ public class UVCCamera {
     private final native void nativeDestroy(final long id_camera);
 
     private final native int nativeConnect(long id_camera, int venderId, int productId,
-            int fileDescriptor, int busNum, int devAddr, String usbfs);
+            int busNum, String usbSerial);
 
     private static final native int nativeRelease(final long id_camera);
 

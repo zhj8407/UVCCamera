@@ -37,6 +37,7 @@
 #include "UVCRecord.h"
 
 #include <string>
+#include <vector>
 
 #include "v4l2_core.h"
 #include "v4l2_controls.h"
@@ -47,7 +48,7 @@
 
 class UVCCamera
 {
-    std::string mCameraIds[UVC_MAX_DEVICES_NUM];
+    std::vector<std::string> mCameraIds;
 
     v4l2_dev_t *mV4l2Devices[UVC_MAX_DEVICES_NUM];
 
@@ -121,20 +122,31 @@ private:
         return ret;
     }
 
+    void getAvailableV4l2Devices(int vendorId,
+                                 int productId,
+                                 const std::string &serial,
+                                 int busNum);
+
 public :
     UVCCamera();
     ~UVCCamera();
 
-    int connect(int vid, int pid, int fd, int busnum, int devaddr, const char *usbfs);
+    int connect(int vid, int pid, int busnum, const char *serialNum);
     int release();
 
     int setStatusCallback(JNIEnv *env, jobject status_callback_obj);
     int setButtonCallback(JNIEnv *env, jobject button_callback_obj);
 
     char *getSupportedSize();
-    int setPreviewSize(int width, int height, int min_fps, int max_fps, int mode, float bandwidth = DEFAULT_BANDWIDTH);
-    int setRecordSize(int width, int height, int profile, int min_fps, int max_fps, int mode, float bandwidth = DEFAULT_BANDWIDTH);
-    int setRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth = DEFAULT_BANDWIDTH);
+    int setPreviewSize(int width, int height, int min_fps,
+                       int max_fps, int mode,
+                       float bandwidth = DEFAULT_BANDWIDTH);
+    int setRecordSize(int width, int height, int profile, int min_fps,
+                      int max_fps, int mode,
+                      float bandwidth = DEFAULT_BANDWIDTH);
+    int setRecordSize(int width, int height, int profile, int usage, int min_fps,
+                      int max_fps, int mode,
+                      float bandwidth = DEFAULT_BANDWIDTH);
     int setPreviewDisplay(ANativeWindow *preview_window);
     int setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pixel_format);
     int startPreview();
