@@ -1304,8 +1304,8 @@ uvc_error_t uvc_parse_vc_encoding_unit(uvc_device_t *dev,
     for (i = 6 + 2 * block[6]; i >= 7 + block[6]; i--)
         unit->bmRunningControls = block[i] + (unit->bmRunningControls << 8);
 
-    LOGI("Encoding Unit: bmControls: %llx, bmRunningControls: %llx\n",
-        unit->bmControls, unit->bmRunningControls);
+    LOGI("Encoding Unit: bmControls: %" PRIx64 ", bmRunningControls: %" PRIx64 "\n",
+         unit->bmControls, unit->bmRunningControls);
 
     DL_APPEND(info->ctrl_if.encoding_unit_descs, unit);
 

@@ -743,6 +743,9 @@ int v4l2core_stop_stream(v4l2_dev_t *vd)
     int type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
     int ret = E_OK;
 
+    /*Clean up the control sets.*/
+    vd->controls_set_list.clear();
+
     switch (vd->cap_meth)
     {
         case IO_READ:
@@ -1752,6 +1755,9 @@ void v4l2core_gen_ctrl_list(v4l2_dev_t *vd, const std::string &str, char delim)
 
     std::stringstream ss(str);
     std::string token;
+
+    /* Firstly, we need to clean up the list. */
+    vd->controls_set_list.clear();
 
     while (std::getline(ss, token, delim))
     {

@@ -269,6 +269,16 @@ abstract class AbstractUVCCameraHandler extends Handler {
         return thread != null && thread.mUVCCamera != null && thread.mUVCCamera.checkSupportFlag(ctrlName);
     }
 
+    public int setVideoParams(final String ctrlSets) {
+        checkReleased();
+        final CameraThread thread = mWeakThread.get();
+        final UVCCamera camera = thread != null ? thread.mUVCCamera : null;
+        if (camera != null) {
+            return camera.setVideoParams(ctrlSets);
+        }
+        return -1;
+    }
+
     public int getValue(final int flag) {
         checkReleased();
         final CameraThread thread = mWeakThread.get();

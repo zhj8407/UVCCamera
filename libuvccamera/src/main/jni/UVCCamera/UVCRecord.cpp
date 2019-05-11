@@ -54,8 +54,7 @@ UVCRecord::UVCRecord(v4l2_dev_t *v4l2Dev)
       requestUsage(DEFAULT_RECORD_USAGE),
       recordBytes(DEFAULT_RECORD_WIDTH * DEFAULT_RECORD_HEIGHT * 3 / 8),
       recordFormat(WINDOW_FORMAT_RGBA_8888),
-      stream_probed(false),
-      stream_committed(false)
+      stream_probed(false)
 {
 
     ENTER();
@@ -167,49 +166,6 @@ int UVCRecord::setRecordSize(int width, int height, int profile, int usage, int 
     RETURN(result, int);
 }
 
-int UVCRecord::commitRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth)
-{
-    ENTER();
-
-    int result = 0;
-
-    if (mode == H264_FORMAT_RECORD_MODE || mode == S264_FORMAT_RECORD_MODE)
-    {
-        requestWidth = width;
-        requestHeight = height;
-        requestMinFps = min_fps;
-        requestMaxFps = max_fps;
-        requestMode = mode;
-        requestProfile = profile;
-        requestUsage = usage;
-        requestBandwidth = bandwidth;
-
-        v4l2core_prepare_new_format(mV4l2Dev,
-                                    pixel_formats[requestMode]);
-        v4l2core_prepare_new_resolution(mV4l2Dev,
-                                        requestWidth,
-                                        requestHeight,
-                                        requestProfile,
-                                        requestUsage - 1,
-                                        0,
-                                        0,
-                                        0,
-                                        0);
-        v4l2core_define_fps(mV4l2Dev, requestMinFps, requestMaxFps);
-    }
-    else
-    {
-        result = -1;
-    }
-
-    if (!result)
-    {
-        stream_probed = stream_committed = true;
-    }
-
-    RETURN(result, int);
-}
-
 int UVCRecord::setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pixel_format)
 {
 
@@ -237,7 +193,7 @@ int UVCRecord::stopRecord()
 
     stopStreaming();
 
-    stream_probed = stream_committed = false;
+    stream_probed = false;
 
     RETURN(0, int);
 }
@@ -277,9 +233,6 @@ int UVCRecord::prepare_streaming()
 
         frameMode = requestMode;
         frameBytes = frameWidth * frameHeight * 3 / 8;
-
-        v4l2core_gen_ctrl_list(mV4l2Dev,
-                               std::string("encoder_select_layer=0x0000,encoder_h_264_profile_toolset=0x4D00,encoder_select_layer=0x0000,encoder_average_bitrate=4096000"));
 
         v4l2core_do_ctrl_list_set(mV4l2Dev);
     }

@@ -238,19 +238,6 @@ int UVCCamera::setRecordSize(int width, int height, int profile, int usage, int 
     RETURN(result, int);
 }
 
-int UVCCamera::commitRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth)
-{
-    ENTER();
-    int result = EXIT_FAILURE;
-
-    if (mRecord)
-    {
-        result = mRecord->commitRecordSize(width, height, profile, usage, min_fps, max_fps, mode, bandwidth);
-    }
-
-    RETURN(result, int);
-}
-
 int UVCCamera::setPreviewDisplay(ANativeWindow *preview_window)
 {
     ENTER();
@@ -367,6 +354,30 @@ bool UVCCamera::getVideoControlSupported(const char *ctrlName, int deviceID)
     }
 
     RETURN(ret, bool);
+}
+
+//======================================================================
+int UVCCamera::setVideoControlSetList(const char *ctrlSets, int deviceID)
+{
+    ENTER();
+
+    int ret = -1;
+
+    if (deviceID < 0 || deviceID >= UVC_MAX_DEVICES_NUM)
+    {
+        return ret;
+    }
+
+    if (mV4l2Devices[deviceID] != NULL)
+    {
+        v4l2_dev_t *vd = mV4l2Devices[deviceID];
+
+        v4l2core_gen_ctrl_list(vd, std::string(ctrlSets));
+
+        ret = 0;
+    }
+
+    RETURN(ret, int);
 }
 
 //======================================================================

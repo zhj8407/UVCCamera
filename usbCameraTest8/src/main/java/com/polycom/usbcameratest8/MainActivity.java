@@ -78,7 +78,7 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
      * preview mode
      * if your camera does not support specific resolution and mode,
      * {@link UVCCamera#setPreviewSize(int, int, int)} throw exception
-     * 0:YUYV, other:MJPEG
+     * 0:YUYV, 1:MJPEG, 2:NV12
      */
     private static final int PREVIEW_MODE = 1;
     /**
@@ -119,6 +119,35 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
      * button for start/stop recording
      */
     private ImageButton mCaptureButton;
+    private View mBrightnessButton, mContrastButton;
+    private View mZoomButton, mPanButtion, mTiltButton;
+    private View mResetButton;
+    private View mToolsLayout, mValueLayout;
+    private final Runnable mUpdateItemsOnUITask = new Runnable() {
+        @Override
+        public void run() {
+            if (isFinishing()) return;
+            final int visible_active = isActive() ? View.VISIBLE : View.INVISIBLE;
+            mToolsLayout.setVisibility(visible_active);
+
+            mBrightnessButton.setVisibility(
+                    checkSupportFlag(UVCCamera.PU_BRIGHTNESS_NAME)
+                            ? visible_active : View.INVISIBLE);
+            mContrastButton.setVisibility(
+                    checkSupportFlag(UVCCamera.PU_CONTRAST_NAME)
+                            ? visible_active : View.INVISIBLE);
+            mZoomButton.setVisibility(
+                    checkSupportFlag(UVCCamera.CTRL_ZOOM_ABS_NAME)
+                            ? visible_active : View.INVISIBLE);
+            mPanButtion.setVisibility(
+                    checkSupportFlag(UVCCamera.CTRL_PAN_ABS_NAME)
+                            ? visible_active : View.INVISIBLE);
+            mTiltButton.setVisibility(
+                    checkSupportFlag(UVCCamera.CTRL_TILT_ABS_NAME)
+                            ? visible_active : View.INVISIBLE);
+
+        }
+    };
     private final CompoundButton.OnCheckedChangeListener mOnCheckedChangeListener
             = new CompoundButton.OnCheckedChangeListener() {
         @Override
@@ -173,35 +202,6 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
         @Override
         public void onCancel(final UsbDevice device) {
             setCameraButton(false);
-        }
-    };
-    private View mBrightnessButton, mContrastButton;
-    private View mZoomButton, mPanButtion, mTiltButton;
-    private View mResetButton;
-    private View mToolsLayout, mValueLayout;
-    private final Runnable mUpdateItemsOnUITask = new Runnable() {
-        @Override
-        public void run() {
-            if (isFinishing()) return;
-            final int visible_active = isActive() ? View.VISIBLE : View.INVISIBLE;
-            mToolsLayout.setVisibility(visible_active);
-
-            mBrightnessButton.setVisibility(
-                    checkSupportFlag(UVCCamera.PU_BRIGHTNESS_NAME)
-                            ? visible_active : View.INVISIBLE);
-            mContrastButton.setVisibility(
-                    checkSupportFlag(UVCCamera.PU_CONTRAST_NAME)
-                            ? visible_active : View.INVISIBLE);
-            mZoomButton.setVisibility(
-                    checkSupportFlag(UVCCamera.CTRL_ZOOM_ABS_NAME)
-                            ? visible_active : View.INVISIBLE);
-            mPanButtion.setVisibility(
-                    checkSupportFlag(UVCCamera.CTRL_PAN_ABS_NAME)
-                            ? visible_active : View.INVISIBLE);
-            mTiltButton.setVisibility(
-                    checkSupportFlag(UVCCamera.CTRL_TILT_ABS_NAME)
-                            ? visible_active : View.INVISIBLE);
-
         }
     };
     private SeekBar mSettingSeekbar;
@@ -312,17 +312,18 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
                         if (checkPermissionWriteExternalStorage() && checkPermissionAudio()) {
                             if (!mCameraHandler.isRecording()) {
                                 mCaptureButton.setColorFilter(0xffff0000);    // turn red
-                                //mCameraHandler.startCapture();
+                                setRecordVideoParams("encoder_select_layer=0x0000," +
+                                        "encoder_h_264_profile_toolset=0x4D00," +
+                                        "encoder_select_layer=0x0000," +
+                                        "encoder_average_bitrate=4096000");
                                 mCameraHandler.startRecord();
-                                setValue(UVCCamera.EU_AVERAGE_BIT_RATE, 4000000);
                             } else {
                                 if (count++ > 5) {
                                     mCaptureButton.setColorFilter(0);    // return to default color
-                                    //mCameraHandler.stopCapture();
                                     mCameraHandler.stopRecord();
                                     count = 0;
                                 } else {
-                                    setValue(UVCCamera.EU_SYNC_REF_FRAME, 0x138801);
+                                    setValue(UVCCamera.EU_SYNC_REF_FRAME, 1);
                                 }
                             }
                         }
@@ -486,6 +487,10 @@ public final class MainActivity extends BaseActivity implements CameraDialog.Cam
 
     private boolean checkSupportFlag(final String ctrlName) {
         return mCameraHandler != null && mCameraHandler.checkSupportFlag(ctrlName);
+    }
+
+    private int setRecordVideoParams(final String ctrlSets) {
+        return mCameraHandler != null ? mCameraHandler.setVideoParams(ctrlSets) : -1;
     }
 
     private int getValue(final int flag) {

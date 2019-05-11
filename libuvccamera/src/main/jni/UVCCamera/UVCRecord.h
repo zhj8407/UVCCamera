@@ -63,8 +63,7 @@ private:
     size_t recordBytes;
 
     bool stream_probed;
-    bool stream_committed;
-    //
+
     virtual int prepare_streaming();
     virtual void do_streaming();
 
@@ -78,7 +77,6 @@ public:
 
     int setRecordSize(int width, int height, int profile, int min_fps, int max_fps, int mode, float bandwidth = 1.0f);
     int setRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth = 1.0f);
-    int commitRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth = 1.0f);
     int setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pixel_format);
     int startRecord();
     int stopRecord();

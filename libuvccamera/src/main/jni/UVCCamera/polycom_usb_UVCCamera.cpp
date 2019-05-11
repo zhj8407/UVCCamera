@@ -56,7 +56,9 @@ static jlong setField_long(JNIEnv *env, jobject java_obj, const char *field_name
     jfieldID field = env->GetFieldID(clazz, field_name, "J");
 
     if (LIKELY(field))
+    {
         env->SetLongField(java_obj, field, val);
+    }
     else
     {
         LOGE("__setField_long:field '%s' not found", field_name);
@@ -81,7 +83,9 @@ static jlong __setField_long(JNIEnv *env, jobject java_obj, jclass clazz, const 
     jfieldID field = env->GetFieldID(clazz, field_name, "J");
 
     if (LIKELY(field))
+    {
         env->SetLongField(java_obj, field, val);
+    }
     else
     {
         LOGE("__setField_long:field '%s' not found", field_name);
@@ -101,7 +105,9 @@ jint __setField_int(JNIEnv *env, jobject java_obj, jclass clazz, const char *fie
     jfieldID id = env->GetFieldID(clazz, field_name, "I");
 
     if (LIKELY(id))
+    {
         env->SetIntField(java_obj, id, val);
+    }
     else
     {
         LOGE("__setField_int:field '%s' not found", field_name);
@@ -171,7 +177,7 @@ static jint nativeConnect(JNIEnv *env, jobject thiz,
 
     if (LIKELY(camera && (fd > 0)))
     {
-        //		libusb_set_debug(NULL, LIBUSB_LOG_LEVEL_DEBUG);
+        //      libusb_set_debug(NULL, LIBUSB_LOG_LEVEL_DEBUG);
         result = camera->connect(vid, pid, fd, busNum, devAddr, c_usbfs);
     }
 
@@ -280,21 +286,6 @@ static jint nativeSetRecordSize(JNIEnv *env, jobject thiz,
     if (LIKELY(camera))
     {
         return camera->setRecordSize(width, height, profile, usage, min_fps, max_fps, mode, bandwidth);
-    }
-
-    RETURN(JNI_ERR, jint);
-}
-
-static jint nativeCommitRecordSize(JNIEnv *env, jobject thiz,
-                                   ID_TYPE id_camera, jint width, jint height, jint profile, jint usage, jint min_fps, jint max_fps, jint mode, jfloat bandwidth)
-{
-
-    ENTER();
-    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
-
-    if (LIKELY(camera))
-    {
-        return camera->commitRecordSize(width, height, profile, usage, min_fps, max_fps, mode, bandwidth);
     }
 
     RETURN(JNI_ERR, jint);
@@ -416,9 +407,9 @@ static jint nativeSetCaptureDisplay(JNIEnv *env, jobject thiz,
 }
 
 static jboolean nativeIsVideoControlSupported(JNIEnv *env, jobject thiz,
-                                              ID_TYPE id_camera,
-                                              jstring ctrl_name,
-                                              jint device_id)
+        ID_TYPE id_camera,
+        jstring ctrl_name,
+        jint device_id)
 {
     jboolean result = false;
     ENTER();
@@ -440,10 +431,35 @@ static jboolean nativeIsVideoControlSupported(JNIEnv *env, jobject thiz,
     RETURN(result, jboolean);
 }
 
+static jint nativeSetVideoControlSetList(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera,
+        jstring ctrl_sets,
+        jint device_id)
+{
+    jint result = JNI_ERR;
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera))
+    {
+        jboolean isCopy;
+        const char *ctrl_sets_str = env->GetStringUTFChars(ctrl_sets, &isCopy);
+
+        if (LIKELY(ctrl_sets_str))
+        {
+            result = camera->setVideoControlSetList(ctrl_sets_str, (int)device_id);
+
+            env->ReleaseStringUTFChars(ctrl_sets, ctrl_sets_str);
+        }
+    }
+
+    RETURN(result, jint);
+}
+
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateScanningModeLimit(JNIEnv *env, jobject thiz,
-                                          ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -501,7 +517,7 @@ static jint nativeGetScanningMode(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateExposureModeLimit(JNIEnv *env, jobject thiz,
-                                          ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -559,7 +575,7 @@ static jint nativeGetExposureMode(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateExposurePriorityLimit(JNIEnv *env, jobject thiz,
-                                              ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -675,7 +691,7 @@ static jint nativeGetExposure(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateExposureRelLimit(JNIEnv *env, jobject thiz,
-                                         ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -791,7 +807,7 @@ static jint nativeGetAutoFocus(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateAutoWhiteBlanceLimit(JNIEnv *env, jobject thiz,
-                                             ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -849,7 +865,7 @@ static jint nativeGetAutoWhiteBlance(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateAutoWhiteBlanceCompoLimit(JNIEnv *env, jobject thiz,
-                                                  ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -873,7 +889,7 @@ static jint nativeUpdateAutoWhiteBlanceCompoLimit(JNIEnv *env, jobject thiz,
 }
 
 static jint nativeSetAutoWhiteBlanceCompo(JNIEnv *env, jobject thiz,
-                                          ID_TYPE id_camera, jboolean autofocus_compo)
+        ID_TYPE id_camera, jboolean autofocus_compo)
 {
 
     jint result = JNI_ERR;
@@ -889,7 +905,7 @@ static jint nativeSetAutoWhiteBlanceCompo(JNIEnv *env, jobject thiz,
 }
 
 static jint nativeGetAutoWhiteBlanceCompo(JNIEnv *env, jobject thiz,
-                                          ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
 
     jint result = JNI_ERR;
@@ -1603,7 +1619,7 @@ static jint nativeGetContrast(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java method correspond to this function should not be a static mathod
 static jint nativeUpdateAutoContrastLimit(JNIEnv *env, jobject thiz,
-                                          ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -1835,7 +1851,7 @@ static jint nativeGetGamma(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateWhiteBlanceLimit(JNIEnv *env, jobject thiz,
-                                         ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -1893,7 +1909,7 @@ static jint nativeGetWhiteBlance(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateWhiteBlanceCompoLimit(JNIEnv *env, jobject thiz,
-                                              ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -1951,7 +1967,7 @@ static jint nativeGetWhiteBlanceCompo(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateBacklightCompLimit(JNIEnv *env, jobject thiz,
-                                           ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -2183,7 +2199,7 @@ static jint nativeGetAutoHue(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdatePowerlineFrequencyLimit(JNIEnv *env, jobject thiz,
-                                                ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -2357,7 +2373,7 @@ static jint nativeGetZoomRel(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateDigitalMultiplierLimit(JNIEnv *env, jobject thiz,
-                                               ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -2415,7 +2431,7 @@ static jint nativeGetDigitalMultiplier(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateDigitalMultiplierLimitLimit(JNIEnv *env, jobject thiz,
-                                                    ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -2439,7 +2455,7 @@ static jint nativeUpdateDigitalMultiplierLimitLimit(JNIEnv *env, jobject thiz,
 }
 
 static jint nativeSetDigitalMultiplierLimit(JNIEnv *env, jobject thiz,
-                                            ID_TYPE id_camera, jint multiplier_limit)
+        ID_TYPE id_camera, jint multiplier_limit)
 {
 
     jint result = JNI_ERR;
@@ -2455,7 +2471,7 @@ static jint nativeSetDigitalMultiplierLimit(JNIEnv *env, jobject thiz,
 }
 
 static jint nativeGetDigitalMultiplierLimit(JNIEnv *env, jobject thiz,
-                                            ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
 
     jint result = 0;
@@ -2473,7 +2489,7 @@ static jint nativeGetDigitalMultiplierLimit(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateAnalogVideoStandardLimit(JNIEnv *env, jobject thiz,
-                                                 ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -2497,7 +2513,7 @@ static jint nativeUpdateAnalogVideoStandardLimit(JNIEnv *env, jobject thiz,
 }
 
 static jint nativeSetAnalogVideoStandard(JNIEnv *env, jobject thiz,
-                                         ID_TYPE id_camera, jint standard)
+        ID_TYPE id_camera, jint standard)
 {
 
     jint result = JNI_ERR;
@@ -2513,7 +2529,7 @@ static jint nativeSetAnalogVideoStandard(JNIEnv *env, jobject thiz,
 }
 
 static jint nativeGetAnalogVideoStandard(JNIEnv *env, jobject thiz,
-                                         ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
 
     jint result = 0;
@@ -2531,7 +2547,7 @@ static jint nativeGetAnalogVideoStandard(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateAnalogVideoLockStateLimit(JNIEnv *env, jobject thiz,
-                                                  ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -2555,7 +2571,7 @@ static jint nativeUpdateAnalogVideoLockStateLimit(JNIEnv *env, jobject thiz,
 }
 
 static jint nativeSetAnalogVideoLockState(JNIEnv *env, jobject thiz,
-                                          ID_TYPE id_camera, jint state)
+        ID_TYPE id_camera, jint state)
 {
 
     jint result = JNI_ERR;
@@ -2571,7 +2587,7 @@ static jint nativeSetAnalogVideoLockState(JNIEnv *env, jobject thiz,
 }
 
 static jint nativeGetAnalogVideoLockState(JNIEnv *env, jobject thiz,
-                                          ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
 
     jint result = 0;
@@ -2589,7 +2605,7 @@ static jint nativeGetAnalogVideoLockState(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateAverageBitrateLimit(JNIEnv *env, jobject thiz,
-                                            ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -2648,7 +2664,7 @@ static jint nativeGetAverageBitrate(JNIEnv *env, jobject thiz,
 //======================================================================
 // Java mnethod correspond to this function should not be a static mathod
 static jint nativeUpdateSyncRefFrameLimit(JNIEnv *env, jobject thiz,
-                                          ID_TYPE id_camera)
+        ID_TYPE id_camera)
 {
     jint result = JNI_ERR;
     ENTER();
@@ -2882,7 +2898,8 @@ jint registerNativeMethods(JNIEnv *env, const char *class_name, JNINativeMethod 
     return result;
 }
 
-static JNINativeMethod methods[] = {
+static JNINativeMethod methods[] =
+{
     {"nativeCreate", "()J", (void *)nativeCreate},
     {"nativeDestroy", "(J)V", (void *)nativeDestroy},
     //
@@ -2895,7 +2912,6 @@ static JNINativeMethod methods[] = {
     {"nativeGetSupportedSize", "(J)Ljava/lang/String;", (void *)nativeGetSupportedSize},
     {"nativeSetPreviewSize", "(JIIIIIF)I", (void *)nativeSetPreviewSize},
     {"nativeSetRecordSize", "(JIIIIIIIF)I", (void *)nativeSetRecordSize},
-    {"nativeCommitRecordSize", "(JIIIIIIIF)I", (void *)nativeCommitRecordSize},
     {"nativeStartPreview", "(J)I", (void *)nativeStartPreview},
     {"nativeStopPreview", "(J)I", (void *)nativeStopPreview},
     {"nativeStartRecord", "(J)I", (void *)nativeStartRecord},
@@ -2906,6 +2922,8 @@ static JNINativeMethod methods[] = {
     {"nativeSetCaptureDisplay", "(JLandroid/view/Surface;)I", (void *)nativeSetCaptureDisplay},
 
     {"nativeIsVideoControlSupported", "(JLjava/lang/String;I)Z", (void *)nativeIsVideoControlSupported},
+
+    {"nativeSetVideoControlSetList", "(JLjava/lang/String;I)I", (void *)nativeSetVideoControlSetList},
 
     {"nativeUpdateScanningModeLimit", "(J)I", (void *)nativeUpdateScanningModeLimit},
     {"nativeSetScanningMode", "(JI)I", (void *)nativeSetScanningMode},

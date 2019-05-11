@@ -135,7 +135,6 @@ public :
     int setPreviewSize(int width, int height, int min_fps, int max_fps, int mode, float bandwidth = DEFAULT_BANDWIDTH);
     int setRecordSize(int width, int height, int profile, int min_fps, int max_fps, int mode, float bandwidth = DEFAULT_BANDWIDTH);
     int setRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth = DEFAULT_BANDWIDTH);
-    int commitRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth = DEFAULT_BANDWIDTH);
     int setPreviewDisplay(ANativeWindow *preview_window);
     int setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pixel_format);
     int startPreview();
@@ -145,6 +144,8 @@ public :
     int setCaptureDisplay(ANativeWindow *capture_window);
 
     bool getVideoControlSupported(const char *ctrlName, int deviceID);
+
+    int setVideoControlSetList(const char *ctrlSets, int deviceID = UVC_RECORD_DEVICE_ID);
 
     int updateScanningModeLimit(int &min, int &max, int &def);
     int setScanningMode(int mode);

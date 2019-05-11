@@ -515,33 +515,6 @@ public class UVCCamera {
         }
     }
 
-    /**
-     * Commit RECORD size and RECORD mode
-     *
-     * @param frameFormat So far, shall be FRAME_FORMAT_H_264(2)
-     */
-    public void commitRecordSize(final int width, final int height, final int profile,
-            final int usage, final int min_fps, final int max_fps, final int frameFormat,
-            final float bandwidthFactor) {
-        if ((width == 0) || (height == 0)) {
-            throw new IllegalArgumentException("invalid Record size");
-        }
-        if (mNativePtr != 0) {
-            final int result = nativeCommitRecordSize(mNativePtr, width, height, profile, usage,
-                    min_fps,
-                    max_fps, frameFormat, bandwidthFactor);
-            if (result != 0) {
-                throw new IllegalArgumentException("Failed to set Record size");
-            }
-            mCurrentRecordFrameFormat = frameFormat;
-            mCurrentRecordWidth = width;
-            mCurrentRecordHeight = height;
-            mCurrentRecordBandwidthFactor = bandwidthFactor;
-            mCurrentRecordProfile = profile;
-            mCurrentRecordUsage = usage;
-        }
-    }
-
     public List<Size> getSupportedSizeList() {
         final int type = (mCurrentFrameFormat > 0) ? 6 : 4;
         return getSupportedSize(type, mSupportedSize);
@@ -677,6 +650,18 @@ public class UVCCamera {
         }
 
         return false;
+    }
+
+    public int setVideoParams(final String controlSets, final int deviceID) {
+        if (mNativePtr != 0) {
+            return nativeSetVideoControlSetList(mNativePtr, controlSets, deviceID);
+        }
+
+        return -1;
+    }
+
+    public int setVideoParams(final String controlSets) {
+        return setVideoParams(controlSets, 1);
     }
 
     //================================================================================
@@ -1448,10 +1433,6 @@ public class UVCCamera {
             final int height, final int profile, final int usage,
             final int min_fps, final int max_fps, final int mode, final float bandwidth);
 
-    private static final native int nativeCommitRecordSize(final long id_camera, final int width,
-            final int height, final int profile, final int usage,
-            final int min_fps, final int max_fps, final int mode, final float bandwidth);
-
     private static final native String nativeGetSupportedSize(final long id_camera);
 
     private static final native int nativeStartPreview(final long id_camera);
@@ -1495,6 +1476,9 @@ public class UVCCamera {
 
     private static final native boolean nativeIsVideoControlSupported(final long id_camera,
             final String control_name, final int device_id);
+    
+    private static final native int nativeSetVideoControlSetList(final long id_camera,
+            final String control_sets, final int device_id);
 
     private final native int nativeUpdateScanningModeLimit(final long id_camera);
 
