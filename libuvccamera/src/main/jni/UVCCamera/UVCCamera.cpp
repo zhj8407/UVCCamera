@@ -56,6 +56,11 @@
 #include <fcntl.h>
 #include <dirent.h>
 
+#include <memory>
+#include <iostream>
+#include <string>
+#include <cstdio>
+
 #include "UVCCamera.h"
 #include "Parameters.h"
 #include "libuvc_internal.h"
@@ -63,6 +68,59 @@
 #include "v4l2_controls.h"
 
 #define LOCAL_DEBUG 0
+
+#define LINUX_V4L2_CLASS_SYSFS  "/sys/class/video4linux"
+
+template<typename ... Args>
+std::string stringFormat(const std::string &format,
+                         Args ... args)
+{
+    size_t size = snprintf(nullptr, 0, format.c_str(), args ...) + 1;
+    std::unique_ptr<char[]> buf(new char[size]);
+    snprintf(buf.get(), size, format.c_str(), args ...);
+    return std::string(buf.get(), buf.get() + size - 1);
+}
+
+template<typename ... Args>
+int readFromFile(const std::string &filename,
+                 const std::string &format,
+                 Args ... args)
+{
+    int fd = 0;
+    char buf[PATH_MAX];
+    int len;
+
+    fd = ::open(filename.c_str(), O_RDONLY);
+
+    if (fd < 0)
+    {
+        LOGE("Can not open the file: %s, error: %s(%d)\n",
+             filename.c_str(), strerror(errno), errno);
+        return -1;
+    }
+
+    len = ::read(fd, buf, sizeof(buf));
+
+    if (len <= 0)
+    {
+        LOGE("Can not read data from file: %s, error: %s(%d)\n",
+             filename.c_str(), strerror(errno), errno);
+        close(fd);
+        return -1;
+    }
+
+    len = ::sscanf(buf, format.c_str(), args ...);
+
+    if (len <= 0)
+    {
+        LOGE("Can not parse the value from %s\n", filename.c_str());
+        close(fd);
+        return -1;
+    }
+
+    ::close(fd);
+    return len;
+}
 
 //**********************************************************************
 //
@@ -90,49 +148,6 @@ UVCCamera::~UVCCamera()
     EXIT();
 }
 
-int readFromFile(const char *filename, const char *format, ...)
-{
-    va_list args;
-    int fd = 0;
-    char buf[PATH_MAX];
-    int len;
-
-    fd = open(filename, O_RDONLY);
-
-    if (fd < 0)
-    {
-        LOGE("Can not open the file: %s, error: %s(%d)\n",
-             filename, strerror(errno), errno);
-        return -1;
-    }
-
-    len = read(fd, buf, sizeof(buf));
-
-    if (len <= 0)
-    {
-        LOGE("Can not read data from file: %s, error: %s(%d)\n",
-             filename, strerror(errno), errno);
-        close(fd);
-        return -1;
-    }
-
-    va_start(args, format);
-    len = vsscanf(buf, format, args);
-    va_end(args);
-
-    if (len <= 0)
-    {
-        LOGE("Can not parse the value from %s\n", filename);
-        close(fd);
-        return -1;
-    }
-
-    close(fd);
-    return len;
-}
-
-#define LINUX_V4L2_CLASS_SYSFS  "/sys/class/video4linux"
-
 void UVCCamera::getAvailableV4l2Devices(int vendorId,
                                         int productId,
                                         const std::string &serial,
@@ -140,20 +155,20 @@ void UVCCamera::getAvailableV4l2Devices(int vendorId,
 {
     struct dirent *de;
     DIR *dir;
-    char name[PATH_MAX];
+
     char linkname[PATH_MAX];
     int ret;
 
-    dir = opendir(LINUX_V4L2_CLASS_SYSFS);
+    dir = ::opendir(LINUX_V4L2_CLASS_SYSFS);
 
     if (dir == NULL)
     {
         return;
     }
 
-    rewinddir(dir);
+    ::rewinddir(dir);
 
-    while ((de = readdir(dir)) != NULL)
+    while ((de = ::readdir(dir)) != NULL)
     {
         if (strcmp(de->d_name, ".") == 0 ||
                 strcmp(de->d_name, "..") == 0)
@@ -167,26 +182,29 @@ void UVCCamera::getAvailableV4l2Devices(int vendorId,
             continue;
         }
 
-        snprintf(name, sizeof(name), "%s/%s",
-                 LINUX_V4L2_CLASS_SYSFS,
-                 de->d_name);
+        std::string v4l2SysFsName =
+            stringFormat("%s/%s", LINUX_V4L2_CLASS_SYSFS, de->d_name);
 
-        ret = readlink(name, linkname, PATH_MAX);
+        ret = ::readlink(v4l2SysFsName.c_str(),
+                         linkname,
+                         PATH_MAX);
 
         if (ret < 0 || ret >= PATH_MAX)
         {
+            /* Can not get the link. */
             continue;
         }
 
         std::string linkNameStr(linkname);
 
         /* Confirm the usb[busnum] is in the path */
-        snprintf(name, sizeof(name), "usb%d", busNum);
+        std::string usbBus = stringFormat("usb%d", busNum);
 
-        size_t keywordIndex = linkNameStr.find(name);
+        size_t keywordIndex = linkNameStr.find(usbBus);
 
         if (keywordIndex == std::string::npos)
         {
+            /* No usb bus found. */
             continue;
         }
 
@@ -211,42 +229,37 @@ void UVCCamera::getAvailableV4l2Devices(int vendorId,
         int vid, pid;
         char serialBuf[PATH_MAX];
 
-        snprintf(name, sizeof(name), "%s/%s/idVendor",
-                 LINUX_V4L2_CLASS_SYSFS,
-                 usbBusPath.c_str());
-        ret = readFromFile(name, "%x\n", &vid);
+        std::string usbVidPath =
+            stringFormat("%s/%s/idVendor", LINUX_V4L2_CLASS_SYSFS, usbBusPath.c_str());
+        ret = readFromFile(usbVidPath, "%x\n", &vid);
 
         if (ret <= 0 || vid != vendorId)
         {
             continue;
         }
 
-        snprintf(name, sizeof(name), "%s/%s/idProduct",
-                 LINUX_V4L2_CLASS_SYSFS,
-                 usbBusPath.c_str());
-        ret = readFromFile(name, "%x\n", &pid);
+        std::string usbPidPath =
+            stringFormat("%s/%s/idProduct", LINUX_V4L2_CLASS_SYSFS, usbBusPath.c_str());
+        ret = readFromFile(usbPidPath, "%x\n", &pid);
 
         if (ret <= 0 || pid != productId)
         {
             continue;
         }
 
-        snprintf(name, sizeof(name), "%s/%s/serial",
-                 LINUX_V4L2_CLASS_SYSFS,
-                 usbBusPath.c_str());
-        ret = readFromFile(name, "%s\n", serialBuf);
+        std::string usbSerialPath =
+            stringFormat("%s/%s/serial", LINUX_V4L2_CLASS_SYSFS, usbBusPath.c_str());
+        ret = readFromFile(usbSerialPath, "%s\n", serialBuf);
 
-        if (ret <= 0 || strcmp(serialBuf, serial.c_str()) != 0)
+        if (ret <= 0 || std::string(serialBuf) != serial)
         {
             continue;
         }
 
-        snprintf(name, sizeof(name), "/dev/%s", de->d_name);
-
-        mCameraIds.push_back(name);
+        mCameraIds.push_back(stringFormat("/dev/%s", de->d_name));
     }
 
-    closedir(dir);
+    ::closedir(dir);
 }
 
 //======================================================================
