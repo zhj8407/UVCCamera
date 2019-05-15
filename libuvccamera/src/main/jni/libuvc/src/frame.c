@@ -593,6 +593,82 @@ uvc_error_t uvc_yuyv2rgb565(uvc_frame_t *in, uvc_frame_t *out)
     return UVC_SUCCESS;
 }
 
+/** @brief Convert a frame from NV12 to RGBX8888
+ * @ingroup frame
+ * @param in NV12 frame
+ * @param out RGBX8888 frame
+ */
+uvc_error_t uvc_nv122rgbx(uvc_frame_t *in, uvc_frame_t *out)
+{
+    if (UNLIKELY(in->frame_format != UVC_FRAME_FORMAT_NV12))
+        return UVC_ERROR_INVALID_PARAM;
+
+    if (UNLIKELY(uvc_ensure_frame_size(out, in->width * in->height * PIXEL_RGBX) < 0))
+        return UVC_ERROR_NO_MEM;
+
+    out->width = in->width;
+    out->height = in->height;
+    out->frame_format = UVC_FRAME_FORMAT_RGBX;
+
+    if (out->library_owns_data)
+        out->step = in->width * PIXEL_RGBX;
+
+    out->sequence = in->sequence;
+    out->capture_time = in->capture_time;
+    out->source = in->source;
+
+    uint8_t *pyuv = in->data;
+    uint8_t *prgbx = out->data;
+
+    const int nv_start = in->width * in->height;
+    uint32_t i, j;
+    int r, g, b, nv_index = 0;
+
+    for(i = 0; i < in->height; i+=2) {
+
+        for (j = 0; j < in->width; j+=2) {
+            //Y0, Y1, Y(width), Y(width + 1) share 
+            //the same U and V
+            nv_index = i / 2 * in->width + j;
+
+            const int u = pyuv[nv_start + nv_index];
+            const int v = pyuv[nv_start + nv_index + 1];
+
+            const int r = (22987 * (v - 128)) >> 14;
+            const int g = (-5636 * (u - 128) - 11698 * (v - 128)) >> 14;
+            const int b = (29049 * (u - 128)) >> 14;
+
+            const int y0 = pyuv[i * in->width + j];
+
+            prgbx[(i * in->width + j) * PIXEL_RGBX + 0] = sat(y0 + r);
+            prgbx[(i * in->width + j) * PIXEL_RGBX + 1] = sat(y0 + g);
+            prgbx[(i * in->width + j) * PIXEL_RGBX + 2] = sat(y0 + b);
+            prgbx[(i * in->width + j) * PIXEL_RGBX + 3] = 0xff;
+
+            const int y1 = pyuv[i * in->width + j + 1];
+
+            prgbx[(i * in->width + j) * PIXEL_RGBX + 4] = sat(y1 + r);
+            prgbx[(i * in->width + j) * PIXEL_RGBX + 5] = sat(y1 + g);
+            prgbx[(i * in->width + j) * PIXEL_RGBX + 6] = sat(y1 + b);
+            prgbx[(i * in->width + j) * PIXEL_RGBX + 7] = 0xff;
+
+            const int y_width_0 = pyuv[(i + 1) * in->width + j];
+            prgbx[((i + 1) * in->width + j) * PIXEL_RGBX + 0] = sat(y_width_0 + r);
+            prgbx[((i + 1) * in->width + j) * PIXEL_RGBX + 1] = sat(y_width_0 + g);
+            prgbx[((i + 1) * in->width + j) * PIXEL_RGBX + 2] = sat(y_width_0 + b);
+            prgbx[((i + 1) * in->width + j) * PIXEL_RGBX + 3] = 0xff;
+
+            const int y_width_1 = pyuv[(i + 1) * in->width + j + 1];
+            prgbx[((i + 1) * in->width + j) * PIXEL_RGBX + 4] = sat(y_width_1 + r);
+            prgbx[((i + 1) * in->width + j) * PIXEL_RGBX + 5] = sat(y_width_1 + g);
+            prgbx[((i + 1) * in->width + j) * PIXEL_RGBX + 6] = sat(y_width_1 + b);
+            prgbx[((i + 1) * in->width + j) * PIXEL_RGBX + 7] = 0xff;
+        }
+    }
+
+    return UVC_SUCCESS;
+}
+
 #define IYUYV2RGBX_2(pyuv, prgbx, ax, bx) { \
         const int d1 = (pyuv)[ax+1]; \
         const int d3 = (pyuv)[ax+3]; \
@@ -604,10 +680,10 @@ uvc_error_t uvc_yuyv2rgb565(uvc_frame_t *in, uvc_frame_t *out)
         (prgbx)[bx+1] = sat(y0 + g); \
         (prgbx)[bx+2] = sat(y0 + b); \
         (prgbx)[bx+3] = 0xff; \
-        const int y2 = (pyuv)[ax+2]; \
-        (prgbx)[bx+4] = sat(y2 + r); \
-        (prgbx)[bx+5] = sat(y2 + g); \
-        (prgbx)[bx+6] = sat(y2 + b); \
+        const int y1 = (pyuv)[ax+2]; \
+        (prgbx)[bx+4] = sat(y1 + r); \
+        (prgbx)[bx+5] = sat(y1 + g); \
+        (prgbx)[bx+6] = sat(y1 + b); \
         (prgbx)[bx+7] = 0xff; \
     }
 #define IYUYV2RGBX_16(pyuv, prgbx, ax, bx) \
@@ -1474,6 +1550,9 @@ uvc_error_t uvc_any2rgbx(uvc_frame_t *in, uvc_frame_t *out)
 
         case UVC_FRAME_FORMAT_UYVY:
             return uvc_uyvy2rgbx(in, out);
+        
+        case UVC_FRAME_FORMAT_NV12:
+            return uvc_nv122rgbx(in, out);
 
         case UVC_FRAME_FORMAT_RGBX:
             return uvc_duplicate_frame(in, out);

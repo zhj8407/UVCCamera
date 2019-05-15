@@ -343,8 +343,10 @@ int UVCPreview::prepare_streaming()
         pthread_mutex_unlock(&streaming_mutex);
 
         frameMode = requestMode;
-        if (frameMode != MJPG_FORMAT_PREVIEW_MODE)
+        if (frameMode == YUYV_FORMAT_PREVIEW_MODE)
             frameBytes = frameWidth * frameHeight * 2;
+        else if (frameMode == NV12_FORMAT_PREVIEW_MODE)
+            frameBytes = frameWidth * frameHeight * 3 / 2;
         else
             frameBytes = frameWidth * frameHeight * 4;
 
@@ -551,7 +553,7 @@ uvc_frame_t *UVCPreview::draw_preview_one(uvc_frame_t *frame, ANativeWindow **wi
                 }
                 else
                 {
-                    LOGE("failed converting");
+                    LOGE("failed converting. Ret: %d\n", b);
                 }
 
                 recycle_frame(converted);
