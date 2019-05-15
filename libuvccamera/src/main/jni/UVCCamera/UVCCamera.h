@@ -319,6 +319,10 @@ public :
     int setSyncRefFrame(int value);
     int getSyncRefFrame();
 
+    int updateSyncRefFrameIntervalLimit(int &min, int &max, int &def);
+    int setSyncRefFrameInterval(int value);
+    int getSyncRefFrameInterval();
+
     int updateCPBSizeLimit(int &min, int &max, int &def);
     int setCPBSize(int value);
     int getCPBSize();

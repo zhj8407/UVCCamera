@@ -189,6 +189,7 @@ public class UVCCamera {
             // D10: Synchronization and Long Term Reference Frame
     public static final int EU_PRIORITY_ID = 0x00000800;  // D11: Priority ID
     public static final int EU_START_OR_STOP_LAYER = 0x00001000;  // D12: Start or Stop Layer/View.
+    public static final int EU_SYNC_REF_FRAME_INTERVAL = 0x00002000;
 
     // uvc_status_class from libuvc.h
     public static final int STATUS_CLASS_CONTROL = 0x10;
@@ -266,6 +267,7 @@ public class UVCCamera {
     protected int mAnalogVideoLockStateMin, mAnalogVideoLockStateMax, mAnalogVideoLockStateDef;
     protected int mAverageBitrateMin, mAverageBitrateMax, mAverageBitrateDef;
     protected int mSyncRefFrameMin, mSyncRefFrameMax, mSyncRefFrameDef;
+    protected int mSyncRefFrameIntervalMin, mSyncRefFrameIntervalMax, mSyncRefFrameIntervalDef;
     protected int mCPBSizeMin, mCPBSizeMax, mCPBSizeDef;
     // until here
 
@@ -1243,12 +1245,24 @@ public class UVCCamera {
         return nativeGetSyncRefFrame(mNativePtr);
     }
 
+    public synchronized void setSyncRefFrameInterval(final int value) {
+        if (mNativePtr != 0) {
+            nativeSetSyncRefFrameInterval(mNativePtr, value);
+        }
+    }
+
+    /**
+     * @return value
+     */
+    public synchronized int getSyncRefFrameInterval() {
+        return nativeGetSyncRefFrameInterval(mNativePtr);
+    }
+
     public synchronized void setCPBSize(final int value) {
         if (mNativePtr != 0) {
             nativeSetCPBSize(mNativePtr, value);
         }
     }
-
     /**
      * @return value
      */
@@ -1728,6 +1742,12 @@ public class UVCCamera {
 
     private static final native int nativeSetSyncRefFrame(final long id_camera,
             final int value);
+
+    private final native int nativeUpdateSyncRefFrameIntervalLimit(final long id_camera);
+
+    private static final native int nativeSetSyncRefFrameInterval(final long id_camera, final int value);
+
+    private static final native int nativeGetSyncRefFrameInterval(final long id_camera);
 
     private static final native int nativeGetSyncRefFrame(final long id_camera);
 

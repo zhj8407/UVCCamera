@@ -316,6 +316,8 @@ int UVCCamera::connect(int vid, int pid, int busnum, const char *serialNum)
     }
     else
     {
+        LOGE("%s: Can not find the UVC1.5 Camera! vid: 0x%04x, pid: 0x%04x, serial: %s\n",
+             __FUNCTION__, vid, pid, serialNum);
         result = UVC_ERROR_NO_DEVICE;
     }
 
@@ -1645,6 +1647,38 @@ int UVCCamera::getSyncRefFrame()
     ENTER();
 
     int ret = getUVCControlValue(V4L2_CID_ENCODER_VP8_SYNC_FRAME_TYPE,
+                                 UVC_RECORD_DEVICE_ID);
+
+    RETURN(ret, int);
+}
+
+//======================================================================
+// SyncRefFrameIntervalStatus
+int UVCCamera::updateSyncRefFrameIntervalLimit(int &min, int &max, int &def)
+{
+    ENTER();
+
+    int ret = updateUVCControlLimit(V4L2_CID_ENCODER_SYNC_FRAME_INTERVAL,
+                                    min, max, def, UVC_RECORD_DEVICE_ID);
+
+    RETURN(ret, int);
+}
+
+int UVCCamera::setSyncRefFrameInterval(int value)
+{
+    ENTER();
+
+    int ret = setUVCControlValue(V4L2_CID_ENCODER_SYNC_FRAME_INTERVAL,
+                                 value, UVC_RECORD_DEVICE_ID);
+
+    RETURN(ret, int);
+}
+
+int UVCCamera::getSyncRefFrameInterval()
+{
+    ENTER();
+
+    int ret = getUVCControlValue(V4L2_CID_ENCODER_SYNC_FRAME_INTERVAL,
                                  UVC_RECORD_DEVICE_ID);
 
     RETURN(ret, int);

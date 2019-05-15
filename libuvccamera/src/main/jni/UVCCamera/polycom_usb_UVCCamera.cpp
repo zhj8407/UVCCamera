@@ -2686,7 +2686,7 @@ static jint nativeUpdateSyncRefFrameLimit(JNIEnv *env, jobject thiz,
 }
 
 static jint nativeSetSyncRefFrame(JNIEnv *env, jobject thiz,
-                                  ID_TYPE id_camera, jint bitrate)
+                                  ID_TYPE id_camera, jint syncType)
 {
 
     jint result = JNI_ERR;
@@ -2696,7 +2696,7 @@ static jint nativeSetSyncRefFrame(JNIEnv *env, jobject thiz,
 
     if (LIKELY(camera))
     {
-        result = camera->setSyncRefFrame(bitrate);
+        result = camera->setSyncRefFrame(syncType);
     }
 
     RETURN(result, jint);
@@ -2713,6 +2713,65 @@ static jint nativeGetSyncRefFrame(JNIEnv *env, jobject thiz,
     if (LIKELY(camera))
     {
         result = camera->getSyncRefFrame();
+    }
+
+    RETURN(result, jint);
+}
+
+//======================================================================
+// Java mnethod correspond to this function should not be a static mathod
+static jint nativeUpdateSyncRefFrameIntervalLimit(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera)
+{
+    jint result = JNI_ERR;
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera))
+    {
+        int min, max, def;
+        result = camera->updateSyncRefFrameIntervalLimit(min, max, def);
+
+        if (!result)
+        {
+            // Java側へ書き込む
+            setField_int(env, thiz, "mSyncRefFrameIntervalMin", min);
+            setField_int(env, thiz, "mSyncRefFrameIntervalMax", max);
+            setField_int(env, thiz, "mSyncRefFrameIntervalDef", def);
+        }
+    }
+
+    RETURN(result, jint);
+}
+
+static jint nativeSetSyncRefFrameInterval(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera, jint interval)
+{
+
+    jint result = JNI_ERR;
+    ENTER();
+
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera))
+    {
+        result = camera->setSyncRefFrame(interval);
+    }
+
+    RETURN(result, jint);
+}
+
+static jint nativeGetSyncRefFrameInterval(JNIEnv *env, jobject thiz,
+        ID_TYPE id_camera)
+{
+
+    jint result = 0;
+    ENTER();
+    UVCCamera *camera = reinterpret_cast<UVCCamera *>(id_camera);
+
+    if (LIKELY(camera))
+    {
+        result = camera->getSyncRefFrameInterval();
     }
 
     RETURN(result, jint);
@@ -3078,6 +3137,10 @@ static JNINativeMethod methods[] =
     {"nativeUpdateSyncRefFrameLimit", "(J)I", (void *)nativeUpdateSyncRefFrameLimit},
     {"nativeSetSyncRefFrame", "(JI)I", (void *)nativeSetSyncRefFrame},
     {"nativeGetSyncRefFrame", "(J)I", (void *)nativeGetSyncRefFrame},
+
+    {"nativeUpdateSyncRefFrameIntervalLimit", "(J)I", (void *)nativeUpdateSyncRefFrameIntervalLimit},
+    {"nativeSetSyncRefFrameInterval", "(JI)I", (void *)nativeSetSyncRefFrameInterval},
+    {"nativeGetSyncRefFrameInterval", "(J)I", (void *)nativeGetSyncRefFrameInterval},
 
     {"nativeUpdateCPBSizeLimit", "(J)I", (void *)nativeUpdateCPBSizeLimit},
     {"nativeSetCPBSize", "(JI)I", (void *)nativeSetCPBSize},

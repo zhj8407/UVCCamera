@@ -292,6 +292,8 @@ abstract class AbstractUVCCameraHandler extends Handler {
                 return camera.getAverageBitrate();
             } else if (flag == UVCCamera.EU_SYNC_REF_FRAME) {
                 return camera.getSyncRefFrame();
+            } else if (flag == UVCCamera.EU_SYNC_REF_FRAME_INTERVAL) {
+                return camera.getSyncRefFrameInterval();
             } else if (flag == UVCCamera.CTRL_ZOOM_ABS) {
                 return camera.getZoom();
             } else if (flag == UVCCamera.CTRL_PAN_ABS) {
@@ -320,6 +322,9 @@ abstract class AbstractUVCCameraHandler extends Handler {
             } else if (flag == UVCCamera.EU_SYNC_REF_FRAME) {
                 camera.setSyncRefFrame(value);
                 return camera.getSyncRefFrame();
+            } else if (flag == UVCCamera.EU_SYNC_REF_FRAME_INTERVAL) {
+                camera.setSyncRefFrameInterval(value);
+                return camera.getSyncRefFrameInterval();
             } else if (flag == UVCCamera.CTRL_ZOOM_ABS) {
                 camera.setZoom(value);
                 return camera.getZoom();
