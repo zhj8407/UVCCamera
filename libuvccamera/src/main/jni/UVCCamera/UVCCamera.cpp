@@ -268,57 +268,67 @@ int UVCCamera::connect(int vid, int pid, int busnum, const char *serialNum)
 {
     ENTER();
     uvc_error_t result = UVC_ERROR_BUSY;
+    int tries = 5;
 
-    /* Reset the cameras. */
-    mCameraIds.clear();
-
-    getAvailableV4l2Devices(vid, pid, std::string(serialNum), busnum);
-
-    if (mCameraIds.size() >= 2)
+    do
     {
-        if (mV4l2Devices[UVC_PREVIEW_DEVICE_ID] == nullptr)
-        {
-            mV4l2Devices[UVC_PREVIEW_DEVICE_ID] = v4l2core_init_dev(mCameraIds[UVC_PREVIEW_DEVICE_ID].c_str());
+        /* Reset the cameras. */
+        mCameraIds.clear();
 
+        getAvailableV4l2Devices(vid, pid, std::string(serialNum), busnum);
+
+        if (mCameraIds.size() >= 2)
+        {
             if (mV4l2Devices[UVC_PREVIEW_DEVICE_ID] == nullptr)
             {
-                LOGE("%s: v4l2core_init_dev (%s) failed\n", __FUNCTION__, mCameraIds[UVC_PREVIEW_DEVICE_ID].c_str());
-                return UVC_ERROR_NO_DEVICE;
+                mV4l2Devices[UVC_PREVIEW_DEVICE_ID] = v4l2core_init_dev(mCameraIds[UVC_PREVIEW_DEVICE_ID].c_str());
+
+                if (mV4l2Devices[UVC_PREVIEW_DEVICE_ID] == nullptr)
+                {
+                    LOGE("%s: v4l2core_init_dev (%s) failed\n", __FUNCTION__, mCameraIds[UVC_PREVIEW_DEVICE_ID].c_str());
+                    return UVC_ERROR_NO_DEVICE;
+                }
+
+                mPreview = new UVCPreview(mV4l2Devices[UVC_PREVIEW_DEVICE_ID]);
             }
-
-            mPreview = new UVCPreview(mV4l2Devices[UVC_PREVIEW_DEVICE_ID]);
-        }
-        else
-        {
-            LOGW("%s: v4l2core_init_dev (%s) camera is already opened. you should release firstly.\n",
-                 __FUNCTION__, mCameraIds[UVC_PREVIEW_DEVICE_ID].c_str());
-        }
-
-        if (mV4l2Devices[UVC_RECORD_DEVICE_ID] == nullptr)
-        {
-            mV4l2Devices[UVC_RECORD_DEVICE_ID] = v4l2core_init_dev(mCameraIds[UVC_RECORD_DEVICE_ID].c_str());
+            else
+            {
+                LOGW("%s: v4l2core_init_dev (%s) camera is already opened. you should release firstly.\n",
+                     __FUNCTION__, mCameraIds[UVC_PREVIEW_DEVICE_ID].c_str());
+            }
 
             if (mV4l2Devices[UVC_RECORD_DEVICE_ID] == nullptr)
             {
-                LOGE("%s: v4l2core_init_dev (%s) failed\n", __FUNCTION__, mCameraIds[UVC_RECORD_DEVICE_ID].c_str());
-                return UVC_ERROR_NO_DEVICE;
+                mV4l2Devices[UVC_RECORD_DEVICE_ID] = v4l2core_init_dev(mCameraIds[UVC_RECORD_DEVICE_ID].c_str());
+
+                if (mV4l2Devices[UVC_RECORD_DEVICE_ID] == nullptr)
+                {
+                    LOGE("%s: v4l2core_init_dev (%s) failed\n", __FUNCTION__, mCameraIds[UVC_RECORD_DEVICE_ID].c_str());
+                    return UVC_ERROR_NO_DEVICE;
+                }
+
+                mRecord = new UVCRecord(mV4l2Devices[UVC_RECORD_DEVICE_ID]);
+            }
+            else
+            {
+                LOGW("%s: v4l2core_init_dev (%s) camera is already opened. you should release firstly.\n",
+                     __FUNCTION__, mCameraIds[UVC_RECORD_DEVICE_ID].c_str());
             }
 
-            mRecord = new UVCRecord(mV4l2Devices[UVC_RECORD_DEVICE_ID]);
+            result = UVC_SUCCESS;
         }
         else
         {
-            LOGW("%s: v4l2core_init_dev (%s) camera is already opened. you should release firstly.\n",
-                 __FUNCTION__, mCameraIds[UVC_RECORD_DEVICE_ID].c_str());
+            result = UVC_ERROR_NO_DEVICE;
+            usleep(100 * 1000); /* Sleep for 100ms. */
         }
-
-        result = UVC_SUCCESS;
     }
-    else
+    while (result != UVC_SUCCESS && tries--);
+
+    if (result != UVC_SUCCESS && (tries <= 0))
     {
         LOGE("%s: Can not find the UVC1.5 Camera! vid: 0x%04x, pid: 0x%04x, serial: %s\n",
              __FUNCTION__, vid, pid, serialNum);
-        result = UVC_ERROR_NO_DEVICE;
     }
 
     RETURN(result, int);
