@@ -43,7 +43,7 @@
 #include "libuvc_internal.h"
 
 #define LOCAL_DEBUG 0
-#define MAX_FRAME 2
+#define MAX_FRAME 4
 #define FRAME_POOL_SZ MAX_FRAME + 1
 
 UVCStream::UVCStream(v4l2_dev_t *v4l2Dev)
@@ -96,9 +96,10 @@ uvc_frame_t *UVCStream::get_frame(size_t data_bytes)
     uvc_frame_t *frame = NULL;
     pthread_mutex_lock(&pool_mutex);
     {
-        if (!mFramePool.isEmpty())
+        if (!mFramePool.empty())
         {
-            frame = mFramePool.last();
+            frame = mFramePool.back();
+            mFramePool.pop_back();
         }
     }
     pthread_mutex_unlock(&pool_mutex);
@@ -118,7 +119,7 @@ void UVCStream::recycle_frame(uvc_frame_t *frame)
 
     if (LIKELY(mFramePool.size() < FRAME_POOL_SZ))
     {
-        mFramePool.put(frame);
+        mFramePool.push_back(frame);
         frame = NULL;
     }
 
@@ -139,7 +140,7 @@ void UVCStream::init_pool(size_t data_bytes)
     {
         for (int i = 0; i < FRAME_POOL_SZ; i++)
         {
-            mFramePool.put(uvc_allocate_frame(data_bytes));
+            mFramePool.push_back(uvc_allocate_frame(data_bytes));
         }
     }
     pthread_mutex_unlock(&pool_mutex);
@@ -153,12 +154,12 @@ void UVCStream::clear_pool()
 
     pthread_mutex_lock(&pool_mutex);
     {
-        const int n = mFramePool.size();
-
-        for (int i = 0; i < n; i++)
+        for_each(mFramePool.begin(), mFramePool.end(),
+                 [] (uvc_frame_t *frame)
         {
-            uvc_free_frame(mFramePool[i]);
+            ::uvc_free_frame(frame);
         }
+                );
 
         mFramePool.clear();
     }
@@ -171,9 +172,9 @@ void UVCStream::addStreamingFrame(uvc_frame_t *frame)
 
     pthread_mutex_lock(&streaming_mutex);
 
-    if (isRunning() && (streamingFrames.size() < MAX_FRAME))
+    if (isRunning() && (mStreamingFrames.size() < MAX_FRAME))
     {
-        streamingFrames.put(frame);
+        mStreamingFrames.push_back(frame);
         frame = NULL;
         pthread_cond_signal(&streaming_sync);
     }
@@ -191,14 +192,15 @@ uvc_frame_t *UVCStream::waitStreamingFrame()
     uvc_frame_t *frame = NULL;
     pthread_mutex_lock(&streaming_mutex);
     {
-        if (!streamingFrames.size())
+        if (mStreamingFrames.empty())
         {
             pthread_cond_wait(&streaming_sync, &streaming_mutex);
         }
 
-        if (LIKELY(isRunning() && streamingFrames.size() > 0))
+        if (LIKELY(isRunning() && !mStreamingFrames.empty()))
         {
-            frame = streamingFrames.remove(0);
+            frame = mStreamingFrames.front();
+            mStreamingFrames.pop_front();
         }
     }
     pthread_mutex_unlock(&streaming_mutex);
@@ -208,14 +210,16 @@ uvc_frame_t *UVCStream::waitStreamingFrame()
 void UVCStream::clearStreamingFrame()
 {
     pthread_mutex_lock(&streaming_mutex);
-    {
-        for (int i = 0; i < streamingFrames.size(); i++)
-        {
-            recycle_frame(streamingFrames[i]);
-        }
 
-        streamingFrames.clear();
+    for_each(mStreamingFrames.begin(), mStreamingFrames.end(),
+             [ = ] (uvc_frame_t *frame)
+    {
+        this->recycle_frame(frame);
     }
+            );
+
+    mStreamingFrames.clear();
+
     pthread_mutex_unlock(&streaming_mutex);
 }
 

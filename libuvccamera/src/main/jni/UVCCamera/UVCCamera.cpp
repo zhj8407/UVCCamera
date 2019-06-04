@@ -66,20 +66,11 @@
 #include "libuvc_internal.h"
 
 #include "v4l2_controls.h"
+#include "v4l2_video_formats.h"
 
 #define LOCAL_DEBUG 0
 
 #define LINUX_V4L2_CLASS_SYSFS  "/sys/class/video4linux"
-
-template<typename ... Args>
-std::string stringFormat(const std::string &format,
-                         Args ... args)
-{
-    size_t size = snprintf(nullptr, 0, format.c_str(), args ...) + 1;
-    std::unique_ptr<char[]> buf(new char[size]);
-    snprintf(buf.get(), size, format.c_str(), args ...);
-    return std::string(buf.get(), buf.get() + size - 1);
-}
 
 template<typename ... Args>
 int readFromFile(const std::string &filename,
@@ -456,15 +447,21 @@ int UVCCamera::setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pix
     ENTER();
     int result = EXIT_FAILURE;
 
-    if (mPreview && pixel_format != 6)
+    if (pixel_format == PIXEL_FORMAT_H264)
     {
-        result = mPreview->setFrameCallback(env, frame_callback_obj, pixel_format);
+        if (mRecord)
+        {
+            result = mRecord->setFrameCallback(env, frame_callback_obj, pixel_format);
+        }
+    }
+    else
+    {
+        if (mPreview)
+        {
+            result = mPreview->setFrameCallback(env, frame_callback_obj, pixel_format);
+        }
     }
 
-    if (mRecord && pixel_format == 6)
-    {
-        result = mRecord->setFrameCallback(env, frame_callback_obj, pixel_format);
-    }
 
     RETURN(result, int);
 }

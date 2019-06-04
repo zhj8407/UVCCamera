@@ -15,6 +15,8 @@
 
 #include <time.h>
 
+#include <sstream>
+
 #include "linux/videodev2.h"
 #include "v4l2_video_formats.h"
 
@@ -99,31 +101,6 @@ static uint32_t decoder_supported_formats[] =
     0
 };
 
-/* FIXME: doesn't support bigendian formats=> fourcc | (1 << 31)
- * get pixelformat from fourcc
- * args:
- *    fourcc - fourcc code for format
- *
- * asserts:
- *    none
- *
- * returns: v4l2 pixel format
- */
-uint32_t v4l2core_fourcc_2_v4l2_pixelformat(const char *fourcc)
-{
-    int fmt = 0;
-
-    if (!fourcc || strlen(fourcc) != 4)
-    {
-        return fmt;
-    }
-    else
-        fmt = v4l2_fourcc(toupper(fourcc[0]), toupper(fourcc[1]),
-                          toupper(fourcc[2]), toupper(fourcc[3]));
-
-    return fmt;
-}
-
 /*
  * check pixelformat against decoder support formats
  * args:
@@ -135,7 +112,7 @@ uint32_t v4l2core_fourcc_2_v4l2_pixelformat(const char *fourcc)
  * returns: TRUE(1) if format is supported
  *          FALSE(0) if not
  */
-uint8_t can_decode_format(uint32_t pixelformat)
+static uint8_t can_decode_format(uint32_t pixelformat)
 {
     int i = 0;
     uint32_t sup_fmt = 0;
@@ -169,9 +146,7 @@ uint8_t can_decode_format(uint32_t pixelformat)
  * asserts:
  *   vd is not null
  *   vd->fd is valid ( > 0 )
- *   vd->list_stream_formats is not null
  *   fmtind is valid
- *   vd->list_stream_formats->list_stream_cap is not null
  *   fsizeind is valid
  *
  * returns 0 if enumeration succeded or errno otherwise
@@ -182,15 +157,13 @@ static int enum_frame_intervals(v4l2_dev_t *vd, uint32_t pixfmt, uint32_t width,
     /*assertions*/
     assert(vd != NULL);
     assert(vd->fd > 0);
-    assert(vd->list_stream_formats != NULL);
-    assert(vd->numb_formats >= fmtind);
-    assert(vd->list_stream_formats->list_stream_cap != NULL);
-    assert(vd->list_stream_formats[fmtind - 1].numb_res >= fsizeind);
+    assert(vd->stream_formats.size() >= fmtind);
+    assert(vd->stream_formats[fmtind - 1].stream_caps.size() >= fsizeind);
 
     int ret = 0;
+    std::ostringstream intervals_oss;
+
     struct v4l2_frmivalenum fival;
-    int list_fps = 0;
-    char intervals_buf[512] = { '\0' };
     int discrete = 0;
     memset(&fival, 0, sizeof(fival));
     fival.index = 0;
@@ -198,10 +171,7 @@ static int enum_frame_intervals(v4l2_dev_t *vd, uint32_t pixfmt, uint32_t width,
     fival.width = width;
     fival.height = height;
 
-    vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num =
-        NULL;
-    vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom =
-        NULL;
+    vd->stream_formats[fmtind - 1].stream_caps[fsizeind - 1].framerates.clear();
 
     if (verbosity > 0)
     {
@@ -218,44 +188,11 @@ static int enum_frame_intervals(v4l2_dev_t *vd, uint32_t pixfmt, uint32_t width,
 
             if (verbosity > 0)
             {
-                size_t len = strnlen(intervals_buf, sizeof(intervals_buf));
-                snprintf(intervals_buf + len, sizeof(intervals_buf) - len,
-                         "%u/%u, ", fival.discrete.numerator,
-                         fival.discrete.denominator);
+                intervals_oss << fival.discrete.numerator << '/' << fival.discrete.denominator << ", ";
             }
 
-            list_fps++;
-            vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num =
-                reinterpret_cast<int *>(realloc(
-                                            vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind
-                                                    - 1].framerate_num, sizeof(int) * list_fps));
-
-            if (vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num
-                    == NULL)
-            {
-                LOGE("V4L2_CORE: FATAL memory allocation failure (enum_frame_intervals): %s\n",
-                     strerror(errno));
-                return -1;
-            }
-
-            vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom =
-                reinterpret_cast<int *>(realloc(
-                                            vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind
-                                                    - 1].framerate_denom,
-                                            sizeof(int) * list_fps));
-
-            if (vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom
-                    == NULL)
-            {
-                LOGE("V4L2_CORE: FATAL memory allocation failure (enum_frame_intervals): %s\n",
-                     strerror(errno));
-                return -1;
-            }
-
-            vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num[list_fps
-                    - 1] = fival.discrete.numerator;
-            vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom[list_fps
-                    - 1] = fival.discrete.denominator;
+            vd->stream_formats[fmtind - 1].stream_caps[fsizeind - 1].framerates.push_back(std::pair<int, int>(fival.discrete.numerator,
+                    fival.discrete.denominator));
         }
         else if (fival.type == V4L2_FRMIVAL_TYPE_CONTINUOUS)
         {
@@ -285,59 +222,14 @@ static int enum_frame_intervals(v4l2_dev_t *vd, uint32_t pixfmt, uint32_t width,
 
     if (discrete && verbosity > 0)
     {
-        size_t len = strnlen(intervals_buf, sizeof(intervals_buf));
-
-        if (len > 0)
-        {
-            intervals_buf[len - 1] = '\0';
-        }
-
-        if (len > 1)
-        {
-            intervals_buf[len - 2] = '\0';
-        }
-
-        LOGI("{ %s }\n", intervals_buf);
+        LOGI("{ %s }\n", intervals_oss.str().c_str());
     }
 
-    if (list_fps == 0)
+    if (vd->stream_formats[fmtind - 1].stream_caps[fsizeind - 1].framerates.empty())
     {
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].numb_frates =
-            1;
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num =
-            reinterpret_cast<int *>(realloc(
-                                        vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind
-                                                - 1].framerate_num, sizeof(int)));
-
-        if (vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num
-                == NULL)
-        {
-            LOGE("V4L2_CORE: FATAL memory allocation failure (enum_frame_intervals): %s\n",
-                 strerror(errno));
-            return -1;
-        }
-
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom =
-            reinterpret_cast<int *>(realloc(
-                                        vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind
-                                                - 1].framerate_denom, sizeof(int)));
-
-        if (vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom
-                == NULL)
-        {
-            LOGE("V4L2_CORE: FATAL memory allocation failure (enum_frame_intervals): %s\n",
-                 strerror(errno));
-            return -1;
-        }
-
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_num[0] =
-            1;
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].framerate_denom[0] =
-            1;
+        vd->stream_formats[fmtind - 1].stream_caps[fsizeind - 1].framerates.push_back(
+            std::pair<int, int>(1, 1));
     }
-    else
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].numb_frates =
-            list_fps;
 
     if (verbosity > 0)
     {
@@ -346,7 +238,8 @@ static int enum_frame_intervals(v4l2_dev_t *vd, uint32_t pixfmt, uint32_t width,
 
     if (ret != 0 && errno != EINVAL)
     {
-        LOGE("V4L2_CORE: (VIDIOC_ENUM_FRAMEINTERVALS) Error enumerating frame intervals\n");
+        LOGE("V4L2_CORE: (VIDIOC_ENUM_FRAMEINTERVALS) Error enumerating frame intervals: %s(%d)\n",
+             strerror(errno), errno);
         return -1;
     }
 
@@ -363,7 +256,6 @@ static int enum_frame_intervals(v4l2_dev_t *vd, uint32_t pixfmt, uint32_t width,
  * asserts:
  *   vd is not null
  *   vd->fd is valid ( > 0 )
- *   vd->list_stream_formats is not null
  *   fmtind is valid
  *
  * returns 0 if enumeration succeded or errno otherwise
@@ -373,14 +265,13 @@ static int enum_frame_sizes(v4l2_dev_t *vd, uint32_t pixfmt, int fmtind)
     /*assertions*/
     assert(vd != NULL);
     assert(vd->fd > 0);
-    assert(vd->list_stream_formats != NULL);
-    assert(vd->numb_formats >= fmtind);
+    assert(vd->stream_formats.size() >= fmtind);
 
     int ret = 0;
     int fsizeind = 0; /*index for supported sizes*/
-    vd->list_stream_formats[fmtind - 1].list_stream_cap = NULL;
-    struct v4l2_frmsizeenum fsize;
+    vd->stream_formats[fmtind - 1].stream_caps.clear();
 
+    struct v4l2_frmsizeenum fsize;
     memset(&fsize, 0, sizeof(fsize));
     fsize.index = 0;
     fsize.pixel_format = pixfmt;
@@ -395,24 +286,18 @@ static int enum_frame_sizes(v4l2_dev_t *vd, uint32_t pixfmt, int fmtind)
                 LOGI("{ discrete: width = %u, height = %u }\n",
                      fsize.discrete.width, fsize.discrete.height);
 
+            v4l2_stream_cap_t stream_cap;
+
+            stream_cap.width = fsize.discrete.width;
+            stream_cap.height = fsize.discrete.height;
+            stream_cap.profile = fsize.reserved[0];
+
             fsizeind++;
-            vd->list_stream_formats[fmtind - 1].list_stream_cap = reinterpret_cast<v4l2_stream_cap_t *>
-                    (realloc( vd->list_stream_formats[fmtind - 1].list_stream_cap,
-                              fsizeind * sizeof(v4l2_stream_cap_t)));
 
-            assert(vd->list_stream_formats[fmtind - 1].list_stream_cap != NULL);
+            vd->stream_formats[fmtind - 1].stream_caps.push_back(stream_cap);
 
-            vd->list_stream_formats[fmtind - 1].numb_res = fsizeind;
-
-            vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].width =
-                fsize.discrete.width;
-            vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].height =
-                fsize.discrete.height;
-            vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].profile =
-                fsize.reserved[0];
-
-            ret = enum_frame_intervals(vd, pixfmt, fsize.discrete.width,
-                                       fsize.discrete.height, fmtind, fsizeind);
+            ret = enum_frame_intervals(vd, pixfmt, stream_cap.width,
+                                       stream_cap.height, fmtind, fsizeind);
 
             if (ret != 0)
                 LOGE("V4L2_CORE:  Unable to enumerate frame sizes %s\n",
@@ -442,21 +327,15 @@ static int enum_frame_sizes(v4l2_dev_t *vd, uint32_t pixfmt, int fmtind)
             /*add at least min and max values*/
             fsizeind++; /*min*/
 
-            vd->list_stream_formats[fmtind - 1].list_stream_cap = reinterpret_cast<v4l2_stream_cap_t *>
-                    (realloc(vd->list_stream_formats[fmtind - 1].list_stream_cap,
-                             fsizeind * sizeof(v4l2_stream_cap_t)));
+            v4l2_stream_cap_t stream_cap;
 
-            assert(vd->list_stream_formats[fmtind - 1].list_stream_cap != NULL);
+            stream_cap.width = fsize.stepwise.min_width;
+            stream_cap.height = fsize.stepwise.min_height;
 
-            vd->list_stream_formats[fmtind - 1].numb_res = fsizeind;
+            vd->stream_formats[fmtind - 1].stream_caps.push_back(stream_cap);
 
-            vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].width =
-                fsize.stepwise.min_width;
-            vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].height =
-                fsize.stepwise.min_height;
-
-            ret = enum_frame_intervals(vd, pixfmt, fsize.stepwise.min_width,
-                                       fsize.stepwise.min_height, fmtind, fsizeind);
+            ret = enum_frame_intervals(vd, pixfmt, stream_cap.width,
+                                       stream_cap.height, fmtind, fsizeind);
 
             if (ret != 0)
                 LOGE("V4L2_CORE:  Unable to enumerate frame sizes %s\n",
@@ -464,21 +343,13 @@ static int enum_frame_sizes(v4l2_dev_t *vd, uint32_t pixfmt, int fmtind)
 
             fsizeind++; /*max*/
 
-            vd->list_stream_formats[fmtind - 1].list_stream_cap = reinterpret_cast<v4l2_stream_cap_t *>
-                    (realloc(vd->list_stream_formats[fmtind - 1].list_stream_cap,
-                             fsizeind * sizeof(v4l2_stream_cap_t)));
+            stream_cap.width = fsize.stepwise.max_width;
+            stream_cap.height = fsize.stepwise.max_height;
 
-            assert(vd->list_stream_formats[fmtind - 1].list_stream_cap != NULL);
+            vd->stream_formats[fmtind - 1].stream_caps.push_back(stream_cap);
 
-            vd->list_stream_formats[fmtind - 1].numb_res = fsizeind;
-
-            vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].width =
-                fsize.stepwise.max_width;
-            vd->list_stream_formats[fmtind - 1].list_stream_cap[fsizeind - 1].height =
-                fsize.stepwise.max_height;
-
-            ret = enum_frame_intervals(vd, pixfmt, fsize.stepwise.max_width,
-                                       fsize.stepwise.max_height, fmtind, fsizeind);
+            ret = enum_frame_intervals(vd, pixfmt, stream_cap.width,
+                                       stream_cap.height, fmtind, fsizeind);
 
             if (ret != 0)
                 LOGE("V4L2_CORE:  Unable to enumerate frame sizes %s\n",
@@ -504,9 +375,6 @@ static int enum_frame_sizes(v4l2_dev_t *vd, uint32_t pixfmt, int fmtind)
     {
         /* ------ some drivers don't enumerate frame sizes ------ */
         /*         negotiate with VIDIOC_TRY_FMT instead          */
-
-        /*if fsizeind = 0 list_stream_cap shouldn't have been allocated*/
-        assert(vd->list_stream_formats[fmtind - 1].list_stream_cap == NULL);
 
         fsizeind++;
         struct v4l2_format fmt;
@@ -537,52 +405,14 @@ static int enum_frame_sizes(v4l2_dev_t *vd, uint32_t pixfmt, int fmtind)
             LOGI("fmtind:%i fsizeind: %i\n", fmtind, fsizeind);
         }
 
-        vd->list_stream_formats[fmtind - 1].list_stream_cap = reinterpret_cast<v4l2_stream_cap_t *>(realloc(
-                    vd->list_stream_formats[fmtind - 1].list_stream_cap,
-                    sizeof(v4l2_stream_cap_t) * fsizeind));
-
-        assert(vd->list_stream_formats[fmtind - 1].list_stream_cap != NULL);
-
-        vd->list_stream_formats[fmtind - 1].numb_res = fsizeind;
+        assert(vd->stream_formats[fmtind - 1].stream_caps.empty());
 
         /*don't enumerateintervals, use a default of 1/25 fps instead*/
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[0].framerate_num =
-            NULL;
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[0].framerate_num =
-            reinterpret_cast<int *>(realloc(
-                                        vd->list_stream_formats[fmtind - 1].list_stream_cap[0].framerate_num,
-                                        sizeof(int)));
+        v4l2_stream_cap_t stream_cap;
 
-        if (vd->list_stream_formats[fmtind - 1].list_stream_cap[0].framerate_num
-                == NULL)
-        {
-            LOGE("V4L2_CORE: FATAL memory allocation failure (enum_frame_intervals): %s\n",
-                 strerror(errno));
-            return -1;
-        }
-
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[0].framerate_denom =
-            NULL;
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[0].framerate_denom =
-            reinterpret_cast<int *>(realloc(
-                                        vd->list_stream_formats[fmtind - 1].list_stream_cap[0].framerate_denom,
-                                        sizeof(int)));
-
-        if (vd->list_stream_formats[fmtind - 1].list_stream_cap[0].framerate_denom
-                == NULL)
-        {
-            LOGE("V4L2_CORE: FATAL memory allocation failure (enum_frame_intervals): %s\n",
-                 strerror(errno));
-            return -1;
-        }
-
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[0].width = width;
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[0].height = height;
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[0].framerate_num[0] =
-            1;
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[0].framerate_denom[0] =
-            25;
-        vd->list_stream_formats[fmtind - 1].list_stream_cap[0].numb_frates = 1;
+        stream_cap.width = width;
+        stream_cap.height = height;
+        stream_cap.framerates.push_back(std::pair<int, int>(1, 25));
     }
 
     return 0;
@@ -590,14 +420,14 @@ static int enum_frame_sizes(v4l2_dev_t *vd, uint32_t pixfmt, int fmtind)
 
 /*
  * enumerate frame formats (pixelformats, resolutions and fps)
- * and creates list in vd->list_stream_formats
+ * and creates container in vd->stream_formats
  * args:
  *   vd - pointer to video device data
  *
  * asserts:
  *   vd is not null
  *   vd->fd is valid ( > 0 )
- *   vd->list_stream_formats is null
+ *   vd->stream_formats is empty
  *
  * returns: 0 (E_OK) if enumeration succeded or error otherwise
  */
@@ -606,7 +436,7 @@ int enum_frame_formats(v4l2_dev_t *vd)
     /*assertions*/
     assert(vd != NULL);
     assert(vd->fd > 0);
-    assert(vd->list_stream_formats == NULL);
+    assert(vd->stream_formats.empty());
 
     int ret = E_OK;
 
@@ -616,17 +446,6 @@ int enum_frame_formats(v4l2_dev_t *vd)
     memset(&fmt, 0, sizeof(fmt));
     fmt.index = 0;
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-
-    vd->list_stream_formats = reinterpret_cast<v4l2_stream_formats_t *>(calloc(1, sizeof(v4l2_stream_formats_t)));
-
-    if (vd->list_stream_formats == NULL)
-    {
-        LOGE("V4L2_CORE: FATAL memory allocation failure (enum_frame_formats): %s\n",
-             strerror(errno));
-        return -1;
-    }
-
-    vd->list_stream_formats[0].list_stream_cap = NULL;
 
     while ((ret = xioctl(vd->fd, VIDIOC_ENUM_FMT, &fmt)) == 0)
     {
@@ -667,26 +486,24 @@ int enum_frame_formats(v4l2_dev_t *vd)
 
         fmtind++;
 
-        vd->list_stream_formats = reinterpret_cast<v4l2_stream_formats_t *>(realloc(vd->list_stream_formats,
-                                  fmtind * sizeof(v4l2_stream_formats_t)));
+        _v4l2_stream_format_t stream_format;
 
-        assert(vd->list_stream_formats != NULL);
-
-        vd->numb_formats = fmtind;
-
-        vd->list_stream_formats[fmtind - 1].dec_support = dec_support;
-        vd->list_stream_formats[fmtind - 1].format = fmt.pixelformat;
+        stream_format.dec_support = dec_support;
+        stream_format.format = fmt.pixelformat;
 
         if ((fmt.pixelformat & (1 << 31)) != 0) //be format flag
         {
             pix_format &= ~(1 << 31);    //need to fix fourcc string
         }
 
-        snprintf(vd->list_stream_formats[fmtind - 1].fourcc, 5, "%c%c%c%c",
-                 pix_format & 0xFF, (pix_format >> 8) & 0xFF,
-                 (pix_format >> 16) & 0xFF, (pix_format >> 24) & 0xFF);
-        strncpy(vd->list_stream_formats[fmtind - 1].description,
-                (char *) fmt.description, 31);
+        stream_format.fourcc =
+            stringFormat("%c%c%c%c",
+                         pix_format & 0xFF, (pix_format >> 8) & 0xFF,
+                         (pix_format >> 16) & 0xFF, (pix_format >> 24) & 0xFF);
+        stream_format.description = reinterpret_cast<char *>(fmt.description);
+
+        vd->stream_formats.push_back(stream_format);
+
         //enumerate frame sizes
         ret = enum_frame_sizes(vd, fmt.pixelformat, fmtind);
 
@@ -721,7 +538,6 @@ int enum_frame_formats(v4l2_dev_t *vd)
  *
  * asserts:
  *   vd is not null
- *   vd->list_stream_formats is not null
  *
  * returns: format list index or -1 if not available
  */
@@ -729,18 +545,17 @@ int get_frame_format_index(v4l2_dev_t *vd, int format)
 {
     /*asserts*/
     assert(vd != NULL);
-    assert(vd->list_stream_formats != NULL);
 
     int i = 0;
 
-    for (i = 0; i < vd->numb_formats; i++)
+    for (const auto &stream_format : vd->stream_formats)
     {
-        //LOGI("V4L2_CORE: requested format(%x)  [%i] -> %x\n",
-        //  format, i, vd->list_stream_formats[i].format);
-        if (format == vd->list_stream_formats[i].format)
+        if (format == stream_format.format)
         {
             return (i);
         }
+
+        i++;
     }
 
     return (-1);
@@ -756,7 +571,6 @@ int get_frame_format_index(v4l2_dev_t *vd, int format)
  *
  * asserts:
  *   vd is not null
- *   vd->list_stream_formats is not null
  *
  * returns: resolution list index for format index or -1 if not available
  */
@@ -765,12 +579,11 @@ int get_format_resolution_index(v4l2_dev_t *vd, int format, int width,
 {
     /*asserts*/
     assert(vd != NULL);
-    assert(vd->list_stream_formats != NULL);
 
-    if (format >= vd->numb_formats || format < 0)
+    if (format >= vd->stream_formats.size() || format < 0)
     {
         LOGE("V4L2_CORE: [get resolution index] format index (%i) is not valid [0 - %i]\n",
-             format, vd->numb_formats - 1);
+             format, vd->stream_formats.size() - 1);
         return (-1);
     }
 
@@ -778,11 +591,9 @@ int get_format_resolution_index(v4l2_dev_t *vd, int format, int width,
     int found_idx = -1;
     int resolution_matched_idx = -1;
 
-    for (i = 0; i < vd->list_stream_formats[format].numb_res; i++)
+    for (const auto &stream_cap : vd->stream_formats[format].stream_caps)
     {
-        if (width == vd->list_stream_formats[format].list_stream_cap[i].width
-                && height
-                == vd->list_stream_formats[format].list_stream_cap[i].height)
+        if (width == stream_cap.width && height == stream_cap.height)
         {
             resolution_matched_idx = i;
 
@@ -792,21 +603,24 @@ int get_format_resolution_index(v4l2_dev_t *vd, int format, int width,
                 return (i);
             }
             else if (profile
-                     == vd->list_stream_formats[format].list_stream_cap[i].profile)
+                     == vd->stream_formats[format].stream_caps[i].profile)
             {
                 /* Find the matched profile. */
                 return (i);
             }
             else if ((profile & 0xFF00)
-                     == (((vd->list_stream_formats[format].list_stream_cap[i].profile)) & 0xFF00))
+                     == (((vd->stream_formats[format].stream_caps[i].profile)) & 0xFF00))
             {
                 /* Found the partially matched profile.
                  * We will continue.
                  */
                 found_idx = i;
+                i++;
                 continue;
             }
         }
+
+        i++;
     }
 
     if (found_idx < 0 && resolution_matched_idx >= 0)
@@ -825,7 +639,6 @@ int get_format_resolution_index(v4l2_dev_t *vd, int format, int width,
  *
  * asserts:
  *   vd is not null
- *   vd->list_stream_formats is not null
  *
  * returns: void
  */
@@ -833,32 +646,6 @@ void free_frame_formats(v4l2_dev_t *vd)
 {
     /*asserts*/
     assert(vd != NULL);
-    assert(vd->list_stream_formats != NULL);
 
-    int i = 0;
-    int j = 0;
-
-    for (i = 0; i < vd->numb_formats; i++)
-    {
-        if (vd->list_stream_formats[i].list_stream_cap != NULL)
-        {
-            for (j = 0; j < vd->list_stream_formats[i].numb_res; j++)
-            {
-                if (vd->list_stream_formats[i].list_stream_cap[j].framerate_num
-                        != NULL)
-                    free(
-                        vd->list_stream_formats[i].list_stream_cap[j].framerate_num);
-
-                if (vd->list_stream_formats[i].list_stream_cap[j].framerate_denom
-                        != NULL)
-                    free(
-                        vd->list_stream_formats[i].list_stream_cap[j].framerate_denom);
-            }
-
-            free(vd->list_stream_formats[i].list_stream_cap);
-        }
-    }
-
-    free(vd->list_stream_formats);
-    vd->list_stream_formats = NULL;
+    vd->stream_formats.clear();
 }

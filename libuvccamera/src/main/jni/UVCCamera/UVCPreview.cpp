@@ -96,11 +96,32 @@ UVCPreview::~UVCPreview()
     EXIT();
 }
 
-int UVCPreview::setPreviewSize(int width, int height, int min_fps, int max_fps, int mode, float bandwidth)
+int UVCPreview::setPreviewSize(int width, int height,
+                               int min_fps, int max_fps,
+                               int mode,
+                               float bandwidth)
 {
     ENTER();
 
     int result = 0;
+
+    if (mode < 0 || mode > ARRAY_SIZE(pixel_formats))
+    {
+        LOGE("UVCPreview::setPreviewSize - Unsupported frame mode: %d\n", mode);
+        return -1;
+    }
+
+    result = v4l2core_prepare_new_format_resolution(mV4l2Dev, pixel_formats[mode],
+             width, height, 0, 0, 0, 0, 0, 0);
+
+    if (result < 0)
+    {
+        LOGE("UVCPreview::setPreviewSize - Can not find the %dX%d@%s\n",
+             width, height, v4l2_fourcc_to_string(pixel_formats[mode]).c_str());
+        return -1;
+    }
+
+    v4l2core_define_fps(mV4l2Dev, requestMinFps, requestMaxFps);
 
     requestWidth = width;
     requestHeight = height;
@@ -108,10 +129,6 @@ int UVCPreview::setPreviewSize(int width, int height, int min_fps, int max_fps, 
     requestMaxFps = max_fps;
     requestMode = mode;
     requestBandwidth = bandwidth;
-
-    v4l2core_prepare_new_format(mV4l2Dev, pixel_formats[requestMode]);
-    v4l2core_prepare_new_resolution(mV4l2Dev, requestWidth, requestHeight, 0, 0, 0, 0, 0, 0);
-    v4l2core_define_fps(mV4l2Dev, requestMinFps, requestMaxFps);
 
     RETURN(result, int);
 }
@@ -146,7 +163,9 @@ int UVCPreview::setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pi
 
     ENTER();
 
-    UVCStream::setFrameCallback(env, frame_callback_obj, 0, "onFrame", "(Ljava/nio/ByteBuffer;)V");
+    UVCStream::setFrameCallback(env, frame_callback_obj,
+                                0, "onFrame",
+                                "(Ljava/nio/ByteBuffer;)V");
 
     pthread_mutex_lock(&capture_mutex);
     {
@@ -328,10 +347,23 @@ int UVCPreview::prepare_streaming()
     {
         frameWidth = requestWidth;
         frameHeight = requestHeight;
-        char fcc_name[5];
         LOGI("frameSize=(%d,%d)@%s",
              frameWidth, frameHeight,
-             v4l2_fourcc_to_string(fcc_name, pixel_formats[requestMode]));
+             v4l2_fourcc_to_string(pixel_formats[requestMode]).c_str());
+
+        pthread_mutex_lock(&capture_mutex);
+
+        if (requestMode == NV12_FORMAT_PREVIEW_MODE)
+        {
+            mPixelFormat = PIXEL_FORMAT_YUV20SP;
+        }
+        else
+        {
+            mPixelFormat = PIXEL_FORMAT_YUV;
+        }
+
+        pthread_mutex_unlock(&capture_mutex);
+
         pthread_mutex_lock(&streaming_mutex);
 
         if (LIKELY(mPreviewWindow))
@@ -343,12 +375,19 @@ int UVCPreview::prepare_streaming()
         pthread_mutex_unlock(&streaming_mutex);
 
         frameMode = requestMode;
+
         if (frameMode == YUYV_FORMAT_PREVIEW_MODE)
+        {
             frameBytes = frameWidth * frameHeight * 2;
+        }
         else if (frameMode == NV12_FORMAT_PREVIEW_MODE)
+        {
             frameBytes = frameWidth * frameHeight * 3 / 2;
+        }
         else
+        {
             frameBytes = frameWidth * frameHeight * 4;
+        }
 
         previewBytes = frameWidth * frameHeight * PREVIEW_PIXEL_BYTES;
     }
@@ -521,7 +560,11 @@ int copyToSurface(uvc_frame_t *frame, ANativeWindow **window)
 }
 
 // changed to return original frame instead of returning converted frame even if convert_func is not null.
-uvc_frame_t *UVCPreview::draw_preview_one(uvc_frame_t *frame, ANativeWindow **window, convFunc_t convert_func, int pixcelBytes)
+uvc_frame_t *UVCPreview::draw_preview_one(
+    uvc_frame_t *frame,
+    ANativeWindow **window,
+    convFunc_t convert_func,
+    int pixcelBytes)
 {
     // ENTER();
 
@@ -609,7 +652,8 @@ int UVCPreview::setCaptureDisplay(ANativeWindow *capture_window)
             {
                 int32_t window_format = ANativeWindow_getFormat(mCaptureWindow);
 
-                if ((window_format != WINDOW_FORMAT_RGB_565) && (previewFormat == WINDOW_FORMAT_RGB_565))
+                if ((window_format != WINDOW_FORMAT_RGB_565) &&
+                        (previewFormat == WINDOW_FORMAT_RGB_565))
                 {
                     LOGE("window format mismatch, cancelled movie capturing.");
                     ANativeWindow_release(mCaptureWindow);
@@ -758,8 +802,11 @@ void UVCPreview::do_capture_callback(JNIEnv *env, uvc_frame_t *frame)
                 }
             }
 
-            jobject buf = env->NewDirectByteBuffer(callback_frame->data, callbackPixelBytes);
-            env->CallVoidMethod(mFrameCallbackObj, iframecallback_fields.onFrame, buf);
+            jobject buf = env->NewDirectByteBuffer(callback_frame->data,
+                                                   callbackPixelBytes);
+            env->CallVoidMethod(mFrameCallbackObj,
+                                iframecallback_fields.onFrame,
+                                buf);
             env->ExceptionClear();
             env->DeleteLocalRef(buf);
         }

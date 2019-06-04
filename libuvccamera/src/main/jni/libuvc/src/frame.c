@@ -593,6 +593,85 @@ uvc_error_t uvc_yuyv2rgb565(uvc_frame_t *in, uvc_frame_t *out)
     return UVC_SUCCESS;
 }
 
+static uvc_error_t uvc_yuyv2nv12(uvc_frame_t *in, uvc_frame_t *out)
+{
+    if (UNLIKELY(in->frame_format != UVC_FRAME_FORMAT_YUYV))
+        return UVC_ERROR_INVALID_PARAM;
+
+    if (UNLIKELY(uvc_ensure_frame_size(out, in->width * in->height * 3 / 2) < 0))
+        return UVC_ERROR_NO_MEM;
+
+    out->width = in->width;
+    out->height = in->height;
+    out->frame_format = UVC_FRAME_FORMAT_NV12;
+
+    if (out->library_owns_data)
+        out->step = in->width * 3 / 2;
+
+    out->sequence = in->sequence;
+    out->capture_time = in->capture_time;
+    out->source = in->source;
+
+    char *pyuyv = in->data;
+    char *pnv12 = out->data;
+
+    char *srcbuf_begin;
+    int *dstint_y, *dstint_uv, *srcint;
+    int src_w = in->width;
+    int src_h = in->height;
+    int y_size = src_w*src_h;
+    int i, j;
+
+    dstint_y = (int*)(pnv12);
+    srcint = (int*)(pyuyv);
+    dstint_uv =  (int*)(pnv12 + y_size);
+
+#ifdef HAVE_ARM_NEON
+    /*
+    * ASM code YUYV to YUV420
+    */
+    for(i=0;i<src_h;i++) {
+        int n = src_w;
+        char tmp = i%2;//get uv only when in even row
+        asm volatile (
+        "   pld [%[src], %[src_stride], lsl #2]                         \n\t"
+        "   cmp %[n], #16                                               \n\t"
+        "   blt 5f                                                      \n\t"
+        "0: @ 16 pixel swap                                             \n\t"
+        "   vld2.8  {q0,q1} , [%[src]]!  @ q0 = y q1 = uv               \n\t"
+        "   vst1.16 {q0},[%[dst_y]]!     @ now q0  -> dst               \n\t"
+        "   cmp %[tmp], #1                                              \n\t"
+        "   bge 1f                                                      \n\t"
+        "   vst1.16 {q1},[%[dst_uv]]!    @ now q1  -> dst   	    	\n\t"
+        "1: @ don't need get uv in odd row                              \n\t"
+        "   sub %[n], %[n], #16                                         \n\t"
+        "   cmp %[n], #16                                               \n\t"
+        "   bge 0b                                                      \n\t"
+        "5: @ end                                                       \n\t"
+        : [dst_y] "+r" (dstint_y), [dst_uv] "+r" (dstint_uv),[src] "+r" (srcint), [n] "+r" (n),[tmp] "+r" (tmp)
+        : [src_stride] "r" (src_w)
+        : "cc", "memory", "q0", "q1", "q2"
+        );
+    }
+#else
+    /*
+    * C code YUYV to YUV420
+    */
+    for(i=0;i<src_h; i++) {
+        for (j=0; j<(src_w>>2); j++) {
+            if(i%2 == 0){
+            *dstint_uv++ = (*(srcint+1)&0xff000000)|((*(srcint+1)&0x0000ff00)<<8)
+                        |((*srcint&0xff000000)>>16)|((*srcint&0x0000ff00)>>8);
+            }
+            *dstint_y++ = ((*(srcint+1)&0x00ff0000)<<8)|((*(srcint+1)&0x000000ff)<<16)
+                            |((*srcint&0x00ff0000)>>8)|(*srcint&0x000000ff);
+            srcint += 2;
+        }
+    }
+#endif
+    return UVC_SUCCESS;
+}
+
 /** @brief Convert a frame from NV12 to RGBX8888
  * @ingroup frame
  * @param in NV12 frame
@@ -601,6 +680,9 @@ uvc_error_t uvc_yuyv2rgb565(uvc_frame_t *in, uvc_frame_t *out)
 uvc_error_t uvc_nv122rgbx(uvc_frame_t *in, uvc_frame_t *out)
 {
     if (UNLIKELY(in->frame_format != UVC_FRAME_FORMAT_NV12))
+        return UVC_ERROR_INVALID_PARAM;
+
+    if (UNLIKELY(in->data_bytes != in->width * in->height * 3 / 2))
         return UVC_ERROR_INVALID_PARAM;
 
     if (UNLIKELY(uvc_ensure_frame_size(out, in->width * in->height * PIXEL_RGBX) < 0))
@@ -620,6 +702,7 @@ uvc_error_t uvc_nv122rgbx(uvc_frame_t *in, uvc_frame_t *out)
     uint8_t *pyuv = in->data;
     uint8_t *prgbx = out->data;
 
+#ifndef RKCHIP_HW_ACCELERATE
     const int nv_start = in->width * in->height;
     uint32_t i, j;
     int r, g, b, nv_index = 0;
@@ -627,7 +710,7 @@ uvc_error_t uvc_nv122rgbx(uvc_frame_t *in, uvc_frame_t *out)
     for(i = 0; i < in->height; i+=2) {
 
         for (j = 0; j < in->width; j+=2) {
-            //Y0, Y1, Y(width), Y(width + 1) share 
+            //Y0, Y1, Y(width), Y(width + 1) share
             //the same U and V
             nv_index = i / 2 * in->width + j;
 
@@ -665,6 +748,19 @@ uvc_error_t uvc_nv122rgbx(uvc_frame_t *in, uvc_frame_t *out)
             prgbx[((i + 1) * in->width + j) * PIXEL_RGBX + 7] = 0xff;
         }
     }
+#else
+    int srcFormat = 0x15; //HAL_PIXEL_FORMAT_YCrCb_NV12
+    int dstFormat = 0x01; //HAL_PIXEL_FORMAT_RGBA_8888
+
+    int status = RGA_Copy(
+                      pyuv, srcFormat, in->width, in->height,
+                      prgbx, dstFormat, out->width, out->height);
+
+    if (status)
+    {
+        return UVC_ERROR_NO_MEM;
+    }
+#endif
 
     return UVC_SUCCESS;
 }
@@ -720,6 +816,7 @@ uvc_error_t uvc_yuyv2rgbx(uvc_frame_t *in, uvc_frame_t *out)
     out->capture_time = in->capture_time;
     out->source = in->source;
 
+#ifndef RKCHIP_HW_ACCELERATE
     uint8_t *pyuv = in->data;
     const uint8_t *pyuv_end = pyuv + in->data_bytes - PIXEL8_YUYV;
     uint8_t *prgbx = out->data;
@@ -765,6 +862,40 @@ uvc_error_t uvc_yuyv2rgbx(uvc_frame_t *in, uvc_frame_t *out)
         pyuv += PIXEL8_YUYV;
     }
 
+#endif
+#else
+    int ret = UVC_SUCCESS;
+    uvc_frame_t *framenv12 = uvc_allocate_frame(in->width * in->height * 3 / 2);
+
+    if (framenv12 == NULL)
+    {
+        return UVC_ERROR_NO_MEM;
+    }
+
+    ret = uvc_yuyv2nv12(in, framenv12);
+    if (ret != UVC_SUCCESS)
+    {
+        uvc_free_frame(framenv12);
+        return ret;
+    }
+
+    uint8_t *pyuv = framenv12->data;
+    uint8_t *prgbx = out->data;
+
+    int srcFormat = 0x15; //HAL_PIXEL_FORMAT_YCrCb_NV12
+    int dstFormat = 0x01; //HAL_PIXEL_FORMAT_RGBA_8888
+
+    int status = RGA_Copy(
+                      pyuv, srcFormat, in->width, in->height,
+                      prgbx, dstFormat, out->width, out->height);
+
+    if (status)
+    {
+        uvc_free_frame(framenv12);
+        return UVC_ERROR_NO_MEM;
+    }
+
+    uvc_free_frame(framenv12);
 #endif
     return UVC_SUCCESS;
 }
@@ -1550,7 +1681,7 @@ uvc_error_t uvc_any2rgbx(uvc_frame_t *in, uvc_frame_t *out)
 
         case UVC_FRAME_FORMAT_UYVY:
             return uvc_uyvy2rgbx(in, out);
-        
+
         case UVC_FRAME_FORMAT_NV12:
             return uvc_nv122rgbx(in, out);
 

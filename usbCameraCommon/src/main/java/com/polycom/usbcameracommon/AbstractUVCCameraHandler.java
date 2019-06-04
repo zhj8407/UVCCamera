@@ -605,15 +605,18 @@ abstract class AbstractUVCCameraHandler extends Handler {
                 }
             }
             if (surface instanceof SurfaceHolder) {
+                Log.i(TAG_THREAD, "instance of SurfaceHolder");
                 mUVCCamera.setPreviewDisplay((SurfaceHolder) surface);
             }
             if (surface instanceof Surface) {
+                Log.i(TAG_THREAD, "instance of Surface");
                 mUVCCamera.setPreviewDisplay((Surface) surface);
             } else {
+                Log.i(TAG_THREAD, "instance of SurfaceTexture");
                 mUVCCamera.setPreviewTexture((SurfaceTexture) surface);
             }
             mUVCCamera.startPreview();
-            mUVCCamera.updateCameraParams();
+
             synchronized (mSync) {
                 mIsPreviewing = true;
             }
@@ -764,7 +767,6 @@ abstract class AbstractUVCCameraHandler extends Handler {
             Log.i(TAG_THREAD, "Save the recorded frames to file : " + mRecordOutputPath);
 
             mUVCCamera.startRecord();
-            // mUVCCamera.updateCameraParams();
 
             synchronized (mSync) {
                 mIsRecording = true;

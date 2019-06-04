@@ -80,88 +80,43 @@ UVCRecord::~UVCRecord()
     EXIT();
 }
 
-int UVCRecord::setRecordSize(int width, int height, int profile, int min_fps, int max_fps, int mode, float bandwidth)
+int UVCRecord::setRecordSize(int width, int height,
+                             int profile, int usage,
+                             int min_fps, int max_fps,
+                             int mode, float bandwidth)
 {
     ENTER();
 
     int result = 0;
 
-    if (mode == H264_FORMAT_RECORD_MODE || mode == S264_FORMAT_RECORD_MODE)
+    if (mode != H264_FORMAT_RECORD_MODE && mode != S264_FORMAT_RECORD_MODE)
     {
-        requestWidth = width;
-        requestHeight = height;
-        requestMinFps = min_fps;
-        requestMaxFps = max_fps;
-        requestMode = mode;
-        requestProfile = profile;
-        requestUsage = DEFAULT_RECORD_USAGE;
-        requestBandwidth = bandwidth;
-
-        v4l2core_prepare_new_format(mV4l2Dev,
-                                    pixel_formats[requestMode]);
-        v4l2core_prepare_new_resolution(mV4l2Dev,
-                                        requestWidth,
-                                        requestHeight,
-                                        requestProfile,
-                                        requestUsage - 1,
-                                        0,
-                                        0,
-                                        0,
-                                        0);
-        v4l2core_define_fps(mV4l2Dev, requestMinFps, requestMaxFps);
-    }
-    else
-    {
-        result = -1;
+        LOGE("UVCRecord::setRecordSize - Unsupported frame mode: %d\n", mode);
+        RETURN(-1, int);
     }
 
-    if (!result)
+    result = v4l2core_prepare_new_format_resolution(mV4l2Dev, pixel_formats[mode],
+             width, height, profile, usage - 1, 0, 0, 0, 0);
+
+    if (result < 0)
     {
-        stream_probed = true;
+        LOGE("UVCRecord::setRecordSize - Can not find the %dX%d@%s\n",
+             width, height, v4l2_fourcc_to_string(pixel_formats[mode]).c_str());
+        RETURN(result, int);
     }
 
-    RETURN(result, int);
-}
+    v4l2core_define_fps(mV4l2Dev, requestMinFps, requestMaxFps);
 
-int UVCRecord::setRecordSize(int width, int height, int profile, int usage, int min_fps, int max_fps, int mode, float bandwidth)
-{
-    ENTER();
+    requestWidth = width;
+    requestHeight = height;
+    requestMinFps = min_fps;
+    requestMaxFps = max_fps;
+    requestMode = mode;
+    requestProfile = profile;
+    requestUsage = usage;
+    requestBandwidth = bandwidth;
 
-    int result = 0;
-
-    if (mode == H264_FORMAT_RECORD_MODE || mode == S264_FORMAT_RECORD_MODE)
-    {
-        requestWidth = width;
-        requestHeight = height;
-        requestMinFps = min_fps;
-        requestMaxFps = max_fps;
-        requestMode = mode;
-        requestProfile = profile;
-        requestUsage = usage;
-        requestBandwidth = bandwidth;
-
-        v4l2core_prepare_new_format(mV4l2Dev,
-                                    pixel_formats[requestMode]);
-        v4l2core_prepare_new_resolution(mV4l2Dev,
-                                        requestWidth,
-                                        requestHeight,
-                                        requestProfile,
-                                        requestUsage - 1,
-                                        0,
-                                        0,
-                                        0,
-                                        0);
-        v4l2core_define_fps(mV4l2Dev, requestMinFps, requestMaxFps);
-    }
-    else
-    {
-        result = -1;
-    }
-
-    if (!result)
-    {
-        stream_probed = true;
-    }
+    stream_probed = true;
 
     RETURN(result, int);
 }
@@ -171,7 +126,9 @@ int UVCRecord::setFrameCallback(JNIEnv *env, jobject frame_callback_obj, int pix
 
     ENTER();
 
-    UVCStream::setFrameCallback(env, frame_callback_obj, 1, "onRecordFrame", "(Ljava/nio/ByteBuffer;)V");
+    UVCStream::setFrameCallback(env, frame_callback_obj,
+                                1, "onRecordFrame",
+                                "(Ljava/nio/ByteBuffer;)V");
 
     RETURN(0, int);
 }
@@ -226,10 +183,9 @@ int UVCRecord::prepare_streaming()
     {
         frameWidth = requestWidth;
         frameHeight = requestHeight;
-        char fcc_name[5];
         LOGI("frameSize=(%d,%d)@%s",
              frameWidth, frameHeight,
-             v4l2_fourcc_to_string(fcc_name, pixel_formats[requestMode]));
+             v4l2_fourcc_to_string(pixel_formats[requestMode]).c_str());
 
         frameMode = requestMode;
         frameBytes = frameWidth * frameHeight * 3 / 8;
@@ -340,8 +296,11 @@ void UVCRecord::do_capture_callback(JNIEnv *env, uvc_frame_t *frame)
 
         if (mFrameCallbackObj)
         {
-            jobject buf = env->NewDirectByteBuffer(callback_frame->data, callback_frame->actual_bytes);
-            env->CallVoidMethod(mFrameCallbackObj, iframecallback_fields.onRecordFrame, buf);
+            jobject buf = env->NewDirectByteBuffer(callback_frame->data,
+                                                   callback_frame->actual_bytes);
+            env->CallVoidMethod(mFrameCallbackObj,
+                                iframecallback_fields.onRecordFrame,
+                                buf);
             env->ExceptionClear();
             env->DeleteLocalRef(buf);
         }

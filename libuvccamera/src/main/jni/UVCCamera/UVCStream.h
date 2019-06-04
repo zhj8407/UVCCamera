@@ -26,14 +26,53 @@
 #ifndef UVCStream_H_
 #define UVCStream_H_
 
-#include "libUVCCamera.h"
 #include <pthread.h>
 #include <android/native_window.h>
-#include "objectarray.h"
+
+#include <algorithm>
+#include <deque>
 
 #include "uvc_dev.h"
+#include "libUVCCamera.h"
+
+#define DEFAULT_PREVIEW_WIDTH 640
+#define DEFAULT_PREVIEW_HEIGHT 480
+#define DEFAULT_PREVIEW_FPS_MIN 1
+#define DEFAULT_PREVIEW_FPS_MAX 30
+#define DEFAULT_PREVIEW_MODE 0
+
+#define YUYV_FORMAT_PREVIEW_MODE 0
+#define MJPG_FORMAT_PREVIEW_MODE 1
+#define NV12_FORMAT_PREVIEW_MODE 2
+#define H264_FORMAT_RECORD_MODE  3
+#define S264_FORMAT_RECORD_MODE  4
+
+#define PIXEL_FORMAT_RAW 0      // same as PIXEL_FORMAT_YUV
+#define PIXEL_FORMAT_YUV 1
+#define PIXEL_FORMAT_RGB565 2
+#define PIXEL_FORMAT_RGBX 3
+#define PIXEL_FORMAT_YUV20SP 4
+#define PIXEL_FORMAT_NV21 5     // YVU420SemiPlanar
+#define PIXEL_FORMAT_H264 6
+
+#define H264_PROFILE_CONSTRAINED_BASELINE 16960
+#define H264_PROFILE_HIGH 25600
+#define H264_PROFILE_CONSTRAINED_HIGH 25612
+
+#define H264_USAGE_1 1
+#define H264_USAGE_2 2
+
+#define DEFAULT_RECORD_WIDTH 1920
+#define DEFAULT_RECORD_HEIGHT 1080
+#define DEFAULT_RECORD_FPS_MIN 1
+#define DEFAULT_RECORD_FPS_MAX 30
+#define DEFAULT_RECORD_MODE H264_FORMAT_RECORD_MODE
+#define DEFAULT_RECORD_PROFILE H264_PROFILE_CONSTRAINED_BASELINE
+#define DEFAULT_RECORD_USAGE H264_USAGE_1
 
 #define DEFAULT_BANDWIDTH 1.0f
+
+#define ARRAY_SIZE(arr) (sizeof(arr)/sizeof((arr)[0]))
 
 typedef uvc_error_t (*convFunc_t)(uvc_frame_t *in, uvc_frame_t *out);
 
@@ -69,7 +108,7 @@ protected:
     pthread_t streaming_thread;
     pthread_mutex_t streaming_mutex;
     pthread_cond_t streaming_sync;
-    ObjectArray<uvc_frame_t *> streamingFrames;
+    std::deque<uvc_frame_t *> mStreamingFrames;
 
     static void *streaming_thread_func(void *vptr_args);
     virtual int prepare_streaming() = 0;
@@ -80,7 +119,7 @@ protected:
 
     // improve performance by reducing memory allocation
     pthread_mutex_t pool_mutex;
-    ObjectArray<uvc_frame_t *> mFramePool;
+    std::vector<uvc_frame_t *> mFramePool;
     uvc_frame_t *get_frame(size_t data_bytes);
     void recycle_frame(uvc_frame_t *frame);
     void init_pool(size_t data_bytes);

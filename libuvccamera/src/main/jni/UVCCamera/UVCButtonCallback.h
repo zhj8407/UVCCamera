@@ -4,12 +4,12 @@
 #include "libUVCCamera.h"
 #include <pthread.h>
 #include <android/native_window.h>
-#include "objectarray.h"
 
 #pragma interface
 
 // for callback to Java object
-typedef struct {
+typedef struct
+{
     jmethodID onButton;
 } Fields_ibuttoncallback;
 

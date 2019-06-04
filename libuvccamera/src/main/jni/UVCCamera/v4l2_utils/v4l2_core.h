@@ -9,6 +9,7 @@
 #define V4L2_CORE_H_
 
 #include "uvc_dev.h"
+#include "v4l2_video_formats.h"
 
 /*
  * set ioctl retries to 4
@@ -149,16 +150,13 @@ static inline int get_layers_from_layout_structure(
     return ((layout_structure >> (3 * stream_id)) & 0x07);
 }
 
-static inline const char *v4l2_fourcc_to_string(char *fcc_str,
-        int fourcc)
+static inline std::string v4l2_fourcc_to_string(int fourcc)
 {
-    fcc_str[0] = (char) (fourcc & 0xFF);
-    fcc_str[1] = (char) ((fourcc & 0xFF00) >> 8);
-    fcc_str[2] = (char) ((fourcc & 0xFF0000) >> 16);
-    fcc_str[3] = (char) ((fourcc & 0xFF000000) >> 24);
-    fcc_str[4] = '\0';
-
-    return fcc_str;
+    return stringFormat("%c%c%c%c",
+                        (char) (fourcc & 0xFF),
+                        (char) ((fourcc & 0xFF00) >> 8),
+                        (char) ((fourcc & 0xFF0000) >> 16),
+                        (char) ((fourcc & 0xFF000000) >> 24));
 }
 
 /*
@@ -253,6 +251,34 @@ void v4l2core_prepare_new_resolution(v4l2_dev_t *vd,
                                      int new_stream_1_layout,
                                      int new_stream_2_layout,
                                      int new_stream_3_layout);
+
+/*
+ * prepare new resolution
+ * args:
+ *   vd - pointer to v4l2 device handler
+ *   new_format - new frame format
+ *   new_width - new width
+ *   new_height - new height
+ *   new_profile - new profile (H.264)
+ *   new_ucconfig - new ucconfig (H.264)
+ *   new_stream_0_layout - new layout for stream 0 (H.264 Simulcast)
+ *   new_stream_1_layout - new layout for stream 1 (H.264 Simulcast)
+ *   new_stream_2_layout - new layout for stream 2 (H.264 Simulcast)
+ *   new_stream_3_layout - new layout for stream 3 (H.264 Simulcast)
+ *
+ * asserts:
+ *    vd is not null
+ *
+ * returns: 0 - Successfully. -1 or -2 - Failed
+ */
+int v4l2core_prepare_new_format_resolution(v4l2_dev_t *vd,
+        int new_format,
+        int new_width,
+        int new_height,
+        int new_profile,
+        int new_ucconfig,
+        int new_stream_0_layout, int new_stream_1_layout,
+        int new_stream_2_layout, int new_stream_3_layout);
 
 /*
  * update the current format (pixelformat, width and height)

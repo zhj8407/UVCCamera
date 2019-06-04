@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <sys/types.h>
+#include <time.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
@@ -32,7 +34,7 @@
 #include "utilbase.h"
 
 /*verbosity (global scope)*/
-int verbosity = 0;
+int verbosity = 3;
 
 static int set_v4l2_framerate(v4l2_dev_t *vd);
 static void clean_v4l2_dev(v4l2_dev_t *vd);
@@ -40,6 +42,37 @@ static void clean_v4l2_dev(v4l2_dev_t *vd);
 static void *_v4l2_frame_ready_caller(void *arg);
 
 #define __PMUTEX &(vd->mutex)
+
+#ifndef NSEC_PER_SEC
+#define NSEC_PER_SEC 1000000000LL
+#endif
+
+#ifndef USEC_PER_SEC
+#define USEC_PER_SEC 1000000LL
+#endif
+
+/*
+ * monotonic time in nanoseconds
+ * args:
+ *   none
+ *
+ * asserts:
+ *   none
+ *
+ * returns: monotonic time in nanoseconds
+ */
+uint64_t ns_time_monotonic()
+{
+    struct timespec now;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0)
+    {
+        fprintf(stderr, "V4L2_CORE: ns_time_monotonic (clock_gettime) error: %s\n", strerror(errno));
+        return 0;
+    }
+
+    return ((uint64_t)now.tv_sec * NSEC_PER_SEC + (uint64_t) now.tv_nsec);
+}
 
 /*
  * Query video device capabilities and supported formats
@@ -170,12 +203,25 @@ static int unmap_buff(v4l2_dev_t *vd)
             {
                 // unmap old buffer
                 if ((vd->mem[i] != MAP_FAILED) && vd->buff_length[i])
+                {
                     if ((ret = munmap(vd->mem[i], vd->buff_length[i])) < 0)
                     {
                         LOGE("V4L2_CORE: couldn't unmap buff: %s\n",
                              strerror(errno));
                     }
+
+                    if (verbosity > 1)
+                    {
+                        LOGI("V4L2_CORE: unmapped buffer[%i] with length %i to pos %p\n", i,
+                             vd->buff_length[i], vd->mem[i]);
+                    }
+
+                    // Set the mem to unmapped
+                    vd->mem[i] = MAP_FAILED;
+                }
             }
+
+            break;
     }
 
     return ret;
@@ -530,10 +576,7 @@ static void clean_v4l2_dev(v4l2_dev_t *vd)
         free_v4l2_control_list(vd);
     }
 
-    if (vd->list_stream_formats)
-    {
-        free_frame_formats(vd);
-    }
+    free_frame_formats(vd);
 
     /*close descriptor*/
     if (vd->fd > 0)
@@ -567,12 +610,12 @@ void v4l2core_prepare_new_format_index(v4l2_dev_t *vd, int format_index)
         format_index = 0;
     }
 
-    if (format_index >= vd->numb_formats)
+    if (format_index >= vd->stream_formats.size())
     {
         format_index = 0;
     }
 
-    vd->curr_pixelformat = vd->list_stream_formats[format_index].format;
+    vd->curr_pixelformat = vd->stream_formats[format_index].format;
 }
 
 /*
@@ -598,7 +641,7 @@ void v4l2core_prepare_new_format(v4l2_dev_t *vd, int new_format)
         format_index = 0;
     }
 
-    vd->curr_pixelformat = vd->list_stream_formats[format_index].format;
+    vd->curr_pixelformat = vd->stream_formats[format_index].format;
 }
 
 /*
@@ -648,17 +691,102 @@ void v4l2core_prepare_new_resolution(v4l2_dev_t *vd, int new_width,
     }
 
     vd->curr_width =
-        vd->list_stream_formats[format_index].list_stream_cap[resolution_index].width;
+        vd->stream_formats[format_index].stream_caps[resolution_index].width;
     vd->curr_height =
-        vd->list_stream_formats[format_index].list_stream_cap[resolution_index].height;
+        vd->stream_formats[format_index].stream_caps[resolution_index].height;
     vd->curr_profile =
-        vd->list_stream_formats[format_index].list_stream_cap[resolution_index].profile;
+        vd->stream_formats[format_index].stream_caps[resolution_index].profile;
 
     vd->curr_ucconfig = new_ucconfig;
     vd->stream_0_layout = new_stream_0_layout;
     vd->stream_1_layout = new_stream_1_layout;
     vd->stream_2_layout = new_stream_2_layout;
     vd->stream_3_layout = new_stream_3_layout;
+}
+
+/*
+ * prepare new resolution
+ * args:
+ *   vd - pointer to v4l2 device handler
+ *   new_format - new frame format
+ *   new_width - new width
+ *   new_height - new height
+ *   new_profile - new profile (H.264)
+ *   new_ucconfig - new ucconfig (H.264)
+ *   new_stream_0_layout - new layout for stream 0 (H.264 Simulcast)
+ *   new_stream_1_layout - new layout for stream 1 (H.264 Simulcast)
+ *   new_stream_2_layout - new layout for stream 2 (H.264 Simulcast)
+ *   new_stream_3_layout - new layout for stream 3 (H.264 Simulcast)
+ *
+ * asserts:
+ *    vd is not null
+ *
+ * returns: 0 - Successfully. -1 or -2 - Failed
+ */
+int v4l2core_prepare_new_format_resolution(v4l2_dev_t *vd,
+        int new_format,
+        int new_width, int new_height,
+        int new_profile,
+        int new_ucconfig,
+        int new_stream_0_layout, int new_stream_1_layout,
+        int new_stream_2_layout, int new_stream_3_layout)
+{
+    /*asserts*/
+    assert(vd != NULL);
+
+    int old_pixelformat = vd->curr_pixelformat;
+
+    int format_index = get_frame_format_index(vd, new_format);
+
+    if (format_index < 0)
+    {
+        LOGW("Can not find the format: %s in total %d formats\n",
+             v4l2_fourcc_to_string(new_format).c_str(),
+             vd->stream_formats.size());
+        return -1;
+    }
+
+    /* Set the current pixel format. */
+    vd->curr_pixelformat = vd->stream_formats[format_index].format;
+
+    if (vd->curr_pixelformat != V4L2_PIX_FMT_H264 &&
+            vd->curr_pixelformat != V4L2_PIX_FMT_H264_SIMULCAST)
+    {
+        new_profile = 0;
+    }
+
+    int resolution_index = get_format_resolution_index(vd, format_index,
+                           new_width, new_height, new_profile);
+
+    if (verbosity > 2)
+    {
+        LOGI("Found resolution index: %d\n", resolution_index);
+    }
+
+    if (resolution_index < 0)
+    {
+        /* Reset to the saved pixel format */
+        LOGW("Can not find the resolution: %dX%d in total %d resolutions\n",
+             new_width, new_height,
+             vd->stream_formats[format_index].stream_caps.size());
+        vd->curr_pixelformat = old_pixelformat;
+        return -2;
+    }
+
+    vd->curr_width =
+        vd->stream_formats[format_index].stream_caps[resolution_index].width;
+    vd->curr_height =
+        vd->stream_formats[format_index].stream_caps[resolution_index].height;
+    vd->curr_profile =
+        vd->stream_formats[format_index].stream_caps[resolution_index].profile;
+
+    vd->curr_ucconfig = new_ucconfig;
+    vd->stream_0_layout = new_stream_0_layout;
+    vd->stream_1_layout = new_stream_1_layout;
+    vd->stream_2_layout = new_stream_2_layout;
+    vd->stream_3_layout = new_stream_3_layout;
+
+    return 0;
 }
 
 /*
@@ -712,6 +840,8 @@ int v4l2core_start_stream(v4l2_dev_t *vd)
         LOGI("V4L2_CORE: (VIDIOC_STREAMON) stream_status = STRM_OK\n");
     }
 
+    vd->fps_ref_ts = ns_time_monotonic();
+
     if (vd->running_thread == 0)
     {
         int err = __THREAD_CREATE(&vd->running_thread, _v4l2_frame_ready_caller, vd);
@@ -745,6 +875,8 @@ int v4l2core_stop_stream(v4l2_dev_t *vd)
 
     /*Clean up the control sets.*/
     vd->controls_set_list.clear();
+
+    vd->fps_frame_count = 0;
 
     switch (vd->cap_meth)
     {
@@ -1344,6 +1476,11 @@ static int process_input_buffer(v4l2_dev_t *vd)
 {
     uvc_frame_t *uvc_frame = reinterpret_cast<uvc_frame_t *>(calloc(1, sizeof(uvc_frame_t)));
 
+    if (uvc_frame == nullptr)
+    {
+        return -1;
+    }
+
     uvc_frame->width = vd->format.fmt.pix.width;
     uvc_frame->height = vd->format.fmt.pix.height;
 
@@ -1374,9 +1511,34 @@ static int process_input_buffer(v4l2_dev_t *vd)
     uvc_frame->data = vd->mem[vd->buf.index];
     uvc_frame->data_bytes = uvc_frame->actual_bytes = vd->buf.bytesused;
 
+    uvc_frame->capture_time = ns_time_monotonic();
+    uvc_frame->sequence = vd->frame_index++;
+
     if (vd->user_cb)
     {
         vd->user_cb(uvc_frame, vd->user_ptr);
+    }
+
+    /*determine real fps every 30 sec aprox.*/
+    vd->fps_frame_count++;
+
+    uint64_t time_diff = uvc_frame->capture_time - vd->fps_ref_ts;
+
+    if (time_diff >= (30 * NSEC_PER_SEC))
+    {
+        vd->real_fps =
+            (double) (vd->fps_frame_count * NSEC_PER_SEC) /
+            (double) (time_diff);
+
+        LOGI("V4L2_CORE: STATISTICS (%dX%d@%s)- %u frames in %llu s. %2.2f fps\n",
+             uvc_frame->width, uvc_frame->height,
+             v4l2_fourcc_to_string(vd->requested_fmt).c_str(),
+             vd->fps_frame_count,
+             time_diff / NSEC_PER_SEC,
+             vd->real_fps);
+
+        vd->fps_frame_count = 0;
+        vd->fps_ref_ts = uvc_frame->capture_time;
     }
 
     free(uvc_frame);
@@ -1848,10 +2010,10 @@ void v4l2core_do_ctrl_list_set(v4l2_dev_t *vd)
                 if (xioctl(vd->fd, VIDIOC_S_CTRL, &ctrl))
                 {
                     LOGE("V4L2_CORE: (VIDIOC_S_CTRL) 0x%08x - 0x%x: %s(%d)\n",
-                            ctrl.id,
-                            ctrl.value,
-                            strerror(errno),
-                            errno);
+                         ctrl.id,
+                         ctrl.value,
+                         strerror(errno),
+                         errno);
                 }
             }
 
@@ -1886,10 +2048,10 @@ void v4l2core_do_ctrl_list_set(v4l2_dev_t *vd)
                 else
                 {
                     LOGE("V4L2_CORE: (VIDIOC_S_CTRL) 0x%08x - 0x%x: %s(%d)\n",
-                            iter->second[ctrls.error_idx].id,
-                            iter->second[ctrls.error_idx].value,
-                            strerror(errno),
-                            errno);
+                         iter->second[ctrls.error_idx].id,
+                         iter->second[ctrls.error_idx].value,
+                         strerror(errno),
+                         errno);
                 }
             }
         }

@@ -19,6 +19,8 @@
 #include <map>
 #include <list>
 #include <string>
+#include <vector>
+#include <memory>
 
 /*
  * buffer number (for driver mmap ops)
@@ -97,9 +99,7 @@ typedef struct _v4l2_stream_cap_t
 {
     int width;            //width
     int height;           //height
-    int *framerate_num;   //list of numerator values - should be 1 in almost all cases
-    int *framerate_denom; //list of denominator values - gives fps
-    int numb_frates;      //number of frame rates (numerator and denominator lists size)
+    std::vector<std::pair<int, int>> framerates;
     int profile;          //profile for H.264
 } v4l2_stream_cap_t;
 
@@ -110,10 +110,9 @@ typedef struct _v4l2_stream_format_t
 {
     uint8_t dec_support;                //decoder support (1-supported; 0-not supported)
     int format;                         //v4l2 pixel format
-    char fourcc[5];                     //corresponding fourcc (mode)
-    char description[32];               //format description
-    int numb_res;                       //available number of resolutions for format (v4l2_stream_cap_t list size)
-    v4l2_stream_cap_t *list_stream_cap; //list of stream capabilities for format
+    std::string fourcc;                 //format fcc
+    std::string description;            //format description
+    std::vector<_v4l2_stream_cap_t> stream_caps;    //container of stream caps for format
 } v4l2_stream_formats_t;
 
 /*
@@ -129,15 +128,31 @@ typedef struct _v4l2_ctrl_t
     char *string;
 
     /*localization*/
-    char *name; /*gettext translated name*/
-    int menu_entries;
-    char **menu_entry; /*gettext translated menu entry name*/
+    std::string name;
 
-    //next control in the list
-    struct _v4l2_ctrl_t *next;
+    std::vector<std::string> menu_entries;
+
+    ~_v4l2_ctrl_t()
+    {
+        if (string != nullptr)
+        {
+            delete [] string;
+            string = nullptr;
+        }
+
+        if (menu != nullptr)
+        {
+            free(menu);
+        }
+    }
+
 } v4l2_ctrl_t;
 
-typedef std::map<std::string, v4l2_ctrl_t *> v4l2_ctrl_map_t;
+typedef std::map<std::string, std::weak_ptr<v4l2_ctrl_t>> v4l2_ctrl_name_map_t;
+
+typedef std::map<uint32_t, std::weak_ptr<v4l2_ctrl_t>> v4l2_ctrl_id_map_t;
+
+typedef std::vector<std::shared_ptr<v4l2_ctrl_t>> v4l2_ctrls_t;
 
 typedef std::list<std::pair<std::string, std::string>> v4l2_ctrl_set_list_t;
 
@@ -150,8 +165,8 @@ typedef struct _v4l2_dev_t
     __MUTEX_TYPE mutex; // device mutex
 
     int cap_meth;                               // capture method: IO_READ or IO_MMAP
-    v4l2_stream_formats_t *list_stream_formats; // list of available stream formats
-    int numb_formats;
+
+    std::vector<v4l2_stream_formats_t> stream_formats;
 
     struct v4l2_capability cap;           // v4l2 capability struct
     struct v4l2_format format;            // v4l2 format struct
@@ -177,6 +192,11 @@ typedef struct _v4l2_dev_t
     int fps_num;   // fps numerator
     int fps_denom; // fps denominator
 
+    double real_fps; //real fps (calculated from number of captured frames)
+
+    uint64_t fps_ref_ts;
+    uint32_t fps_frame_count;
+
     uint8_t flag_fps_change; // set to 1 to request a fps change
 
     uint8_t streaming;               // flag device stream : STRM_STOP ; STRM_REQ_STOP; STRM_OK
@@ -186,9 +206,12 @@ typedef struct _v4l2_dev_t
     uint32_t buff_offset[NB_BUFFER]; // memory buffers offset as set by VIDIOC_QUERYBUF
 
     v4l2_ctrl_t *list_device_controls; //null terminated linked list of available device controls
-    int num_controls;                  //number of controls in list
 
-    v4l2_ctrl_map_t map_device_controls; // Map the name to pointer of v4l2_ctrl_t
+    v4l2_ctrl_name_map_t dev_ctrls_name_map; // Map the name to weak pointer of v4l2_ctrl_t
+    v4l2_ctrl_id_map_t dev_ctrls_id_map;     // Map the id to weak pointer of v4l2_ctrl_t
+
+    v4l2_ctrls_t dev_ctrls;                  // Vector to store all the controls
+
     v4l2_ctrl_set_list_t controls_set_list;
 
     int pan_step;  //pan step for relative pan tilt controls (logitech sphere/orbit/BCC950)

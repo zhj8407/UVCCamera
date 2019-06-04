@@ -8,20 +8,22 @@
 #ifndef V4L2_VIDEO_FORMATS_H_
 #define V4L2_VIDEO_FORMATS_H_
 
+#include <memory>
+#include <iostream>
+#include <string>
+#include <cstdio>
+
 #include "uvc_dev.h"
 
-/*
- * check pixelformat against decoder support formats
- * args:
- *    pixelformat - v4l2 pixelformat
- *
- * asserts:
- *    none
- *
- * returns: TRUE(1) if format is supported
- *          FALSE(0) if not
- */
-uint8_t can_decode_format(uint32_t pixelformat);
+template<typename ... Args>
+static inline std::string stringFormat(const std::string &format,
+                         Args ... args)
+{
+    size_t size = snprintf(nullptr, 0, format.c_str(), args ...) + 1;
+    std::unique_ptr<char[]> buf(new char[size]);
+    snprintf(buf.get(), size, format.c_str(), args ...);
+    return std::string(buf.get(), buf.get() + size - 1);
+}
 
 /*
  * enumerate frame formats (pixelformats, resolutions and fps)

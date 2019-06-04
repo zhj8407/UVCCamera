@@ -13,6 +13,8 @@
 #include <errno.h>
 #include <assert.h>
 
+#include <algorithm>
+
 #include "linux/videodev2.h"
 
 #include "v4l2_controls.h"
@@ -95,97 +97,6 @@ static int query_ioctl(v4l2_dev_t *vd, int current_ctrl, struct v4l2_queryctrl *
 }
 
 /*
- * output control data
- * args:
- *   control - pointer to control data
- *   i - control index (from control list)
- *
- * asserts:
- *   none
- *
- * returns: void
- */
-static void print_control(v4l2_ctrl_t *control, int i)
-{
-    if (control == NULL)
-    {
-        LOGI("V4L2_CORE: null control at index %i\n", i);
-        return;
-    }
-
-    int j = 0;
-
-    switch (control->control.type)
-    {
-        case V4L2_CTRL_TYPE_INTEGER:
-            LOGI("control[%d]:(int) 0x%x '%s'\n", i, control->control.id, control->name);
-            LOGI("\tmin:%d max:%d step:%d def:%d curr:%d\n",
-                 control->control.minimum, control->control.maximum, control->control.step,
-                 control->control.default_value, control->value);
-            break;
-
-        case V4L2_CTRL_TYPE_INTEGER64:
-            LOGI("control[%d]:(int64) 0x%x '%s'\n", i, control->control.id, control->name);
-            LOGI("\tcurr:%" PRId64 "\n", control->value64);
-            break;
-
-        case V4L2_CTRL_TYPE_STRING:
-            LOGI("control[%d]:(str) 0x%x '%s'\n", i, control->control.id, control->name);
-            LOGI("\tmin:%d max:%d step:%d curr: %s\n",
-                 control->control.minimum, control->control.maximum,
-                 control->control.step, control->string);
-            break;
-
-        case V4L2_CTRL_TYPE_BOOLEAN:
-            LOGI("control[%d]:(bool) 0x%x '%s'\n", i, control->control.id, control->name);
-            LOGI("\tdef:%d curr:%d\n",
-                 control->control.default_value, control->value);
-            break;
-
-        case V4L2_CTRL_TYPE_MENU:
-            LOGI("control[%d]:(menu) 0x%x '%s'\n", i, control->control.id, control->name);
-            LOGI("\tmin:%d max:%d def:%d curr:%d\n",
-                 control->control.minimum, control->control.maximum,
-                 control->control.default_value, control->value);
-
-            for (j = 0; control->menu[j].index <= control->control.maximum; j++)
-            {
-                LOGI("\tmenu[%d]: [%d] -> '%s'\n", j, control->menu[j].index, control->menu_entry[j]);
-            }
-
-            break;
-
-        case V4L2_CTRL_TYPE_INTEGER_MENU:
-            LOGI("control[%d]:(intmenu) 0x%x '%s'\n", i, control->control.id, control->name);
-            LOGI("\tmin:%d max:%d def:%d curr:%d\n",
-                 control->control.minimum, control->control.maximum,
-                 control->control.default_value, control->value);
-
-            for (j = 0; control->menu[j].index <= control->control.maximum; j++)
-                LOGI("\tmenu[%d]: [%d] -> %" PRId64 " (0x%" PRIx64 ")\n", j, control->menu[j].index,
-                     (int64_t)control->menu[j].value,
-                     (int64_t)control->menu[j].value);
-
-            break;
-
-        case V4L2_CTRL_TYPE_BUTTON:
-            LOGI("control[%d]:(button) 0x%x '%s'\n", i, control->control.id, control->name);
-            break;
-
-        case V4L2_CTRL_TYPE_BITMASK:
-            LOGI("control[%d]:(bitmask) 0x%x '%s'\n", i, control->control.id, control->name);
-            LOGI("\tmin:%x max:%x def:%x curr:%x\n",
-                 control->control.minimum, control->control.maximum,
-                 control->control.default_value, control->value);
-
-        default:
-            LOGI("control[%d]:(unknown - 0x%x) 0x%x '%s'\n", i, control->control.type,
-                 control->control.id, control->control.name);
-            break;
-    }
-}
-
-/*
  * prints control list to stdout
  * args:
  *   vd - pointer to video device data
@@ -200,20 +111,91 @@ static void print_control_list(v4l2_dev_t *vd)
     /*asserts*/
     assert(vd != NULL);
 
-    if (vd->list_device_controls == NULL)
+    if (vd->dev_ctrls.empty())
     {
         LOGI("V4L2_CORE: WARNING empty control list\n");
         return;
     }
 
     int i = 0;
-    v4l2_ctrl_t *current = vd->list_device_controls;
 
-    for (; current != NULL; current = current->next)
+    for_each(vd->dev_ctrls.begin(), vd->dev_ctrls.end(),
+             [&i] (const std::shared_ptr<v4l2_ctrl_t> &control)
     {
-        print_control(current, i);
+        int j = 0;
+
+        switch (control->control.type)
+        {
+            case V4L2_CTRL_TYPE_INTEGER:
+                LOGI("control[%d]:(int) 0x%x '%s'\n", i, control->control.id, control->name.c_str());
+                LOGI("\tmin:%d max:%d step:%d def:%d curr:%d\n",
+                     control->control.minimum, control->control.maximum, control->control.step,
+                     control->control.default_value, control->value);
+                break;
+
+            case V4L2_CTRL_TYPE_INTEGER64:
+                LOGI("control[%d]:(int64) 0x%x '%s'\n", i, control->control.id, control->name.c_str());
+                LOGI("\tcurr:%" PRId64 "\n", control->value64);
+                break;
+
+            case V4L2_CTRL_TYPE_STRING:
+                LOGI("control[%d]:(str) 0x%x '%s'\n", i, control->control.id, control->name.c_str());
+                LOGI("\tmin:%d max:%d step:%d curr: %s\n",
+                     control->control.minimum, control->control.maximum,
+                     control->control.step, control->string);
+                break;
+
+            case V4L2_CTRL_TYPE_BOOLEAN:
+                LOGI("control[%d]:(bool) 0x%x '%s'\n", i, control->control.id, control->name.c_str());
+                LOGI("\tdef:%d curr:%d\n",
+                     control->control.default_value, control->value);
+                break;
+
+            case V4L2_CTRL_TYPE_MENU:
+                LOGI("control[%d]:(menu) 0x%x '%s'\n", i, control->control.id, control->name.c_str());
+                LOGI("\tmin:%d max:%d def:%d curr:%d\n",
+                     control->control.minimum, control->control.maximum,
+                     control->control.default_value, control->value);
+
+                for (j = 0; control->menu[j].index <= control->control.maximum; j++)
+                {
+                    LOGI("\tmenu[%d]: [%d] -> '%s'\n", j, control->menu[j].index, control->menu_entries[j].c_str());
+                }
+
+                break;
+
+            case V4L2_CTRL_TYPE_INTEGER_MENU:
+                LOGI("control[%d]:(intmenu) 0x%x '%s'\n", i, control->control.id, control->name.c_str());
+                LOGI("\tmin:%d max:%d def:%d curr:%d\n",
+                     control->control.minimum, control->control.maximum,
+                     control->control.default_value, control->value);
+
+                for (j = 0; control->menu[j].index <= control->control.maximum; j++)
+                    LOGI("\tmenu[%d]: [%d] -> %" PRId64 " (0x%" PRIx64 ")\n", j, control->menu[j].index,
+                         (int64_t)control->menu[j].value,
+                         (int64_t)control->menu[j].value);
+
+                break;
+
+            case V4L2_CTRL_TYPE_BUTTON:
+                LOGI("control[%d]:(button) 0x%x '%s'\n", i, control->control.id, control->name.c_str());
+                break;
+
+            case V4L2_CTRL_TYPE_BITMASK:
+                LOGI("control[%d]:(bitmask) 0x%x '%s'\n", i, control->control.id, control->name.c_str());
+                LOGI("\tmin:%x max:%x def:%x curr:%x\n",
+                     control->control.minimum, control->control.maximum,
+                     control->control.default_value, control->value);
+
+            default:
+                LOGI("control[%d]:(unknown - 0x%x) 0x%x '%s'\n", i, control->control.type,
+                     control->control.id, control->control.name);
+                break;
+        }
+
         i++;
     }
+            );
 }
 
 /*
@@ -304,7 +286,8 @@ static std::string name2var(const char *name)
  *
  * returns: pointer to newly added control
  */
-static v4l2_ctrl_t *add_control(v4l2_dev_t *vd, struct v4l2_queryctrl *queryctrl, v4l2_ctrl_t **current, v4l2_ctrl_t **first)
+static int add_control(v4l2_dev_t *vd,
+                       struct v4l2_queryctrl *queryctrl)
 {
     /*assertions*/
     assert(vd != NULL);
@@ -312,14 +295,13 @@ static v4l2_ctrl_t *add_control(v4l2_dev_t *vd, struct v4l2_queryctrl *queryctrl
     assert(queryctrl != NULL);
     int menu_entries = 0;
 
-    v4l2_ctrl_t *control = NULL;
     struct v4l2_querymenu *menu = NULL;     //menu list
     struct v4l2_querymenu *old_menu = menu; //temp menu list pointer
 
     if (queryctrl->flags & V4L2_CTRL_FLAG_DISABLED)
     {
         LOGI("V4L2_CORE: Control 0x%08x is disabled: remove it from control list\n", queryctrl->id);
-        return NULL;
+        return -1;
     }
 
     //check menu items if needed
@@ -362,7 +344,7 @@ static v4l2_ctrl_t *add_control(v4l2_dev_t *vd, struct v4l2_queryctrl *queryctrl
                 }
 
                 LOGE( "V4L2_CORE: FATAL memory allocation failure (add_control): %s\n", strerror(errno));
-                return NULL;
+                return -1;
             }
 
             memcpy(&(menu[i]), &querymenu, sizeof(struct v4l2_querymenu));
@@ -393,7 +375,7 @@ static v4l2_ctrl_t *add_control(v4l2_dev_t *vd, struct v4l2_queryctrl *queryctrl
             }
 
             LOGE( "V4L2_CORE: FATAL memory allocation failure (add_control): %s\n", strerror(errno));
-            return NULL;
+            return -1;
         }
 
         menu[i].id = querymenu.id;
@@ -421,53 +403,42 @@ static v4l2_ctrl_t *add_control(v4l2_dev_t *vd, struct v4l2_queryctrl *queryctrl
     }
 
     // Add the control to the linked list
-    control = reinterpret_cast<v4l2_ctrl_t *>(calloc(1, sizeof(v4l2_ctrl_t)));
+    auto control = std::make_shared<v4l2_ctrl_t>();
 
-    if (control == NULL)
+    if (!control)
     {
-        LOGE( "V4L2_CORE: FATAL memory allocation failure (add_control): %s\n", strerror(errno));
-        return NULL;
+        LOGE( "V4L2_CORE: FATAL memory allocation failure (add_control): %s\n",
+              strerror(errno));
+        return -1;
     }
 
     memcpy(&(control->control), queryctrl, sizeof(struct v4l2_queryctrl));
     control->cclass = V4L2_CTRL_ID2CLASS(control->control.id);
-    control->name = strdup((char *)control->control.name);
+    control->name = reinterpret_cast<char *>(control->control.name);
     //add the menu adress (NULL if not a menu)
     control->menu = menu;
 
+    control->menu_entries.clear();
+
     if (control->menu != NULL && control->control.type == V4L2_CTRL_TYPE_MENU)
     {
-        int i = 0;
-        control->menu_entry = reinterpret_cast<char **>(calloc(menu_entries, sizeof(char *)));
-
-        if (control->menu_entry == NULL)
+        for (int i = 0; i < menu_entries; i++)
         {
-            LOGE( "V4L2_CORE: FATAL memory allocation failure (add_control): %s\n", strerror(errno));
-            return NULL;
+            control->menu_entries.push_back(
+                std::string(reinterpret_cast<char *>(control->menu[i].name)));
         }
-
-        for (i = 0; i < menu_entries; i++)
-        {
-            control->menu_entry[i] = strdup((char *)control->menu[i].name);
-        }
-
-        control->menu_entries = menu_entries;
-    }
-    else
-    {
-        control->menu_entries = 0;
-        control->menu_entry = NULL;
     }
 
     //allocate a string with max size if needed
     if (control->control.type == V4L2_CTRL_TYPE_STRING)
     {
-        control->string = reinterpret_cast<char *>(calloc(control->control.maximum + 1, sizeof(char)));
+        control->string = new char[control->control.maximum + 1];
 
         if (control->string == NULL)
         {
-            LOGE( "V4L2_CORE: FATAL memory allocation failure (add_control): %s\n", strerror(errno));
-            return NULL;
+            LOGE( "V4L2_CORE: FATAL memory allocation failure (add_control): %s\n",
+                  strerror(errno));
+            return -1;
         }
     }
     else
@@ -475,25 +446,20 @@ static v4l2_ctrl_t *add_control(v4l2_dev_t *vd, struct v4l2_queryctrl *queryctrl
         control->string = NULL;
     }
 
-    if (*first != NULL)
-    {
-        (*current)->next = control;
-        *current = control;
-    }
-    else
-    {
-        *first = control;
-        *current = *first;
-    }
+    vd->dev_ctrls.push_back(control);
 
-    vd->map_device_controls.insert(
-        std::pair<std::string, v4l2_ctrl_t *>(
+    vd->dev_ctrls_name_map.insert(
+        std::pair<std::string, std::weak_ptr<v4l2_ctrl_t>>(
             name2var((char *)(queryctrl->name)), control));
+
+    vd->dev_ctrls_id_map.insert(
+        std::pair<uint32_t, std::weak_ptr<v4l2_ctrl_t>>(
+            queryctrl->id, control));
 
     //subscribe control events
     v4l2_subscribe_control_events(vd, queryctrl->id);
 
-    return control;
+    return 0;
 }
 
 /*
@@ -504,7 +470,7 @@ static v4l2_ctrl_t *add_control(v4l2_dev_t *vd, struct v4l2_queryctrl *queryctrl
  * asserts:
  *   vd is not null
  *   vd->fd is valid ( > 0 )
- *   vd->list_device_controls is null
+ *   vd->dev_ctrls is empty
  *
  * returns: error code
  */
@@ -513,7 +479,7 @@ int enumerate_v4l2_control(v4l2_dev_t *vd)
     /*assertions*/
     assert(vd != NULL);
     assert(vd->fd > 0);
-    assert(vd->list_device_controls == NULL);
+    assert(vd->dev_ctrls.empty());
 
     int ret = 0;
     v4l2_ctrl_t *current = NULL;
@@ -527,7 +493,7 @@ int enumerate_v4l2_control(v4l2_dev_t *vd)
     /*try the next_flag method first*/
     while ((ret = query_ioctl(vd, currentctrl, &queryctrl)) == 0)
     {
-        if (add_control(vd, &queryctrl, &current, &(vd->list_device_controls)) != NULL)
+        if (add_control(vd, &queryctrl) == 0)
         {
             n++;
         }
@@ -539,8 +505,6 @@ int enumerate_v4l2_control(v4l2_dev_t *vd)
 
     if (queryctrl.id != V4L2_CTRL_FLAG_NEXT_CTRL)
     {
-        vd->num_controls = n;
-
         if (verbosity > 0)
         {
             print_control_list(vd);
@@ -567,7 +531,7 @@ int enumerate_v4l2_control(v4l2_dev_t *vd)
 
         if (xioctl(vd->fd, VIDIOC_QUERYCTRL, &queryctrl) == 0)
         {
-            if (add_control(vd, &queryctrl, &current, &(vd->list_device_controls)) != NULL)
+            if (add_control(vd, &queryctrl) == 0)
             {
                 n++;
             }
@@ -581,7 +545,7 @@ int enumerate_v4l2_control(v4l2_dev_t *vd)
 
         if (xioctl(vd->fd, VIDIOC_QUERYCTRL, &queryctrl) == 0)
         {
-            if (add_control(vd, &queryctrl, &current, &(vd->list_device_controls)) != NULL)
+            if (add_control(vd, &queryctrl) == 0)
             {
                 n++;
             }
@@ -592,13 +556,11 @@ int enumerate_v4l2_control(v4l2_dev_t *vd)
     for (queryctrl.id = V4L2_CID_PRIVATE_BASE;
             xioctl(vd->fd, VIDIOC_QUERYCTRL, &queryctrl) == 0; queryctrl.id++)
     {
-        if (add_control(vd, &queryctrl, &current, &(vd->list_device_controls)) != NULL)
+        if (add_control(vd, &queryctrl) == 0)
         {
             n++;
         }
     }
-
-    vd->num_controls = n;
 
     if (verbosity > 0)
     {
@@ -915,9 +877,7 @@ static void update_ctrl_list_flags(v4l2_dev_t *vd)
     /*asserts*/
     assert(vd != NULL);
 
-    v4l2_ctrl_t *current = vd->list_device_controls;
-
-    for (; current != NULL; current = current->next)
+    for (const auto &current : vd->dev_ctrls)
     {
         update_ctrl_flags(vd, current->control.id);
     }
@@ -968,25 +928,26 @@ void get_v4l2_control_values(v4l2_dev_t *vd)
     assert(vd != NULL);
     assert(vd->fd > 0);
 
-    if (vd->list_device_controls == NULL)
+    if (vd->dev_ctrls.empty())
     {
         LOGI("V4L2_CORE: (get control values) empty control list\n");
         return;
     }
 
     int ret = 0;
-    struct v4l2_ext_control clist[vd->num_controls];
-    v4l2_ctrl_t *current = vd->list_device_controls;
+    struct v4l2_ext_control clist[vd->dev_ctrls.size()];
 
     int count = 0;
     int i = 0;
 
-    for (; current != NULL; current = current->next)
+    for (size_t j = 0; j < vd->dev_ctrls.size(); j++)
     {
+        auto &current = vd->dev_ctrls[j];
+
         /* If the last control happens to be WRITE_ONLY.
          * We should not jump over it.
          */
-        if (current->next != NULL &&
+        if (j != vd->dev_ctrls.size() - 1 &&
                 current->control.flags & V4L2_CTRL_FLAG_WRITE_ONLY)
         {
             continue;
@@ -998,7 +959,7 @@ void get_v4l2_control_values(v4l2_dev_t *vd)
         if (current->control.type == V4L2_CTRL_TYPE_STRING)
         {
             clist[count].size = current->control.maximum + 1;
-            clist[count].string = reinterpret_cast<char *>(calloc(clist[count].size, sizeof(char)));
+            clist[count].string = new char[clist[count].size];
 
             if (clist[count].string == NULL)
             {
@@ -1009,7 +970,8 @@ void get_v4l2_control_values(v4l2_dev_t *vd)
 
         count++;
 
-        if ((current->next == NULL) || (current->next->cclass != current->cclass))
+        if ((j == vd->dev_ctrls.size() - 1) ||
+                (vd->dev_ctrls[j + 1]->cclass != current->cclass))
         {
             if (current->control.flags & V4L2_CTRL_FLAG_WRITE_ONLY)
             {
@@ -1089,9 +1051,9 @@ void get_v4l2_control_values(v4l2_dev_t *vd)
                     case V4L2_CTRL_TYPE_STRING:
                     {
                         /*
-                             * string gets set on VIDIOC_G_EXT_CTRLS
-                             * add the maximum size to value
-                             */
+                         * string gets set on VIDIOC_G_EXT_CTRLS
+                         * add the maximum size to value
+                         */
                         unsigned len = strlen(clist[i].string);
                         unsigned max_len = ctrl->control.maximum;
 
@@ -1105,7 +1067,7 @@ void get_v4l2_control_values(v4l2_dev_t *vd)
                         }
 
                         /*clean up*/
-                        free(clist[i].string);
+                        delete [] clist[i].string;
                         clist[i].string = NULL;
                         break;
                     }
@@ -1145,18 +1107,19 @@ v4l2_ctrl_t *get_control_by_id(v4l2_dev_t *vd, int id)
     /*asserts*/
     assert(vd != NULL);
 
-    v4l2_ctrl_t *current = vd->list_device_controls;
+    auto it = vd->dev_ctrls_id_map.find((uint32_t)id);
 
-    for (; current != NULL; current = current->next)
+    if (it != vd->dev_ctrls_id_map.end())
     {
-        if (current == NULL)
-        {
-            break;
-        }
+        auto ctrl = it->second.lock();
 
-        if (current->control.id == id)
+        if (ctrl)
         {
-            return (current);
+            return ctrl.get();
+        }
+        else
+        {
+            return (NULL);
         }
     }
 
@@ -1179,16 +1142,23 @@ v4l2_ctrl_t *get_control_by_name(v4l2_dev_t *vd, const std::string &name)
     /*asserts*/
     assert(vd != NULL);
 
-    auto it = vd->map_device_controls.find(name);
+    auto it = vd->dev_ctrls_name_map.find(name);
 
-    if (it != vd->map_device_controls.end())
+    if (it != vd->dev_ctrls_name_map.end())
     {
-        return it->second;
+        auto ctrl = it->second.lock();
+
+        if (ctrl)
+        {
+            return ctrl.get();
+        }
+        else
+        {
+            return (NULL);
+        }
     }
-    else
-    {
-        return NULL;
-    }
+
+    return (NULL);
 }
 
 /*
@@ -1248,7 +1218,7 @@ int get_control_value_by_id(v4l2_dev_t *vd, int id)
         if (control->control.type == V4L2_CTRL_TYPE_STRING)
         {
             ctrl.size = control->control.maximum + 1;
-            ctrl.string = reinterpret_cast<char *>(calloc(ctrl.size, sizeof(char)));
+            ctrl.string = new char[ctrl.size];
 
             if (ctrl.string == NULL)
             {
@@ -1274,7 +1244,7 @@ int get_control_value_by_id(v4l2_dev_t *vd, int id)
                     strncpy(control->string, ctrl.string, ctrl.size);
 
                     //clean up
-                    free(ctrl.string);
+                    delete [] ctrl.string;
                     ctrl.string = NULL;
 
                     break;
@@ -1286,8 +1256,6 @@ int get_control_value_by_id(v4l2_dev_t *vd, int id)
 
                 default:
                     control->value = ctrl.value;
-                    //LOGI("V4L2_CORE: control %i [0x%08x] = %i\n",
-                    //    i, clist[i].id, clist[i].value);
                     break;
             }
         }
@@ -1315,15 +1283,14 @@ void set_v4l2_control_values(v4l2_dev_t *vd)
     assert(vd != NULL);
     assert(vd->fd > 0);
 
-    if (vd->list_device_controls == NULL)
+    if (vd->dev_ctrls.empty())
     {
         LOGI("V4L2_CORE: (set control values) empty control list\n");
         return;
     }
 
     int ret = 0;
-    struct v4l2_ext_control clist[vd->num_controls];
-    v4l2_ctrl_t *current = vd->list_device_controls;
+    struct v4l2_ext_control clist[vd->dev_ctrls.size()];
 
     int count = 0;
     int i = 0;
@@ -1333,8 +1300,10 @@ void set_v4l2_control_values(v4l2_dev_t *vd)
         LOGI("V4L2_CORE: setting control values\n");
     }
 
-    for (; current != NULL; current = current->next)
+    for (size_t j = 0; j < vd->dev_ctrls.size(); j++)
     {
+        auto &current = vd->dev_ctrls[i];
+
         if (current->control.flags & V4L2_CTRL_FLAG_READ_ONLY)
         {
             continue;
@@ -1351,25 +1320,22 @@ void set_v4l2_control_values(v4l2_dev_t *vd)
 
                 if (len > max_len)
                 {
-                    clist[count].size = max_len + 1;
-                    clist[count].string = reinterpret_cast<char *>(calloc(max_len + 1, sizeof(char)));
-
-                    if (clist[count].string == NULL)
-                    {
-                        LOGE( "V4L2_CORE: FATAL memory allocation failure (set_v4l2_control_values): %s\n", strerror(errno));
-                        return;
-                    }
-
-                    clist[count].string = strncpy(clist[count].string, current->string, max_len);
-                    clist[count].string[max_len + 1] = 0; /*NULL terminated*/
                     LOGE( "V4L2_CORE: control (0x%08x) trying to set string size of %d when max is %d (clip)\n",
                           current->control.id, len, max_len);
                 }
-                else
+
+                len = len > max_len ? max_len : len;
+                clist[count].size = len + 1;
+                clist[count].string = new char[len + 1];
+
+                if (clist[count].string == nullptr)
                 {
-                    clist[count].size = len + 1;
-                    clist[count].string = strdup(current->string);
+                    LOGE( "V4L2_CORE: FATAL memory allocation failure (set_v4l2_control_values): %s\n", strerror(errno));
+                    return;
                 }
+
+                strncpy(clist[count].string, current->string, len);
+                clist[count].string[len + 1] = 0;
 
                 break;
             }
@@ -1390,7 +1356,8 @@ void set_v4l2_control_values(v4l2_dev_t *vd)
 
         count++;
 
-        if ((current->next == NULL) || (current->next->cclass != current->cclass))
+        if ((j == vd->dev_ctrls.size() - 1) ||
+                (vd->dev_ctrls[j + 1]->cclass != current->cclass))
         {
             struct v4l2_ext_controls ctrls = {0};
             ctrls.ctrl_class = current->cclass;
@@ -1404,7 +1371,9 @@ void set_v4l2_control_values(v4l2_dev_t *vd)
                 struct v4l2_control ctrl;
 
                 /*set the controls one by one*/
-                if (current->cclass == V4L2_CTRL_CLASS_USER && current->control.type != V4L2_CTRL_TYPE_STRING && current->control.type != V4L2_CTRL_TYPE_INTEGER64)
+                if (current->cclass == V4L2_CTRL_CLASS_USER &&
+                        current->control.type != V4L2_CTRL_TYPE_STRING &&
+                        current->control.type != V4L2_CTRL_TYPE_INTEGER64)
                 {
                     LOGE( "V4L2_CORE: using VIDIOC_S_CTRL for user class controls\n");
 
@@ -1452,7 +1421,7 @@ void set_v4l2_control_values(v4l2_dev_t *vd)
 
                         if (ctrl && ctrl->control.type == V4L2_CTRL_TYPE_STRING)
                         {
-                            free(clist[i].string); //free allocated string
+                            delete [] clist[i].string;
                             clist[i].string = NULL;
                         }
                     }
@@ -1479,23 +1448,18 @@ void set_control_defaults(v4l2_dev_t *vd)
     /*asserts*/
     assert(vd != NULL);
 
-    if (vd->list_device_controls == NULL)
+    if (vd->dev_ctrls.empty())
     {
         LOGI("V4L2_CORE: (set control defaults) empty control list\n");
         return;
     }
-
-    v4l2_ctrl_t *current = vd->list_device_controls;
-    v4l2_ctrl_t *next = current->next;
 
     if (verbosity > 0)
     {
         LOGI("V4L2_CORE: loading defaults\n");
     }
 
-    int i = 0;
-
-    for (; current != NULL; current = current->next, ++i)
+    for (auto &current : vd->dev_ctrls)
     {
         if (current->control.flags & V4L2_CTRL_FLAG_READ_ONLY)
         {
@@ -1516,7 +1480,9 @@ void set_control_defaults(v4l2_dev_t *vd)
 
                 if (verbosity > 1)
                 {
-                    LOGI("\tdefault[%i] = %i\n", i, current->control.default_value);
+                    LOGI("\tdefault[0x%08x] = %i\n",
+                         current->control.id,
+                         current->control.default_value);
                 }
 
                 current->value = current->control.default_value;
@@ -1548,7 +1514,9 @@ static int __set_control_full_value_by_id(v4l2_dev_t *vd, int id, int reserved)
         return (-1);
     }
 
-    if (control->cclass == V4L2_CTRL_CLASS_USER && control->control.type != V4L2_CTRL_TYPE_STRING && control->control.type != V4L2_CTRL_TYPE_INTEGER64)
+    if (control->cclass == V4L2_CTRL_CLASS_USER &&
+            control->control.type != V4L2_CTRL_TYPE_STRING &&
+            control->control.type != V4L2_CTRL_TYPE_INTEGER64)
     {
         //using VIDIOC_G_CTRL for user class controls
         struct v4l2_control ctrl;
@@ -1572,25 +1540,23 @@ static int __set_control_full_value_by_id(v4l2_dev_t *vd, int id, int reserved)
 
                 if (len > max_len)
                 {
-                    ctrl.size = max_len + 1;
-                    ctrl.string = reinterpret_cast<char *>(calloc(max_len + 1, sizeof(char)));
-
-                    if (ctrl.string == NULL)
-                    {
-                        LOGE( "V4L2_CORE: FATAL memory allocation failure (v4l2core_set_control_value_by_id): %s\n", strerror(errno));
-                        return -1;
-                    }
-
-                    ctrl.string = strncpy(ctrl.string, control->string, max_len);
-                    ctrl.string[max_len + 1] = 0; /*NULL terminated*/
                     LOGE( "V4L2_CORE: control (0x%08x) trying to set string size of %d when max is %d (clip)\n",
                           control->control.id, len, max_len);
                 }
-                else
+
+                len = len > max_len ? max_len : len;
+                ctrl.size = len + 1;
+                ctrl.string = new char[len + 1];
+
+                if (ctrl.string == nullptr)
                 {
-                    ctrl.size = len + 1;
-                    ctrl.string = (char *)strdup(control->string);
+                    LOGE( "V4L2_CORE: FATAL memory allocation failure (v4l2core_set_control_value_by_id): %s\n",
+                          strerror(errno));
+                    return -1;
                 }
+
+                strncpy(ctrl.string, control->string, len);
+                ctrl.string[len + 1] = 0;
 
                 break;
             }
@@ -1616,7 +1582,7 @@ static int __set_control_full_value_by_id(v4l2_dev_t *vd, int id, int reserved)
 
         if (control->control.type == V4L2_CTRL_TYPE_STRING)
         {
-            free(ctrl.string); //clean up string allocation
+            delete [] ctrl.string;
             ctrl.string = NULL;
         }
     }
@@ -1668,44 +1634,12 @@ void free_v4l2_control_list(v4l2_dev_t *vd)
     /*asserts*/
     assert(vd != NULL);
 
-    if (vd->list_device_controls == NULL)
+    if (vd->dev_ctrls.empty())
     {
         return;
     }
 
-    v4l2_ctrl_t *first = vd->list_device_controls;
-
-    while (first != NULL)
-    {
-        v4l2_ctrl_t *next = first->next;
-
-        if (first->string)
-        {
-            free(first->string);
-        }
-
-        if (first->menu)
-        {
-            free(first->menu);
-        }
-
-        if (first->menu_entry)
-        {
-            int i = 0;
-
-            for (i = 0; i < first->menu_entries; i++)
-            {
-                free(first->menu_entry[i]);
-            }
-
-            free(first->menu_entry);
-        }
-
-        free(first);
-        first = next;
-    }
-
-    vd->list_device_controls = NULL;
+    vd->dev_ctrls.clear();
 
     //unsubscibe control events
     v4l2_unsubscribe_control_events(vd);
